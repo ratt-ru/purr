@@ -1,19 +1,19 @@
+# -*- coding: utf-8 -*-
 Version = "1.0";
 
 import os.path
 
 # init debug printing
-import Timba.utils
-_verbosity = Timba.utils.verbosity(name="purr");
+import Kittens.utils
+_verbosity = Kittens.utils.verbosity(name="purr");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-import Timba.GUI.pixmaps 
-pixmaps = Timba.GUI.pixmaps.PixmapCache("purr");
+import Kittens.pixmaps 
+pixmaps = Kittens.pixmaps.PixmapCache("purr");
 
-
-import Timba.Apps.config
-Config = Timba.Apps.config.section("Purr");
+import Kittens.config
+Config = Kittens.config.section("Purr");
 
 from LogEntry import DataProduct,LogEntry
 from Purrer import Purrer

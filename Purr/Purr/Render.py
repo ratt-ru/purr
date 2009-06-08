@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 
 import sys
 import os
 import time
 import os.path
 import re
-import sets
 import fnmatch
 import imp
 import traceback
@@ -12,9 +12,9 @@ import traceback
 import Purr
 
 from Purr import Config
-import Timba.utils
+import Kittens.utils
 
-_verbosity = Timba.utils.verbosity(name="render");
+_verbosity = Kittens.utils.verbosity(name="render");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 

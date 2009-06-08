@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 try:
   import PIL.Image
 except:
@@ -9,13 +10,12 @@ PIL is available from http://www.pythonware.com/products/pil/. On Debian-based s
   
 import os.path
 import traceback
-import sets
 
 from Purr.Render import DefaultRenderer
 
 class ImageRenderer (DefaultRenderer):
   """This class renders PIL-compatible image data products.""";
-  _extensions = sets.Set([
+  _extensions = set([
     "jpg","jpeg","png","gif","xpm","ppm","pbm","pnm","tiff","tif"
   ]);
   

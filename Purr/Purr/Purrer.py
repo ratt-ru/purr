@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # TODO:
 # - add right-click options to New Entry menu: delete DP
 # - store settings (such as pounce mode) inside the log
@@ -14,7 +15,6 @@ import re
 import time
 import traceback
 import fnmatch
-import sets
 import signal
 import fcntl
 
@@ -122,7 +122,7 @@ class Purrer (QObject):
       self._newfiles = [];
       # the self.fileset attribute gives the current directory content
       try:
-        self.fileset = sets.Set(os.listdir(self.path));
+        self.fileset = set(os.listdir(self.path));
       except:
         _printexc("Error doing listdir(%s)"%self.path);
         traceback.print_exc();
@@ -155,14 +155,14 @@ class Purrer (QObject):
       Returns None on access error."""
       if self.fileset is None:
         return None;
-      newfiles = sets.Set(self._newfiles);  # some newfiles may have been found in __init__
+      newfiles = set(self._newfiles);  # some newfiles may have been found in __init__
       self._newfiles = [];
       updated = self.isUpdated();
       if updated is None:
         return None;
       elif updated:
         try:
-          fileset1 = sets.Set(os.listdir(self.path));
+          fileset1 = set(os.listdir(self.path));
         except:
           _printexc("Error doing listdir(%s)"%self.path);
           traceback.print_exc();
@@ -254,21 +254,21 @@ class Purrer (QObject):
     # watched files
     watch = Config.get("watch-patterns","Images=*fits,*FITS,*jpg,*png;TDL configuration=.tdl.conf");
     self._watch = parse_pattern_list(watch);
-    self._watch_patterns = sets.Set();
+    self._watch_patterns = set();
     for desc,patts in self._watch:
       self._watch_patterns.update(patts);
     dprint(1,"watching patterns",self._watch_patterns);
     # quietly watched files (dialog is not popped up)
     watch = Config.get("watch-patterns-quiet","TDL configuration=.tdl.conf");
     self._quiet = parse_pattern_list(watch);
-    self._quiet_patterns = sets.Set();
+    self._quiet_patterns = set();
     for desc,patts in self._quiet:
       self._quiet_patterns.update(patts);
     dprint(1,"quietly watching patterns",self._quiet_patterns);
     # ignored files 
     ignore = Config.get("ignore-patterns","Hidden files=.*;Purr logs=purrlog;MeqTree logs=meqtree.log;Python files=*.py*;Backup files=*~,*.bck;Measurement sets=*.MS,*.ms;CASA tables=table.f*,table.dat,table.info,table.lock");
     self._ignore = parse_pattern_list(ignore);
-    self._ignore_patterns = sets.Set();
+    self._ignore_patterns = set();
     for desc,patts in self._ignore:
       self._ignore_patterns.update(patts);
     dprint(1,"ignoring patterns",self._ignore_patterns);
@@ -404,11 +404,11 @@ class Purrer (QObject):
   def setWatchedFilePatterns (self,watch,ignore=[]):
     self._watch = watch;
     self._ignore = ignore;
-    self._watch_patterns = sets.Set();
+    self._watch_patterns = set();
     for desc,patts in self._watch:
       self._watch_patterns.update(patts);
     dprint(1,"watching patterns",self._watch_patterns);
-    self._ignore_patterns = sets.Set();
+    self._ignore_patterns = set();
     for desc,patts in self._ignore:
       self._ignore_patterns.update(patts);
     dprint(1,"ignoring patterns",self._ignore_patterns);
@@ -418,8 +418,8 @@ class Purrer (QObject):
   def watchDirectories (self,dirs):
     """Starts watching the specified directories for changes"""
     # see if we're alredy watching this exact set of directories -- do nothing if so
-    newset = sets.Set([Purr.canonizePath(dd) for dd in dirs]);
-    if newset == sets.Set(self.watched_dirs):
+    newset = set([Purr.canonizePath(dd) for dd in dirs]);
+    if newset == set(self.watched_dirs):
       dprint(1,"watchDirectories: no change to set of dirs");
       return;
     # collect timestamps of specified directories
@@ -436,7 +436,7 @@ class Purrer (QObject):
       dprintf(2,"watching directory %s, mtime %s, %d files\n",
                  dirname,time.strftime("%x %X",time.localtime(wdir.mtime)),len(wdir.fileset));
       # find files in this directory matching the watch_patterns, and watch them for changes
-      watchset = sets.Set();
+      watchset = set();
       for patt in self._watch_patterns:
         watchset.update(fnmatch.filter(wdir.fileset,patt));
       for fname in watchset:

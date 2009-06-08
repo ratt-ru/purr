@@ -1,8 +1,8 @@
+# -*- coding: utf-8 -*-
 from qt import *
 import time
 import os
 import os.path
-import sets
 
 from Purr import Config,pixmaps
 import Purr.LogEntry
@@ -198,7 +198,7 @@ class DPListView (QListView):
     filename = dp.filename;
     if not dp.archived:
       # form up set of taken names
-      taken_names = sets.Set();
+      taken_names = set();
       for i0,dp0 in self.getItemDPList():
         if dp0.policy not in ["remove","ignore","banish"]:
           taken_names.add(str(i0.text(self.ColRename)));
@@ -330,7 +330,7 @@ class DPListView (QListView):
     """Goes through list of DPs to make sure that their destination names
     do not clash. Adjust names as needed. Returns True if some conflicts were resolved.
     """
-    taken_names = sets.Set();
+    taken_names = set();
     resolved = False;
     # iterate through items
     for item,dp in self.getItemDPList():

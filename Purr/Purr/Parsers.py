@@ -1,14 +1,15 @@
+# -*- coding: utf-8 -*-
 _tdl_no_reimport = True;
 
 import time
 import os.path
 from HTMLParser import HTMLParser
 
-import Timba.utils
+import Kittens.utils
 
 import Purr
 
-_verbosity = Timba.utils.verbosity(name="purrparse");
+_verbosity = Kittens.utils.verbosity(name="purrparse");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 

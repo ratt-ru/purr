@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 import sys
 import os
 import time
 import os.path
 import re
-import sets
 import fnmatch
 import imp
 import traceback
@@ -16,9 +16,9 @@ def loadPlugins (paths):
   global bad_plugins;
   bad_plugins = {};
   # find potential plugin files
-  modfiles = sets.Set();
+  modfiles = set();
   for path in paths:
-    files = sets.Set(fnmatch.filter(os.listdir(path),"*.py"));
+    files = set(fnmatch.filter(os.listdir(path),"*.py"));
     files.discard('__init__.py');
     modfiles.update([ os.path.join(path,file) for file in files ]);
   dprintf(1,"%d plugins found\n",len(modfiles));

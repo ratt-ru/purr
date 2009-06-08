@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 # loading file into karma:
 #   ksend -add_connection unix 9975 multi_array kvis -load ARRAY:FILE0 img4096.fits
@@ -27,8 +28,6 @@ if __name__ == "__main__":
   
   import Purr
   import Purr.MainWindow
-  import Timba.utils
-  
   import Purr.Render
   
   
