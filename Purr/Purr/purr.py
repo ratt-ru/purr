@@ -8,17 +8,18 @@
 # runs Purr standalone
 if __name__ == "__main__":
   print "Welcome to PURR!"
-  print "Please wait a second while the GUI starts up."
 
   # parse options is the first thing we should do
   from optparse import OptionParser
   usage = "usage: %prog [options] <directories to watch>"
-  parser = OptionParser()
+  parser = OptionParser(usage=usage)
   parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
   parser.add_option("-n", "--no-cwd",dest="no_cwd",action="store_true",
                     help="Do not include '.' in directories to watch.");
   (options, rem_args) = parser.parse_args();
+
+  print "Please wait a second while the GUI starts up."
   
   import sys
   import signal
