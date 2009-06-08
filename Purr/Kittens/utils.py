@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 #
 #% $Id$ 
@@ -32,6 +33,28 @@ import string
 import types
 import traceback
 
+class recdict (dict):
+  """A recdict is basically a dict whose contents may also be
+  accessed via attributes, using the rec.field notation.
+  """;
+  def __getattr__(self,name):
+    if name.startswith('__'):
+      return dict.__getattr__(self,name);
+    # else try to access attribute anyway, to see if we have one
+    try: return dict.__getattr__(self,name);
+    except AttributeError: pass;
+    return dict.__getitem__(self,name);
+  # __setattr__: sets entry in dict
+  def __setattr__(self,name,value):
+    if name.startswith('__'):
+      return dict.__setattr__(self,name,value);
+    return dict.__setitem__(self,name,value);
+  # __delattr__: deletes key
+  def __delattr__(self,name):
+    if name.startswith('__'):
+      return dict.__delattr__(self,name,value);
+    return dict.__delitem__(self,key);
+    
 
 def type_maker(objtype,**kwargs):
   def maker(x):

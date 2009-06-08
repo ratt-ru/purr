@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # PIL and pyfits are show-stoppers for this plugin
 try:
   import PIL.Image
@@ -41,7 +42,7 @@ import math
 import Purr
 from Purr.Render import dprint,dprintf
 from Purr.CachingRenderer import CachingRenderer
-from Timba import dmi
+import Kittens.utils
 
 class FITSRenderer (CachingRenderer):
   """This class renders FITS image data products.""";
@@ -138,7 +139,7 @@ class FITSRenderer (CachingRenderer):
       Purr.progressMessage("rendering %s"%title,sub=True);
         
       # build up record of stuff associated with this image
-      rec = self.imgrec[num_image] = dmi.record();
+      rec = self.imgrec[num_image] = Kittens.utils.recdict();
       # min/max data values
       datamin,datamax = float(data.min()),float(data.max());
       rec.datamin,rec.datamax = datamin,datamax;
@@ -159,7 +160,11 @@ class FITSRenderer (CachingRenderer):
       # and either pylab is available (so we can produce plots), or histogram clipping is in effect
       if nbins and (pylab or hclip):
         dprintf(3,"%s plane %d: computing histogram\n",self.dp.fullpath,num_image);
-        counts,edges = numpy.histogram(data,nbins);
+	try:
+	  counts,edges = numpy.histogram(data,nbins,new=True); # needed for 1.3+ to avoid warnings
+	  edges = edges[:-1];
+	except TypeError:
+	  counts,edges = numpy.histogram(data,nbins);
         # render histogram
         if pylab:
           rec.histogram_full,path,uptodate = self.subproduct("-%d-hist-full.png"%num_image);
