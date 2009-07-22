@@ -478,6 +478,8 @@ class MainWindow (QMainWindow):
     self._timer.start(2000);
       
   def _forceRescan (self):
+    if not self.purrer:
+      self.attachDirectory('.');
     self._rescan(force=True);
     
   def _rescan (self,force=False):
