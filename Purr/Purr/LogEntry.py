@@ -99,7 +99,7 @@ class DataProduct (object):
     Asks for confirmation along the way if parent is not None
     (in which case it will be the parent widget for confirmation dialogs)
     """;
-    from qt import QMessageBox;
+    from PyQt4.Qt import QMessageBox;
     exists = os.path.exists(self.sourcepath);
     if parent:
       msg = """<P>Do you really want to restore <tt>%s</tt> from 
@@ -123,7 +123,7 @@ class DataProduct (object):
           QMessageBox.warning(parent,"Error removing file","""<P>
             There was an error removing %s. Archived copy was not restored. 
             The text console may have more information.</P>"""%self.sourcepath,
-            QMessageBox.Ok);
+            QMessageBox.Ok,0);
         return False;
     # copy over archived file
     if os.system("/bin/cp -a %s %s"%(self.fullpath,self.sourcepath)):
@@ -131,13 +131,13 @@ class DataProduct (object):
       if parent:
         QMessageBox.warning(parent,"Error copying file","""<P>
           There was an error copying the archived version to %s. The text console may have more information.</P>"""%self.sourcepath,
-          QMessageBox.Ok);
+          QMessageBox.Ok,0);
       return False;
     busy = None;
     if parent:
       QMessageBox.information(parent,"Restored file","""<P>Restored %s from this entry's 
           archived copy.</P>"""%self.sourcepath,
-        QMessageBox.Ok);
+        QMessageBox.Ok,0);
     return True;
 
 class LogEntry (object):
@@ -249,11 +249,13 @@ class LogEntry (object):
     # get device of pathname -- need to know whether we move or copy
     devnum = os.stat(pathname).st_dev;
     # copy data products as needed
+    dprintf(2,"saving entry %s, %d data products\n",pathname,len(self.dps));
     dps = [];
     for dp in self.dps:
       # if archived, this indicates a previously saved data product, so ignore it
       # if ignored, no need to save the DP -- but keep it in list
       if dp.archived or dp.ignored:
+        dprintf(3,"dp %s is archived or ignored, skipping\n",dp.sourcepath);
         dps.append(dp);
         continue;
       # file missing for some reason (perhaps it got removed on us?) skip data product entirely

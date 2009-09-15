@@ -1,16 +1,17 @@
+# -*- coding: utf-8 -*-
 _tdl_no_reimport = True;
 
 import os.path
 import time
 
-from qt import *
+from PyQt4.Qt import *
 
 import Purr
 import Purr.Editors
 import Purr.LogEntry
 import Purr.Pipe
 from Purr import Config,pixmaps,dprint,dprintf
-
+import Kittens.widgets
 
 class BusyIndicator (object):
   def __init__ (self):
@@ -25,7 +26,7 @@ class HTMLViewerDialog (QDialog):
     'config_name' is used to get/set default window size from Config object
     'buttons' can be a list of names or (QPixmapWrapper,name[,tooltip]) tuples to provide 
     custom buttons at the bottom of the dialog. When a button is clicked, the dialog 
-    emits PYSIGNAL("name()").
+    emits SIGNAL("name").
     A "Close" button is always provided, this simply hides the dialog.
     """;
     QDialog.__init__(self,parent,*args);
@@ -34,20 +35,20 @@ class HTMLViewerDialog (QDialog):
     # create viewer
     self.label = QLabel(self);
     self.label.setMargin(5);
+    self.label.setWordWrap(True);
     lo.addWidget(self.label);
     self.label.hide();
-    self.viewer = QTextEdit(self);
+    self.viewer = QTextBrowser(self);
     lo.addWidget(self.viewer);
-    self.viewer.setReadOnly(True);
+    # self.viewer.setReadOnly(True);
     self.viewer.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
-    # make a QMimeSourceFactory for the viewer -- needed to resolve image links
-    self.viewer_msf = QMimeSourceFactory();
-    self.viewer.setMimeSourceFactory(self.viewer_msf);
+    QObject.connect(self.viewer,SIGNAL("anchorClicked(const QUrl &)"),self._resetSource);
+    self._source = None;
     lo.addSpacing(5);
     # create button bar
     btnfr = QFrame(self);
     btnfr.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.Fixed);
-    btnfr.setMargin(5);
+    # btnfr.setMargin(5);
     lo.addWidget(btnfr);
     lo.addSpacing(5);
     btnfr_lo = QHBoxLayout(btnfr);
@@ -63,20 +64,20 @@ class HTMLViewerDialog (QDialog):
           tip = None;
         else:
           pixmap,name,tip = name;
-        btn = QPushButton(pixmap.iconset(),name,btnfr);
+        btn = QPushButton(pixmap.icon(),name,btnfr);
         if tip:
-          QToolTip.add(btn,tip);
+          btn.setToolTip(tip);
       self._user_buttons[name] = btn;
-      self.connect(btn,SIGNAL("clicked()"),self,PYSIGNAL(name+"()"));
+      self.connect(btn,SIGNAL("clicked()"),self,SIGNAL(name));
       btnfr_lo.addWidget(btn,1);
     # add a Close button
     btnfr_lo.addStretch(100);
-    closebtn = QPushButton(pixmaps.grey_round_cross.iconset(),"Close",btnfr);
+    closebtn = QPushButton(pixmaps.grey_round_cross.icon(),"Close",btnfr);
     self.connect(closebtn,SIGNAL("clicked()"),self.hide);
     btnfr_lo.addWidget(closebtn,1);
     # resize selves
     self.config_name = config_name or "html-viewer";
-    width = Config.getint('%s-width'%self.config_name,256);
+    width = Config.getint('%s-width'%self.config_name,512);
     height = Config.getint('%s-height'%self.config_name,512);
     self.resize(QSize(width,height));
     
@@ -86,11 +87,13 @@ class HTMLViewerDialog (QDialog):
     Config.set('%s-width'%self.config_name,sz.width());
     Config.set('%s-height'%self.config_name,sz.height());
     
-  def setDocument (self,text,path='.'):
-    """Sets the HTML text to be displayed. 'path' can be used to give a relative path for
-    resolving images in the text""";
-    self.viewer_msf.setFilePath(QStringList(path));
-    self.viewer.setText(text);
+  def setDocument (self,filename):
+    """Sets the HTML text to be displayed. """;
+    self._source = QUrl.fromLocalFile(filename);
+    self.viewer.setSource(self._source);
+    
+  def _resetSource (self,*dum):
+    self.viewer.setSource(self._source);
     
   def setLabel (self,label=None):
     if label is None:
@@ -148,40 +151,42 @@ class MainWindow (QMainWindow):
     # Purr pipe for receiving remote commands
     self.purrpipe = None;
     # init GUI
-    self.setCaption("PURR");
-    self.setIcon(pixmaps.purr_logo.pm());
+    self.setWindowTitle("PURR");
+    self.setWindowIcon(pixmaps.purr_logo.icon());
     cw = QWidget(self);
     self.setCentralWidget(cw);
     cwlo = QVBoxLayout(cw);
     cwlo.setMargin(5);
-    toplo = QHBoxLayout(cwlo);
+    toplo = QHBoxLayout(); cwlo.addLayout(toplo);
     label = QLabel("Updated files:",cw);
+    label.setToolTip(self.pounce_help);
     toplo.addWidget(label);
     toplo.addSpacing(5);
     self.wpounce = QComboBox(cw);
-    QToolTip.add(self.wpounce,self.pounce_help);
-    self.wpounce.insertStrList(self.pounce_labels);
-    self.wpounce.setCurrentItem(self._autopounce);
+    self.wpounce.setToolTip(self.pounce_help);
+    self.wpounce.addItems(self.pounce_labels);
+    self.wpounce.setCurrentIndex(self._autopounce);
     self.connect(self.wpounce,SIGNAL("activated(int)"),self.setPounceMode);
     toplo.addWidget(self.wpounce,1);
     toplo.addSpacing(5);
-    wrescan = QPushButton(pixmaps.blue_round_reload.iconset(),"Rescan",cw);
-    QToolTip.add(wrescan,"Checks your working directories for new or updated files.");
+    wrescan = QPushButton(pixmaps.blue_round_reload.icon(),"Rescan",cw);
+    wrescan.setToolTip("Checks your working directories for new or updated files.");
     self.connect(wrescan,SIGNAL("clicked()"),self._forceRescan);
     toplo.addWidget(wrescan);
     toplo.addStretch(1);
     about_btn = QPushButton("About...",cw);
     about_btn.setMinimumWidth(128);
-    about_btn.setFlat(True);
-    about_btn.setIconSet(pixmaps.purr_logo.iconset());
+    # about_btn.setFlat(True);
+    about_btn.setIcon(pixmaps.purr_logo.icon());
     toplo.addWidget(about_btn);
-    self._about_dialog = QMessageBox("About PURR",self.about_message + """
-        <P>PURR is not watching any directories right now. Click on the "pounce" option to start
-        watching your current directory.</P>""",
-        QMessageBox.NoIcon,
-        QMessageBox.Ok,QMessageBox.NoButton,QMessageBox.NoButton,cw);
+    self._about_dialog = QMessageBox(self);
+    self._about_dialog.setWindowTitle("About PURR");
+    self._about_dialog.setText(self.about_message + """
+        <P>PURR is not watching any directories right now. Click on the "Updated files" option to start
+        watching your current directory.</P>""");
+    # self._about_dialog.setStandardButtons(QMessageBox.Ok);
     self._about_dialog.setIconPixmap(pixmaps.purr_logo.pm()); 
-    self.connect(about_btn,SIGNAL("clicked()"),self._about_dialog.exec_loop);
+    self.connect(about_btn,SIGNAL("clicked()"),self._about_dialog.exec_);
     cwlo.addSpacing(5);
     logframe = QFrame(cw);
     cwlo.addWidget(logframe);
@@ -191,22 +196,25 @@ class MainWindow (QMainWindow):
 #    logframe.setFrameShape(QFrame.Panel);
     logframe.setLineWidth(1);
     self.dir_label = QLabel("Directory: none",logframe);
+    self.dir_label.setToolTip("""<P>This is the directory where your current purrlog is stored.
+      If you want to change this, you must restart PURR with a different directory name.</P>""");
     log_lo.addWidget(self.dir_label);
-    title_lo = QHBoxLayout(log_lo);
+    title_lo = QHBoxLayout(); log_lo.addLayout(title_lo); 
     self.title_label = QLabel("Log title: none",logframe);
+    self.title_label.setToolTip("""<P>This is your current log title. To change, click on the "Rename" button.</P>""");
     title_lo.addWidget(self.title_label,1);
     self.wrename = QPushButton("Rename",logframe);
-    QToolTip.add(self.wrename,"Click to edit log title");
+    self.wrename.setToolTip("Click to edit log title");
     self.wrename.setMinimumWidth(80);
-    self.wrename.setFlat(True);
+    # self.wrename.setFlat(True);
     self.wrename.setEnabled(False);
     self.connect(self.wrename,SIGNAL("clicked()"),self._renameLogDialog);
     title_lo.addWidget(self.wrename,0);
     title_lo.addSpacing(5);
-    self.wviewlog = QPushButton(pixmaps.openbook.iconset(),"View",logframe);
-    QToolTip.add(self.wviewlog,"Click to see an HTML rendering of the log");
+    self.wviewlog = QPushButton(pixmaps.openbook.icon(),"View",logframe);
+    self.wviewlog.setToolTip("Click to see an HTML rendering of the log");
     self.wviewlog.setMinimumWidth(80);
-    self.wviewlog.setFlat(True);
+    # self.wviewlog.setFlat(True);
     self.wviewlog.setEnabled(False);
     # log viewer dialog
     self.viewer_dialog = HTMLViewerDialog(self,config_name="log-viewer",
@@ -217,57 +225,61 @@ class MainWindow (QMainWindow):
                    """)]);
     self._viewer_timestamp = None;
     self.connect(self.wviewlog,SIGNAL("clicked()"),self._showViewerDialog);
-    self.connect(self.viewer_dialog,PYSIGNAL("Regenerate()"),self._regenerateLog);
+    self.connect(self.viewer_dialog,SIGNAL("Regenerate"),self._regenerateLog);
     title_lo.addWidget(self.wviewlog,0);
     cwlo.addSpacing(5);
     # listview of log entries
-    self.elv = QListView(cw);
-    cwlo.addWidget(self.elv);
-    self.elv.addColumn("date");
-    self.elv.addColumn("entry title",128);
-    self.elv.addColumn("comment",-1);
-    self.elv.header().show();
-    self.elv.setAllColumnsShowFocus(True);
-    self.elv.setShowToolTips(True);
-    self.elv.setSorting(-1);
-    self.elv.setResizeMode(QListView.LastColumn);
-    self.elv.setColumnAlignment(2,Qt.AlignLeft|Qt.AlignTop);
-    self.elv.setSelectionMode(QListView.Extended);
-    self.elv.setRootIsDecorated(True);
-    self.connect(self.elv,SIGNAL("selectionChanged()"),self._entrySelectionChanged);
-    self.connect(self.elv,SIGNAL("doubleClicked(QListViewItem*,const QPoint&,int)"),self._viewEntryItem);
-    self.connect(self.elv,SIGNAL("returnPressed(QListViewItem*)"),self._viewEntryItem);
-    self.connect(self.elv,SIGNAL("spacePressed(QListViewItem*)"),self._viewEntryItem);
-    self.connect(self.elv,SIGNAL('contextMenuRequested(QListViewItem*,const QPoint &,int)'),
-                     self._showItemContextMenu);
-    # create popup menu for data product
-    self._archived_dp_menu = menu = QPopupMenu(self);
-    qa = QAction(pixmaps.editcopy.iconset(),"Restore file from this entry's archived copy",0,menu);
-    QObject.connect(qa,SIGNAL("activated()"),self._restoreItemFromArchive);
-    qa.addTo(self._archived_dp_menu);
-    qa = QAction(pixmaps.editpaste.iconset(),"Copy location of archived copy to clipboard",0,menu);
-    QObject.connect(qa,SIGNAL("activated()"),self._copyItemToClipboard);
-    qa.addTo(self._archived_dp_menu);
+    self.etw = Kittens.widgets.ClickableTreeWidget(cw);
+    cwlo.addWidget(self.etw);
+    self.etw.header().setDefaultSectionSize(128);
+    self.etw.header().setMovable(False);
+    self.etw.setHeaderLabels(["date","entry title","comment"]);
+    if hasattr(QHeaderView,'ResizeToContents'):
+      self.etw.header().setResizeMode(0,QHeaderView.ResizeToContents);
+    else:
+      self.etw.header().setResizeMode(0,QHeaderView.Custom);
+      self.etw.header().resizeSection(0,120);
+    self.etw.header().setResizeMode(1,QHeaderView.Interactive);
+    self.etw.header().setResizeMode(2,QHeaderView.Stretch);
+    self.etw.header().show();
+    try: self.etw.setAllColumnsShowFocus(True); 
+    except AttributeError: pass; # Qt 4.2+
+    # self.etw.setShowToolTips(True);
+    self.etw.setSortingEnabled(False);
+    # self.etw.setColumnAlignment(2,Qt.AlignLeft|Qt.AlignTop);
+    self.etw.setSelectionMode(QTreeWidget.ExtendedSelection);
+    self.etw.setRootIsDecorated(True);
+    self.connect(self.etw,SIGNAL("itemSelectionChanged()"),self._entrySelectionChanged);
+    self.connect(self.etw,SIGNAL("itemActivated(QTreeWidgetItem*,int)"),self._viewEntryItem);
+    self.connect(self.etw,SIGNAL("itemContextMenuRequested"),self._showItemContextMenu);
+    # create popup menu for data products
+    self._archived_dp_menu = menu = QMenu(self);
+    menu.addAction(pixmaps.editcopy.icon(),"Restore file from this entry's archived copy",self._restoreItemFromArchive);
+    menu.addAction(pixmaps.editpaste.icon(),"Copy location of archived copy to clipboard",self._copyItemToClipboard);
     self._current_item = None;
+    # create popup menu for entries
+    self._entry_menu = menu = QMenu(self);
+    menu.addAction(pixmaps.filefind.icon(),"View",self._viewEntryItem);
+    menu.addAction(pixmaps.editdelete.icon(),"Delete",self._deleteSelectedEntries);
     # buttons at bottom
     cwlo.addSpacing(5);
-    btnlo = QHBoxLayout(cwlo);
-    self.wnewbtn = QPushButton(pixmaps.filenew.iconset(),"New entry...",cw);
-    QToolTip.add(self.wnewbtn,"Click to add a new log entry");
-    self.wnewbtn.setFlat(True);
+    btnlo = QHBoxLayout(); cwlo.addLayout(btnlo); 
+    self.wnewbtn = QPushButton(pixmaps.filenew.icon(),"New entry...",cw);
+    self.wnewbtn.setToolTip("Click to add a new log entry");
+    # self.wnewbtn.setFlat(True);
     self.wnewbtn.setEnabled(False);
     btnlo.addWidget(self.wnewbtn);
     btnlo.addSpacing(5);
-    self.weditbtn = QPushButton(pixmaps.filefind.iconset(),"View entry...",cw);
-    QToolTip.add(self.weditbtn,"Click to view or edit the selected log entry");
-    self.weditbtn.setFlat(True);
+    self.weditbtn = QPushButton(pixmaps.filefind.icon(),"View entry...",cw);
+    self.weditbtn.setToolTip("Click to view or edit the selected log entry");
+    # self.weditbtn.setFlat(True);
     self.weditbtn.setEnabled(False);
     self.connect(self.weditbtn,SIGNAL("clicked()"),self._viewEntryItem);
     btnlo.addWidget(self.weditbtn);
     btnlo.addSpacing(5);
-    self.wdelbtn = QPushButton(pixmaps.editdelete.iconset(),"Delete",cw);
-    QToolTip.add(self.wdelbtn,"Click to delete the selected log entry or entries");
-    self.wdelbtn.setFlat(True);
+    self.wdelbtn = QPushButton(pixmaps.editdelete.icon(),"Delete",cw);
+    self.wdelbtn.setToolTip("Click to delete the selected log entry or entries");
+    # self.wdelbtn.setFlat(True);
     self.wdelbtn.setEnabled(False);
     self.connect(self.wdelbtn,SIGNAL("clicked()"),self._deleteSelectedEntries);
     btnlo.addWidget(self.wdelbtn);
@@ -277,19 +289,19 @@ class MainWindow (QMainWindow):
     self._prev_msg = None;
     # editor dialog for new entry
     self.new_entry_dialog = Purr.Editors.NewLogEntryDialog(self);
-    self.connect(self.new_entry_dialog,PYSIGNAL("newLogEntry()"),self._newLogEntry);
-    self.connect(self.new_entry_dialog,PYSIGNAL("filesSelected()"),self._addDPFiles);
+    self.connect(self.new_entry_dialog,SIGNAL("newLogEntry"),self._newLogEntry);
+    self.connect(self.new_entry_dialog,SIGNAL("filesSelected"),self._addDPFiles);
     self.connect(self.wnewbtn,SIGNAL("clicked()"),self.new_entry_dialog.show);
-    self.connect(self.new_entry_dialog,PYSIGNAL("shown()"),self._checkPounceStatus);
+    self.connect(self.new_entry_dialog,SIGNAL("shown"),self._checkPounceStatus);
     # entry viewer dialog
     self.view_entry_dialog = Purr.Editors.ExistingLogEntryDialog(self);
-    self.connect(self.view_entry_dialog,PYSIGNAL("previous()"),self._viewPrevEntry);
-    self.connect(self.view_entry_dialog,PYSIGNAL("next()"),self._viewNextEntry);
-    self.connect(self.view_entry_dialog,PYSIGNAL("filesSelected()"),self._addDPFilesToOldEntry);
-    self.connect(self.view_entry_dialog,PYSIGNAL("entryChanged()"),self._entryChanged);
+    self.connect(self.view_entry_dialog,SIGNAL("previous()"),self._viewPrevEntry);
+    self.connect(self.view_entry_dialog,SIGNAL("next()"),self._viewNextEntry);
+    self.connect(self.view_entry_dialog,SIGNAL("filesSelected"),self._addDPFilesToOldEntry);
+    self.connect(self.view_entry_dialog,SIGNAL("entryChanged"),self._entryChanged);
     # saving a data product to an older entry will automatically drop it from the
     # new entry dialog
-    self.connect(self.view_entry_dialog,PYSIGNAL("creatingDataProduct()"),
+    self.connect(self.view_entry_dialog,SIGNAL("creatingDataProduct"),
                   self.new_entry_dialog.dropDataProducts);
     # resize selves
     width = Config.getint('main-window-width',512);
@@ -321,8 +333,8 @@ class MainWindow (QMainWindow):
         msg = ": ".join((self._prev_msg,msg));
     else:
       self._prev_msg = msg;
-    self.statusBar().message(msg,ms);
-    QApplication.eventLoop().processEvents(QEventLoop.ExcludeUserInput);
+    self.statusBar().showMessage(msg,ms);
+    QCoreApplication.processEvents(QEventLoop.ExcludeUserInputEvents);
       
   def detachDirectory (self):
     self.purrer and self.purrer.detach();
@@ -351,19 +363,19 @@ class MainWindow (QMainWindow):
         # check that we could attach, display message if not
         QMessageBox.warning(self,"Catfight!","""<P><NOBR>It appears that another PURR process (%s)</NOBR>
           is already attached to <tt>%s</tt>, so we're not allowed to touch it. You should exit the other PURR
-          process first.</P>"""%(err.args[0],os.path.abspath(dirname)),QMessageBox.Ok);
+          process first.</P>"""%(err.args[0],os.path.abspath(dirname)),QMessageBox.Ok,0);
         return False;
       except Purr.Purrer.LockFailError,err:
         QMessageBox.warning(self,"Failed to lock directory","""<P><NOBR>PURR was unable to obtain a lock</NOBR>
-          on directory <tt>%s</tt> (error was "%s"). The most likely cause is insufficient permissions.</P>"""%(os.path.abspath(dirname),err.args[0]),QMessageBox.Ok);
+          on directory <tt>%s</tt> (error was "%s"). The most likely cause is insufficient permissions.</P>"""%(os.path.abspath(dirname),err.args[0]),QMessageBox.Ok,0);
         return False;
       self.purrer_stack.insert(0,purrer);
       # discard end of stack
       self.purrer_stack = self.purrer_stack[:3];
       # attach signals
-      self.connect(purrer,PYSIGNAL("disappearedFile()"),
+      self.connect(purrer,SIGNAL("disappearedFile"),
                    self.new_entry_dialog.dropDataProducts);
-      self.connect(purrer,PYSIGNAL("disappearedFile()"),
+      self.connect(purrer,SIGNAL("disappearedFile"),
                    self.view_entry_dialog.dropDataProducts);
     # have we changed the current purrer? Update our state then
     # reopen pipe
@@ -401,7 +413,7 @@ class MainWindow (QMainWindow):
     self._autopounce = enable;
     if self.purrer:
       self.purrer.autopounce = enable;
-    self.wpounce.setCurrentItem(enable%len(self.pounce_labels));
+    self.wpounce.setCurrentIndex(enable%len(self.pounce_labels));
     self._checkPounceStatus();
     
   def _updateNames (self):
@@ -419,7 +431,7 @@ class MainWindow (QMainWindow):
     self.dir_label.setText("Directory: %s"%self.purrer.dirname);
     title = self.purrer.logtitle or "Unnamed log"
     self.title_label.setText("Log title: <B>%s</B>"%title);
-    self.viewer_dialog.setCaption(title);
+    self.viewer_dialog.setWindowTitle(title);
     
   def _showViewerDialog (self):
     self._updateViewer(True);
@@ -447,7 +459,7 @@ class MainWindow (QMainWindow):
       text = file(self.purrer.indexfile).read();
     except:
       pass;
-    self.viewer_dialog.setDocument(text,os.path.dirname(self.purrer.indexfile));
+    self.viewer_dialog.setDocument(self.purrer.indexfile);
     self.viewer_dialog.setLabel("""<P>Below is your full HTML-rendered log. Note that this window 
       is only a bare-bones viewer, not a real browser. You can't
       click on links, or do anything else besides simply look. For a fully-functional view, use your
@@ -457,14 +469,14 @@ class MainWindow (QMainWindow):
     self._viewer_timestamp = mtime;
     
   def _setEntries (self,entries):
-    self.elv.clear();
+    self.etw.clear();
     item = None;
     for i,entry in enumerate(entries):
       item = self._addEntryItem(entry,i,item);
       
   def _renameLogDialog (self):
-    (title,ok) = QInputDialog.getText("PURR: Rename Log",
-                  "Enter new name for this log",QLineEdit.Normal,self.purrer.logtitle,self);
+    (title,ok) = QInputDialog.getText(self,"PURR: Rename Log",
+                  "Enter new name for this log",QLineEdit.Normal,self.purrer.logtitle);
     if ok and title != self.purrer.logtitle:
       self.setLogTitle(title);
       
@@ -524,37 +536,26 @@ class MainWindow (QMainWindow):
                           [(file,True) for file in files],unbanish=True));
     
   def _entrySelectionChanged (self):
-    nsel = 0;
-    item = self.elv.firstChild();
-    selected = [];
-    while item:
-      if self.elv.isSelected(item) and item._ientry is not None:
-        selected.append(item);
-      item = item.nextSibling();
+    selected = [ item for item in self.etw.iterator(self.etw.Iterator.Selected) if item._ientry is not None ];
     self.weditbtn.setEnabled(len(selected) == 1);
     self.wdelbtn.setEnabled(bool(selected));
       
   def _viewEntryItem (self,item=None,*dum):
     """Pops up the viewer dialog for the entry associated with the given item.
     If 'item' is None, looks for a selected item in the listview.
-    The dum arguments are for connecting this to QListView signals such as doubleClicked().
+    The dum arguments are for connecting this to QTreeWidget signals such as doubleClicked().
     """;
     # if item not set, look for selected items in listview. Only 1 must be selected.
     select = True;
     if item is None:
-      item = self.elv.firstChild();
-      selected = [];
-      while item:
-        if self.elv.isSelected(item) and item._ientry is not None:
-          selected.append(item);
-        item = item.nextSibling();
+      selected = [ item for item in self.etw.iterator(self.etw.Iterator.Selected) if item._ientry is not None ];
       if len(selected) != 1:
         return;
       item = selected[0];
       select = False; # already selected
     else:
       # make sure item is open -- the click will cause it to close
-      item.setOpen(True);
+      self.etw.expandItem(item);
     # show dialog
     ientry = getattr(item,'_ientry',None);
     if ientry is not None:
@@ -569,11 +570,8 @@ class MainWindow (QMainWindow):
     self.view_entry_dialog.show();
     # select entry in listview
     if select:
-      self.elv.clearSelection();
-      item = self.elv.firstChild();
-      for i in range(ientry):
-        item = item and item.nextSibling();
-      self.elv.setSelected(item,True);
+      self.etw.clearSelection();
+      self.etw.setItemSelected(self.etw.topLevelItem(ientry),True);
      
   def _viewPrevEntry (self):
     if self._viewing_ientry is not None and self._viewing_ientry > 0:
@@ -588,10 +586,11 @@ class MainWindow (QMainWindow):
     menu = getattr(item,'_menu',None);
     if menu: 
       # self._current_item tells callbacks what item the menu was referring to
+      point = self.etw.mapToGlobal(point);
       self._current_item = item;
-      self.elv.clearSelection();
-      self.elv.setSelected(item,True);
-      menu.exec_loop(point);
+      self.etw.clearSelection();
+      self.etw.setItemSelected(item,True);
+      menu.exec_(point);
     else:
       self._current_item = None;
       
@@ -614,21 +613,13 @@ class MainWindow (QMainWindow):
   
   def _deleteSelectedEntries (self):
     remaining_entries = [];
-    del_entries = [];
-    item = self.elv.firstChild();
-    hide_viewer = False;
-    while item:
-      if self.elv.isSelected(item):
-        del_entries.append(item._ientry);
-        if self._viewing_ientry == item._ientry:
-          hide_viewer = True;
-      else:
-        remaining_entries.append(item._ientry);
-      item = item.nextSibling();
+    del_entries = list(self.etw.iterator(self.etw.Iterator.Selected));
+    remaining_entries = list(self.etw.iterator(self.etw.Iterator.Unselected));
     if not del_entries:
       return;
-    del_entries = [ self.purrer.entries[i] for i in del_entries ];
-    remaining_entries = [ self.purrer.entries[i] for i in remaining_entries ];
+    hide_viewer = bool([ item for item in del_entries if self._viewing_ientry == item._ientry ]);
+    del_entries = [ self.purrer.entries[self.etw.indexOfTopLevelItem(item)] for item in del_entries ];
+    remaining_entries = [ self.purrer.entries[self.etw.indexOfTopLevelItem(item)] for item in remaining_entries ];
     # ask for confirmation
     if len(del_entries) == 1:
       msg = """<P><NOBR>Permanently delete the log entry</NOBR> "%s"?</P>"""%del_entries[0].title;
@@ -657,25 +648,31 @@ class MainWindow (QMainWindow):
       entry.remove_directory();
       
   def _addEntryItem (self,entry,number,after):
-    item = QListViewItem(self.elv,after);
+    item = QTreeWidgetItem(self.etw,after);
     item.setText(0,self._make_time_label(entry.timestamp));
     item.setText(1," "+(entry.title or ""));
-    comment = " "+(entry.comment or "");
-    item.setText(2,comment);
+    item.setToolTip(1,entry.title);
+    if entry.comment:
+      item.setText(2," "+entry.comment.split('\n')[0]);
+      item.setToolTip(2,"<P>"+entry.comment.replace("<","&lt;").replace(">","&gt;"). \
+                                    replace("\n\n","</P><P>").replace("\n","</P><P>")+"</P>");
     item._ientry = number;
     item._dp = None;
+    item._menu = self._entry_menu;
     # now make subitems for DPs
     subitem = None;
     for dp in entry.dps:
       if not dp.ignored:
         subitem = self._addDPSubItem(dp,item,subitem);
-    item.setOpen(False);
+    self.etw.collapseItem(item);
     return item;
     
   def _addDPSubItem (self,dp,parent,after):
-    item = QListViewItem(parent,after);
+    item = QTreeWidgetItem(parent,after);
     item.setText(1,dp.filename);
+    item.setToolTip(1,dp.filename);
     item.setText(2,dp.comment or "");
+    item.setToolTip(2,dp.comment or "");
     item._ientry = None;
     item._dp = dp;
     item._menu = self._archived_dp_menu;
@@ -690,9 +687,10 @@ class MainWindow (QMainWindow):
     # add entry to listview if it is not an ignored entry
     # (ignored entries only carry information about DPs to be ignored)
     if not entry.ignore:
-      lastitem = self.elv.lastItem();
-      while lastitem and isinstance(lastitem.parent(),QListViewItem):
-        lastitem = lastitem.parent();
+      if self.etw.topLevelItemCount():
+        lastitem = self.etw.topLevelItem(self.etw.topLevelItemCount()-1);
+      else:
+        lastitem = None;
       self._addEntryItem(entry,len(self.purrer.entries)-1,lastitem);
     # log will have changed, so update the viewer
     if not entry.ignore:

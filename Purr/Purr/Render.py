@@ -283,7 +283,6 @@ def renderInTable (renderer,relpath=""):
   """calls renderLink() on the specified renderer. On error, falls back to renderDefault()""";
   return _callRender(renderer,"renderInTable",relpath,fallback="<TR><TD>%s</TD></TR>");
 
-
 addRenderer(DefaultRenderer,"built-in",__file__);
 
 # we don't really need this, but it's better to import it here rather than from a plugin, since

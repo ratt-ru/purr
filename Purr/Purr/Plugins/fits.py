@@ -27,13 +27,14 @@ numpy is available from http://numpy.scipy.org/, or as Debian package python-num
 
   
 # pylab needed for rendering histograms, but we can get on without it
-try:
-  import pylab
-except:
-  print """matplotlib (aka pylab) package not found, rendering of FITS histograms will not be available.
-matplotlib is available from http://matplotlib.sourceforge.net/, or as Debian package python-matplotlib.
-""";
-  pylab = None;
+pylab = None;
+#try:
+  #import pylab
+#except:
+  #print """matplotlib (aka pylab) package not found, rendering of FITS histograms will not be available.
+#matplotlib is available from http://matplotlib.sourceforge.net/, or as Debian package python-matplotlib.
+#""";
+  #pylab = None;
   
 import os.path
 import traceback

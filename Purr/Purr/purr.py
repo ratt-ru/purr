@@ -25,7 +25,7 @@ if __name__ == "__main__":
   import signal
   import os.path
   
-  from qt import *
+  from PyQt4.Qt import *
   
   import Purr
   import Purr.MainWindow
@@ -46,7 +46,7 @@ if __name__ == "__main__":
   purrwin = Purr.MainWindow.MainWindow(None);
   if purrwin.attachDirectory(dirnames[0],dirnames):
     purrwin.setPounceMode(purrwin.PounceShow);
-    app.setMainWidget(purrwin);
+    # app.setMainWidget(purrwin);
     purrwin.show();
     QObject.connect(app,SIGNAL("lastWindowClosed()"),app,SLOT("quit()"));
     
@@ -57,5 +57,5 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT,sigint_handler);
   
     
-    app.exec_loop(); 
+    app.exec_(); 
     print "PURR exiting normally, goodbye!";

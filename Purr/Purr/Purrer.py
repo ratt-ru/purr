@@ -23,7 +23,8 @@ import Purr.Parsers
 import Purr.Render
 import Purr.Plugins
 from Purr import Config,dprint,dprintf
-from qt import QObject,PYSIGNAL
+
+from PyQt4.Qt import QObject,SIGNAL
 
 # this string is used to create lock files
 _lockstring = "%s:%d"%(os.uname()[1],os.getpid());
@@ -570,7 +571,7 @@ class Purrer (QObject):
           dprintf(2,"access error on %s, will no longer be watched",watcher.path);
           del self.watchers[path];
         if not watcher.disappeared:
-          self.emit(PYSIGNAL("disappearedFile()"),(path,));
+          self.emit(SIGNAL("disappearedFile"),path);
           watcher.disappeared = True;
         continue;
       dprintf(5,"%s: %d new file(s)\n",watcher.path,len(newfiles));
@@ -594,7 +595,7 @@ class Purrer (QObject):
       if watcher.newFiles() is None:
         dprintf(2,"access error on %s, marking as disappeared",watcher.path);
         del self.temp_watchers[path];
-        self.emit(PYSIGNAL("disappearedFile()"),(path,));
+        self.emit(SIGNAL("disappearedFile"),path);
     # if we have new data products, send them to the main window
     return self.makeDataProducts(newstuff.iteritems());
           

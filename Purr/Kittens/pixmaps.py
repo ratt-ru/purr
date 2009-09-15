@@ -25,8 +25,10 @@
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-from qt import QPixmap,QIconSet
-from utils import verbosity
+from PyQt4.Qt import *
+PYSIGNAL = SIGNAL;
+
+from Timba.utils import verbosity
 
 import sys
 
@@ -84,17 +86,20 @@ class QPixmapWrapper(object):
     else:             # assume xpm string list to be decoded on-demand 
       self._xpmstr = pm;
       self._pm = None;
-    self._iconset = None;
+    self._icon = None;
   def pm (self):
     """Get QPixmap from wrapper""";
     if self._pm is None:
       self._pm = QPixmap(self._xpmstr);
     return self._pm;
-  def iconset (self):
-    """Get QIconSet from wrapper""";
-    if self._iconset is None:
-      self._iconset = QIconSet(self.pm());
-    return self._iconset;
+  def icon (self):
+    """Get QIcon from wrapper""";
+    if self._icon is None:
+      self._icon = QIcon(self.pm());
+    return self._icon;
+    
+  # for compatibility with old code
+  iconset = icon;
 
 exclaim = QPixmapWrapper([ "14 14 3 1",
           "       c None",
