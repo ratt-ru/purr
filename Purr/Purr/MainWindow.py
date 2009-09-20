@@ -157,6 +157,7 @@ class MainWindow (QMainWindow):
     self.setCentralWidget(cw);
     cwlo = QVBoxLayout(cw);
     cwlo.setMargin(5);
+    cwlo.setSpacing(0);
     toplo = QHBoxLayout(); cwlo.addLayout(toplo);
     label = QLabel("Updated files:",cw);
     label.setToolTip(self.pounce_help);
@@ -175,7 +176,7 @@ class MainWindow (QMainWindow):
     toplo.addWidget(wrescan);
     toplo.addStretch(1);
     about_btn = QPushButton("About...",cw);
-    about_btn.setMinimumWidth(128);
+    about_btn.setMinimumWidth(100);
     # about_btn.setFlat(True);
     about_btn.setIcon(pixmaps.purr_logo.icon());
     toplo.addWidget(about_btn);
@@ -192,6 +193,7 @@ class MainWindow (QMainWindow):
     cwlo.addWidget(logframe);
     log_lo = QVBoxLayout(logframe);
     log_lo.setMargin(5);
+    log_lo.setSpacing(0);
     logframe.setFrameStyle(QFrame.Box|QFrame.Raised);
 #    logframe.setFrameShape(QFrame.Panel);
     logframe.setLineWidth(1);

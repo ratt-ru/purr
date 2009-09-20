@@ -5,10 +5,11 @@ import time
 import os
 import os.path
 
-from Purr import Config,pixmaps
+from Purr import Config,pixmaps,dprint,dprintf
 import Purr.LogEntry
 import Purr.Render
 import Kittens.widgets
+import Kittens.utils
 
 def _makeUniqueFilename (taken_names,name):
   """Helper function. Checks if name is in the set 'taken_names'.
@@ -34,24 +35,23 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     Kittens.widgets.ClickableTreeWidget.__init__(self,*args);
     # insert columns, and numbers for them
     self.header().setDefaultSectionSize(120);
-    columns = [ "action","filename","rename to","render","comment" ];
+    columns = [ "action","filename","type","rename to","render","comment" ];
     self.setHeaderLabels(columns);
-    self.ColAction,self.ColFilename,self.ColRename,self.ColRender,self.ColComment = range(len(columns));
+    self.ColAction,self.ColFilename,self.ColType,self.ColRename,self.ColRender,self.ColComment = range(len(columns));
     self.setSortingEnabled(False);
     self.setRootIsDecorated(False);
+    self.setEditTriggers(QAbstractItemView.AllEditTriggers);
     # sort out resizing modes
     self.header().setMovable(False);
     self.header().setResizeMode(self.ColFilename,QHeaderView.Interactive);
+    self.header().setResizeMode(self.ColType,QHeaderView.ResizeToContents);
     self.header().setResizeMode(self.ColRename,QHeaderView.Interactive);
     self.header().setResizeMode(self.ColComment,QHeaderView.Stretch);
-    if hasattr(QHeaderView,'ResizeToContents'):
-      self.header().setResizeMode(self.ColAction,QHeaderView.ResizeToContents);
-      self.header().setResizeMode(self.ColRender,QHeaderView.ResizeToContents);
-    else:
-      self.header().setResizeMode(self.ColAction,QHeaderView.Custom);
-      self.header().setResizeMode(self.ColRender,QHeaderView.Custom);
-      self.header().resizeSection(self.ColAction,80);
-      self.header().resizeSection(self.ColRender,80);
+    self.header().setResizeMode(self.ColAction,QHeaderView.Fixed);
+    self.header().setResizeMode(self.ColRender,QHeaderView.Fixed);
+    self.header().resizeSection(self.ColAction,64);
+    self.header().resizeSection(self.ColRender,64);
+    self._fontmetrics = QFontMetrics(QFont());
     # setup other properties of the listview
     self.setAcceptDrops(True);
     try: self.setAllColumnsShowFocus(True); 
@@ -79,16 +79,14 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # dictionary of listview items
     # key is (path,archived) tuple, value is item
     self.dpitems = {};
-    
-  # The keys of this dict are valid policies for new data products
-  # The values are the "next" policy when cycling through
-  _policy_cycle = dict(copy="move",move="ignore",ignore="banish",banish="copy");
-  _policy_icons = dict(copy='copy',move='move',ignore='grey_round_cross',banish='red_round_cross');
-  # The keys of this dict are valid policies for archived data products
-  # The values are the "next" policy when cycling through
-  _policy_cycle_archived = dict(keep="remove",remove="keep");
-  _policy_icons_archived = dict(keep="checkmark",remove="grey_round_cross");
-    
+
+    self._policy_list_default 	= ( ("copy",pixmaps.copy.icon()),
+				    ("move",pixmaps.move.icon()),
+				    ("ignore",pixmaps.grey_round_cross.icon()),
+				    ("banish",pixmaps.red_round_cross.icon()) );
+    self._policy_list_archived 	= ( ("keep",pixmaps.checkmark.icon()),
+				    ("remove",pixmaps.grey_round_cross.icon()) );
+
   def _checkDragDropEvent (self,ev):
     """Checks if event contains a file URL, accepts if it does, ignores if it doesn't""";
     mimedata = ev.mimeData();
@@ -165,22 +163,51 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
   def clear (self):
     QTreeWidget.clear(self);
     self.dpitems = {};
-      
-  def _setItemPolicy (self,item,policy):
+
+  def _itemComboBox (self,item,column):
+    """This returns the QComboBox associated with item and column, or creates a new one if
+    it hasn't been created yet. The reason we don't create a combobox immediately is because
+    the item needs to be inserted into its QTreeWidget first.""";
+    if item.treeWidget() is not self:
+      return None;
+    combobox = self.itemWidget(item,column);
+    if not combobox:
+      combobox = QComboBox(self);
+      # combobox.setSizeAdjustPolicy(QComboBox.AdjustToContents);
+      self.setItemWidget(item,column,combobox);
+      width = 0;
+      for num,(name,icon) in enumerate(item._combobox_option_list[column]):
+	if icon:
+	  combobox.addItem(icon,name);
+	else:
+	  combobox.addItem(name);
+	width = max(width,self._fontmetrics.width(name) + (icon and 16 or 0));
+      combobox.setCurrentIndex(item._combobox_current_index[column]);
+      item._combobox_changed[column] = Kittens.utils.curry(self._updateItemComboBoxIndex,item,column);
+      QObject.connect(combobox,SIGNAL("currentIndexChanged(int)"),item._combobox_changed[column]);
+      QObject.connect(combobox,SIGNAL("currentIndexChanged(int)"),self._emitUpdatedSignal);
+      # resize section if needed
+      width += 32;
+      if width > self.header().sectionSize(column):
+	self.header().resizeSection(column,width);
+    return combobox;
+	
+  def _emitUpdatedSignal (self,*dum):
+    self.emit(SIGNAL("updated"));
+
+  def _updateItemComboBoxIndex (self,item,column,num):
+    """Callback for comboboxes: notifies us that a combobox for the given item and column has changed""";
+    item._combobox_current_index[column] = num;
+    item._combobox_current_value[column] = item._combobox_option_list[column][num][0];
+
+  def setItemPolicy (self,item,policy):
     """Sets the policy of the given item""";
-    pmname = item._policy_icons.get(policy);
-    if pmname is None:
-      policy = "copy";
-      pmname = item._policy_icons.get(policy);
-    item._policy = policy;
-    # new DPs get their policy updated
-    item.setText(self.ColAction,policy);
-    pixmap = getattr(pixmaps,pmname,None);
-    if pixmap:
-      item.setIcon(self.ColAction,pixmap.icon());
-    else:
-      item.setIcon(self.ColAction,QIcon());
-      
+    index = item._combobox_indices[self.ColAction].get(policy,0);
+    self._updateItemComboBoxIndex(item,self.ColAction,index);
+    combobox = self.itemWidget(item,self.ColAction);
+    if combobox:
+      combobox.setCurrentIndex(index);
+
   def getItemDPList (self):
     """Returns list of item,dp pairs corresponding to content of listview.
     Not-yet-saved items will have dp=None.""";
@@ -193,26 +220,39 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       item = QTreeWidgetItem(parent,after);
     else:
       item = QTreeWidgetItem();
-    item.setTextAlignment(self.ColAction,Qt.AlignRight);
-    item.setTextAlignment(self.ColFilename,Qt.AlignRight);
-    item.setTextAlignment(self.ColRename,Qt.AlignLeft);
-    item.setTextAlignment(self.ColRender,Qt.AlignHCenter);
-    item.setTextAlignment(self.ColComment,Qt.AlignLeft);
+    item.setTextAlignment(self.ColAction,Qt.AlignRight|Qt.AlignVCenter);
+    item.setTextAlignment(self.ColFilename,Qt.AlignRight|Qt.AlignVCenter);
+    item.setTextAlignment(self.ColType,Qt.AlignLeft|Qt.AlignVCenter);
+    item.setTextAlignment(self.ColRename,Qt.AlignLeft|Qt.AlignVCenter);
+    item.setTextAlignment(self.ColRender,Qt.AlignHCenter|Qt.AlignVCenter);
+    item.setTextAlignment(self.ColComment,Qt.AlignLeft|Qt.AlignVCenter);
     item.setFlags(Qt.ItemIsSelectable|Qt.ItemIsDragEnabled|Qt.ItemIsDropEnabled|Qt.ItemIsEnabled);
     item._dp = dp;
+    # init stuff for combobox functions above
+    item._combobox_option_list = {};
+    item._combobox_current_index = {};
+    item._combobox_current_value = {};
+    item._combobox_indices = {};
+    item._combobox_changed = {};
     # setup available policies for new or archived items, set initial policy
     if dp.archived:
       item._menu = self._archived_dp_menu;
-      item._policy_cycle = self._policy_cycle_archived;
-      item._policy_icons = self._policy_icons_archived;
-      self._setItemPolicy(item,"keep");
+      item._combobox_option_list[self.ColAction] = policies = self._policy_list_archived;
+      policy = "keep";
     else:
-      item._policy_cycle = self._policy_cycle;
-      item._policy_icons = self._policy_icons;
-      self._setItemPolicy(item,dp.policy);
+      item._combobox_option_list[self.ColAction] = policies = self._policy_list_default;
+      policy = dp.policy;
+    # create reverse mapping from policy names to indices
+    item._combobox_indices[self.ColAction] = dict([ (name,num) for num,(name,icon) in enumerate(policies) ]);
+    # init item policy
+    self.setItemPolicy(item,policy);
     # set other columns
-    item.setText(self.ColFilename,os.path.basename(dp.sourcepath));
-    item.setToolTip(self.ColFilename,os.path.basename(dp.sourcepath));
+    basename = os.path.basename(dp.sourcepath);
+    name,ext = os.path.splitext(basename);
+    item.setText(self.ColFilename,name);
+    item.setText(self.ColType,ext);
+    item.setToolTip(self.ColFilename,basename);
+    item.setToolTip(self.ColType,basename);
     item.setData(self.ColComment,Qt.EditRole,QVariant(dp.comment or ""));
     # make sure new filenames are unique
     filename = dp.filename;
@@ -228,13 +268,16 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # get list of available renderers
     item._renderers = Purr.Render.getRenderers(dp.fullpath or dp.sourcepath);
     item._render = 0;
+    item._combobox_option_list[self.ColRender] = [ (name,None) for name in item._renderers ];
+    # create reverse mapping from renderer names to indices
+    item._combobox_indices[self.ColRender] = dict([ (name,num) for num,name in enumerate(item._renderers) ]);
     # for archived items, try to find renderer in list
     if dp.archived:
       try:
         item._render = item._renderers.index(dp.render);
       except:
         pass;
-    item.setText(self.ColRender,item._renderers[0]);
+    self._updateItemComboBoxIndex(item,self.ColRender,item._render);
     # add to map of items
     self.dpitems[dp.fullpath or dp.sourcepath] = item;
     return item;
@@ -245,9 +288,10 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
         return;
       else:
         self.closePersistentEditor(*self._editing);
-        self._editing = None;
+        self._editing = None;	
     if item and column in [self.ColRename,self.ColComment]:
       self._editing = item,column;
+      dprint(0,"opening editor for",item,column);
       self.openPersistentEditor(item,column);
   
   def _itemClicked (self,button,item,point,column):
@@ -255,13 +299,6 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     if not item or button != Qt.LeftButton:
       return;
     self._startOrStopEditing(item,column);  # start editing if editable column
-    if column == self.ColAction:
-      self._setItemPolicy(item,item._policy_cycle.get(item._policy,"copy"));
-      self.emit(SIGNAL("updated"));
-    elif column == self.ColRender:
-      item._render = (item._render+1)%len(item._renderers);
-      item.setText(self.ColRender,item._renderers[item._render]);
-      self.emit(SIGNAL("updated"));
   
   def _itemRenamed (self,item,col):
     self._startOrStopEditing();
@@ -312,10 +349,13 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     
   def fillDataProducts(self,dps):
     """Fills listview with existing data products""";
-    after = None;
+    item = None;
     for dp in dps:
       if not dp.ignored:
-        after = self._makeDPItem(self,dp,after);
+        item = self._makeDPItem(self,dp,item);
+	# ensure combobox widgets are made
+	self._itemComboBox(item,self.ColAction);
+	self._itemComboBox(item,self.ColRender);
       
   def addDataProducts(self,dps):
     """Adds new data products to listview. dps is a list of DP objects.
@@ -344,6 +384,10 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     if itemlist:
       self.insertTopLevelItems(index,itemlist);
       self.emit(SIGNAL("updated"));
+    for item in itemlist:
+      # ensure combobox widgets are made
+      self._itemComboBox(item,self.ColAction);
+      self._itemComboBox(item,self.ColRender);
     return wakeup;
   
   def dropDataProducts (self,*pathnames):
@@ -377,13 +421,14 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
           resolved = True;
           self.emit(SIGNAL("updated"));
     return resolved;
-        
+       
   def buildDPList (self):
     """Builds list of data products."""
     dps = [];
     itemlist = self.getItemDPList();
     # first remove all items marked for removal, in case their names clash with new or renamed items
     for item,dp in itemlist:
+      item._policy = item._combobox_current_value[self.ColAction];
       if dp and item._policy == "remove":
         dp.remove_file();
         dp.remove_subproducts();
@@ -392,7 +437,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       if item._policy == "remove":
         continue;
       # update rendered and comment
-      dp.render  = str(item.text(self.ColRender));
+      dp.render  = item._combobox_current_value[self.ColRender];
       dp.comment = str(item.text(self.ColComment));
       # archived DPs may need to be renamed, for new ones simply set the name
       if dp.archived:
@@ -660,7 +705,7 @@ class LogEntryEditor (QWidget):
     # update widget
     self.comment_doc.setPlainText(cur_comment);
     if cpos:
-      cpos = self.wcomment.setTextCursor();
+      self.wcomment.setTextCursor(cpos);
     
   def countRemovedDataProducts (self):
     """Returns number of DPs marked for removal""";
@@ -715,7 +760,7 @@ class LogEntryEditor (QWidget):
       if dp and not dp.archived: # None means a new DP
         # set all policies to ignore, unless already set to banish
         if dp.policy != "banish":
-          self.wdplv._setItemPolicy(item,"ignore");
+          self.wdplv.setItemPolicy(item,"ignore");
           dp.set_policy("ignore");
         dps.append(dp);
     # return new entry
