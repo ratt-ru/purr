@@ -117,7 +117,7 @@ class DataProduct (object):
     busy = Purr.BusyIndicator();
     # remove file if in the way
     if exists:
-      if os.system("/bin/rm -fr %s"%self.sourcepath):
+      if os.system("/bin/rm -fr '%s'"%self.sourcepath):
         busy = None;
         if parent:
           QMessageBox.warning(parent,"Error removing file","""<P>
@@ -126,7 +126,7 @@ class DataProduct (object):
             QMessageBox.Ok,0);
         return False;
     # copy over archived file
-    if os.system("/bin/cp -a %s %s"%(self.fullpath,self.sourcepath)):
+    if os.system("/bin/cp -a '%s' '%s'"%(self.fullpath,self.sourcepath)):
       busy = None;
       if parent:
         QMessageBox.warning(parent,"Error copying file","""<P>
@@ -277,14 +277,14 @@ class LogEntry (object):
           dp.timestamp = os.path.getmtime(destname);
           dps.append(dp);
           continue;
-        if os.system("/bin/rm -fr %s"%destname):
+        if os.system("/bin/rm -fr '%s'"%destname):
           print "Error removing %s, which is in the way of %s"%(destname,sourcepath);
           print "This data product is not saved.";
           continue;
       # now copy/move it over
       if dp.policy == "copy":
         dprintf(2,"copying\n");
-        if os.system("/bin/cp -ua %s %s"%(sourcepath,destname)):
+        if os.system("/bin/cp -ua '%s' '%s'"%(sourcepath,destname)):
           print "Error copying %s to %s"%(sourcepath,destname);
           print "This data product is not saved.";
           continue;
@@ -292,18 +292,18 @@ class LogEntry (object):
         # files or directories on same device may be moved directly
         if not os.path.isdir(sourcepath) or os.stat(sourcepath).st_dev == devnum:
           dprintf(2,"same filesystem, moving\n");
-          if os.system("/bin/mv -fu %s %s"%(sourcepath,destname)):
+          if os.system("/bin/mv -fu '%s' '%s'"%(sourcepath,destname)):
             print "Error moving %s to %s"%(sourcepath,destname);
             print "This data product is not saved.";
             continue;
         # else copy, then remove
         else:
           dprintf(2,"different filesystem, copying & removing\n");
-          if os.system("/bin/mv -fu %s %s"%(sourcepath,destname)):
+          if os.system("/bin/cp -ua '%s' '%s'"%(sourcepath,destname)):
             print "Error moving %s to %s"%(sourcepath,destname);
             print "This data product is not saved.";
             continue;
-          os.system("/bin/rm -fr %s"%sourcepath);
+          os.system("/bin/rm -fr '%s'"%sourcepath);
       # success, set timestamp and append
       dp.timestamp = os.path.getmtime(destname);
       dp.archived = True;
@@ -321,7 +321,7 @@ class LogEntry (object):
     """Removes this entry's directory from disk""";
     if not self.pathname:
       return;
-    if os.system("/bin/rm -fr %s"%self.pathname):
+    if os.system("/bin/rm -fr '%s'"%self.pathname):
       print "Error removing %s";
     
   def timeLabel (self):

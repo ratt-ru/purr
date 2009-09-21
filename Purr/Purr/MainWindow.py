@@ -608,8 +608,9 @@ class MainWindow (QMainWindow):
       return;
     dp = getattr(self._current_item,'_dp',None);
     if dp and dp.archived:
-      QApplication.clipboard().setText(dp.fullpath,QClipboard.Clipboard);
-      QApplication.clipboard().setText(dp.fullpath,QClipboard.Selection);
+      path = dp.fullpath.replace(" ","\\ ");
+      QApplication.clipboard().setText(path,QClipboard.Clipboard);
+      QApplication.clipboard().setText(path,QClipboard.Selection);
       
   def _restoreItemFromArchive (self):
     """Callback for item menu.""";
