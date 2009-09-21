@@ -654,9 +654,9 @@ class MainWindow (QMainWindow):
     # delete entry files
     for entry in del_entries:
       entry.remove_directory();
-      
+
   def _addEntryItem (self,entry,number,after):
-    item = QTreeWidgetItem(self.etw,after);
+    item = entry.tw_item = QTreeWidgetItem(self.etw,after);
     item.setText(0,self._make_time_label(entry.timestamp));
     item.setText(1," "+(entry.title or ""));
     item.setToolTip(1,entry.title);
@@ -709,6 +709,16 @@ class MainWindow (QMainWindow):
     """This is called when a log entry is changed""";
     # resave the log
     self.purrer.save();
+    # redo entry item
+    if entry.tw_item:
+      number = entry.tw_item._ientry;
+      entry.tw_item = None;
+      self.etw.takeTopLevelItem(number);
+      if number:
+	after = self.etw.topLevelItem(number-1);
+      else:
+	after = None;
+      self._addEntryItem(entry,number,after);
     # log will have changed, so update the viewer
     self._updateViewer();
     

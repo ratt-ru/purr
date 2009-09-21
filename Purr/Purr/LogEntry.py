@@ -160,6 +160,8 @@ class LogEntry (object):
     self.updated = True;
     if load:
       self.load(load);
+    # QTreeWidgetItem associated with this log entry
+    self.tw_item = None;
     
   _entry_re = re.compile(".*/(entry|ignore)-(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$");
   
