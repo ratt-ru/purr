@@ -12,6 +12,7 @@ import Purr.LogEntry
 import Purr.Pipe
 from Purr import Config,pixmaps,dprint,dprintf
 import Kittens.widgets
+import Kittens.utils
 
 class BusyIndicator (object):
   def __init__ (self):
@@ -68,7 +69,8 @@ class HTMLViewerDialog (QDialog):
         if tip:
           btn.setToolTip(tip);
       self._user_buttons[name] = btn;
-      self.connect(btn,SIGNAL("clicked()"),self,SIGNAL(name));
+      btn._clicked = Kittens.utils.curry(self.emit,SIGNAL(name));
+      self.connect(btn,SIGNAL("clicked()"),btn._clicked);
       btnfr_lo.addWidget(btn,1);
     # add a Close button
     btnfr_lo.addStretch(100);
@@ -80,7 +82,7 @@ class HTMLViewerDialog (QDialog):
     width = Config.getint('%s-width'%self.config_name,512);
     height = Config.getint('%s-height'%self.config_name,512);
     self.resize(QSize(width,height));
-    
+   
   def resizeEvent (self,ev):
     QDialog.resizeEvent(self,ev);
     sz = ev.size();
@@ -94,6 +96,9 @@ class HTMLViewerDialog (QDialog):
     
   def _resetSource (self,*dum):
     self.viewer.setSource(self._source);
+
+  def reload (self):
+    self.viewer.reload();
     
   def setLabel (self,label=None):
     if label is None:
@@ -462,6 +467,7 @@ class MainWindow (QMainWindow):
     except:
       pass;
     self.viewer_dialog.setDocument(self.purrer.indexfile);
+    self.viewer_dialog.reload();
     self.viewer_dialog.setLabel("""<P>Below is your full HTML-rendered log. Note that this window 
       is only a bare-bones viewer, not a real browser. You can't
       click on links, or do anything else besides simply look. For a fully-functional view, use your
