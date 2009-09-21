@@ -120,33 +120,11 @@ class MainWindow (QMainWindow):
     generate an HTML page with a rendering of your log and data products.</P>
   """;
   
-  pounce_help = \
-      """<P>This control determines what PURR does about updated files.</P>
-      
-      <P>If <B>pounce & show</B> is selected, PURR will periodically check your working directories for new
-      or updated files, and pop up the "New Log Entry" dialog when it detects any.</P>
-      
-      <P><B>Pounce</B> alone is less obtrusive. PURR will watch for files and quietly add them to the "New Log Entry" dialog, but will not display the dialog. You can display the dialog yourself by
-      clicking on "New entry".</P>
-      
-      <P>If <B>ignore</B> is selected, PURR will not watch for changes at all. In this mode, you can use the "Rescan" button to check for new or updated files.</P>
-      """;
-
-  # constants for autopounce modes
-  PounceIgnore = 0;
-  PouncePounce = 1;
-  PounceShow = 2;
-  # labels for the pounce mode combobox
-  pounce_labels = [ "ignore","pounce","pounce & show" ];
-  
   def __init__ (self,parent,hide_on_close=False):
     QMainWindow.__init__(self,parent);
     self._hide_on_close = hide_on_close;
     # replace the BusyIndicator class with a GUI-aware one
     Purr.BusyIndicator = BusyIndicator;
-    # autopounce is on if GUI checkbox is on
-    # pounce is on if autopounce is on, or the new Entry dialog is visible.
-    self._autopounce = self.PounceIgnore;
     self._pounce = False;
     # we keep a small stack of previously active purrers. This makes directory changes
     # faster (when going back and forth between dirs)
@@ -164,66 +142,14 @@ class MainWindow (QMainWindow):
     cwlo.setMargin(5);
     cwlo.setSpacing(0);
     toplo = QHBoxLayout(); cwlo.addLayout(toplo);
-    label = QLabel("Updated files:",cw);
-    label.setToolTip(self.pounce_help);
-    toplo.addWidget(label);
-    toplo.addSpacing(5);
-    self.wpounce = QComboBox(cw);
-    self.wpounce.setToolTip(self.pounce_help);
-    self.wpounce.addItems(self.pounce_labels);
-    self.wpounce.setCurrentIndex(self._autopounce);
-    self.connect(self.wpounce,SIGNAL("activated(int)"),self.setPounceMode);
-    toplo.addWidget(self.wpounce,1);
-    toplo.addSpacing(5);
-    wrescan = QPushButton(pixmaps.blue_round_reload.icon(),"Rescan",cw);
-    wrescan.setToolTip("Checks your working directories for new or updated files.");
-    self.connect(wrescan,SIGNAL("clicked()"),self._forceRescan);
-    toplo.addWidget(wrescan);
-    toplo.addStretch(1);
-    about_btn = QPushButton("About...",cw);
-    about_btn.setMinimumWidth(100);
-    # about_btn.setFlat(True);
-    about_btn.setIcon(pixmaps.purr_logo.icon());
-    toplo.addWidget(about_btn);
+
+    # About dialog
     self._about_dialog = QMessageBox(self);
     self._about_dialog.setWindowTitle("About PURR");
     self._about_dialog.setText(self.about_message + """
         <P>PURR is not watching any directories right now. Click on the "Updated files" option to start
         watching your current directory.</P>""");
-    # self._about_dialog.setStandardButtons(QMessageBox.Ok);
-    self._about_dialog.setIconPixmap(pixmaps.purr_logo.pm()); 
-    self.connect(about_btn,SIGNAL("clicked()"),self._about_dialog.exec_);
-    cwlo.addSpacing(5);
-    logframe = QFrame(cw);
-    cwlo.addWidget(logframe);
-    log_lo = QVBoxLayout(logframe);
-    log_lo.setMargin(5);
-    log_lo.setSpacing(0);
-    logframe.setFrameStyle(QFrame.Box|QFrame.Raised);
-#    logframe.setFrameShape(QFrame.Panel);
-    logframe.setLineWidth(1);
-    self.dir_label = QLabel("Directory: none",logframe);
-    self.dir_label.setToolTip("""<P>This is the directory where your current purrlog is stored.
-      If you want to change this, you must restart PURR with a different directory name.</P>""");
-    log_lo.addWidget(self.dir_label);
-    title_lo = QHBoxLayout(); log_lo.addLayout(title_lo); 
-    self.title_label = QLabel("Log title: none",logframe);
-    self.title_label.setToolTip("""<P>This is your current log title. To change, click on the "Rename" button.</P>""");
-    title_lo.addWidget(self.title_label,1);
-    self.wrename = QPushButton("Rename",logframe);
-    self.wrename.setToolTip("Click to edit log title");
-    self.wrename.setMinimumWidth(80);
-    # self.wrename.setFlat(True);
-    self.wrename.setEnabled(False);
-    self.connect(self.wrename,SIGNAL("clicked()"),self._renameLogDialog);
-    title_lo.addWidget(self.wrename,0);
-    title_lo.addSpacing(5);
-    self.wviewlog = QPushButton(pixmaps.openbook.icon(),"View",logframe);
-    self.wviewlog.setToolTip("Click to see an HTML rendering of the log");
-    self.wviewlog.setMinimumWidth(80);
-    # self.wviewlog.setFlat(True);
-    self.wviewlog.setEnabled(False);
-    # log viewer dialog
+    # Log viewer dialog
     self.viewer_dialog = HTMLViewerDialog(self,config_name="log-viewer",
           buttons=[(pixmaps.blue_round_reload,"Regenerate",
                    """<P>Regenerates your log's HTML code from scratch. This can be useful if
@@ -231,10 +157,68 @@ class MainWindow (QMainWindow):
                    the last time the files were generated.</P>
                    """)]);
     self._viewer_timestamp = None;
-    self.connect(self.wviewlog,SIGNAL("clicked()"),self._showViewerDialog);
     self.connect(self.viewer_dialog,SIGNAL("Regenerate"),self._regenerateLog);
-    title_lo.addWidget(self.wviewlog,0);
+
+    # Log title toolbar
+    title_tb = QToolBar(cw);
+    title_tb.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
+    title_tb.setIconSize(QSize(16,16));
+    cwlo.addWidget(title_tb);
+    title_label = QLabel("Purrlog title:",title_tb);
+    title_tb.addWidget(title_label);
+    self.title_editor = QLineEdit(title_tb);
+    title_tb.addWidget(self.title_editor);
+    self.connect(self.title_editor,SIGNAL("editingFinished()"),self._titleChanged);
+    tip = """<P>This is your current log title. To rename the log, enter new name here and press Enter.</P>"""
+    title_label.setToolTip(tip);
+    self.title_editor.setToolTip(tip);
+    self.wviewlog = title_tb.addAction(pixmaps.openbook.icon(),"View",self._showViewerDialog);
+    self.wviewlog.setToolTip("Click to see an HTML rendering of the log");
+    qa = title_tb.addAction(pixmaps.purr_logo.icon(),"About...",self._about_dialog.exec_);
+    qa.setToolTip("<P>Click to see the About... dialog</P>");
+
+    self.wdirframe = QFrame(cw);
+    cwlo.addWidget(self.wdirframe);
+    self.dirs_lo = QVBoxLayout(self.wdirframe);
+    self.dirs_lo.setMargin(5);
+    self.dirs_lo.setSpacing(0);
+    self.wdirframe.setFrameStyle(QFrame.Box|QFrame.Raised);
+    self.wdirframe.setLineWidth(1);
+
+    ## Directories toolbar
+    dirs_tb = QToolBar(self.wdirframe);
+    dirs_tb.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
+    dirs_tb.setIconSize(QSize(16,16));
+    self.dirs_lo.addWidget(dirs_tb);
+    label = QLabel("Monitoring directories:",dirs_tb);
+    self._dirs_tip = """<P>PURR can monitor your working directories for new or updated files. If there's a checkmark
+      next to the directory name in this list, PURR is monitoring it. 
+
+      When a new or updated file is detected, it is added to the "New entry..." dialog box. 
+      happens when a new or updated file is detected depends on the setting of the per-directory mode selector to the
+      right of the directory name:
+      </P>
+      <DL>
+      <DT><B>pounce & show</B></DT><DD>PURR displays the "New entry..." dialog, and adds the file to it.</DD>
+      <DT><B>pounce</B></DT><DD>PURR quietly adds the file to the dialog, without displaying it.</DD>
+      <DT><B>ignore</B></DT><DD>PURR ignores the file. In this mode, use the "Rescan" button to check for new files.</DD>
+      </DL>
+      """
+    label.setToolTip(self._dirs_tip);
+    label.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.Minimum);
+    dirs_tb.addWidget(label);
+    # qa = dirs_tb.addAction(pixmaps.blue_round_reload.icon(),"Rescan",self._forceRescan);
+    # qa.setToolTip("Click to rescan the directories for any new or updated files.");
+    self.wshownew = QCheckBox("show new files",dirs_tb);
+    dirs_tb.addWidget(self.wshownew);
+    self.wshownew.setCheckState(Qt.Checked);
+    self.wshownew.setToolTip("""<P>If this is checked, the "New entry" dialog will pop up automatically whenever 
+	new or updated files are detected. If this is unchecked, the files will be added to the dialog quietly; 
+	you can show it manually by clicking on the "New entry..." button below.</P>""");
+    self._dir_entries = {};
+
     cwlo.addSpacing(5);
+
     # listview of log entries
     self.etw = Kittens.widgets.ClickableTreeWidget(cw);
     cwlo.addWidget(self.etw);
@@ -342,8 +326,47 @@ class MainWindow (QMainWindow):
       self._prev_msg = msg;
     self.statusBar().showMessage(msg,ms);
     QCoreApplication.processEvents(QEventLoop.ExcludeUserInputEvents);
+
+  class WatchedDirEntry (object):
+    def __init__ (self,path,mw,purrer):
+      self.path = path;
+      self.tb = self.wwatch = None;
+      self.purrer = purrer;
+      self.watching = True;
+      self.mainwin = mw;
+      self.purrer.enableWatching(self.path);
+
+    def enable_watching (self,enable):
+      self.watching = bool(enable);
+      if enable:
+	self.purrer.enableWatching(self.path);
+      else:
+	self.purrer.disableWatching(self.path);
+      self.mainwin._checkPounceStatus();
+
+  def _addWatchedDirectories (self,*dirs):
+    for dirname in dirs:
+      entry = self._dir_entries[dirname] = MainWindow.WatchedDirEntry(dirname,self,self.purrer);
+      tb = entry.tb = QToolBar(self.wdirframe);
+      self.dirs_lo.addWidget(tb);
+      tb.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
+      tb.setIconSize(QSize(16,16));
+      # make QLabel with dirname
+      entry.wwatch = QCheckBox(dirname,tb);
+      tb.addWidget(entry.wwatch);
+      entry.wwatch.setToolTip(self._dirs_tip);
+      entry.wwatch.setCheckState(Qt.Checked);
+      self.connect(entry.wwatch,SIGNAL("stateChanged(int)"),entry.enable_watching);
+
+  def _clearWatchedDirectories (self):
+    dum = QWidget();
+    for entry in self._dir_entries.itervalues():
+      self.dirs_lo.removeWidget(entry.tb);
+      entry.tb.setParent(dum);
+    self._dir_entries = {};
       
   def detachDirectory (self):
+    self._clearWatchedDirectories();
     self.purrer and self.purrer.detach();
     
   def attachDirectory (self,dirname,watchdirs=None):
@@ -360,7 +383,7 @@ class MainWindow (QMainWindow):
         # update purrer with watched directories, in case they have changed
         if watchdirs:
           purrer.watchDirectories(watchdirs);
-        break;
+	break;
     # no purrer found, make a new one
     else:
       dprint(1,"creating new Purrer object");
@@ -396,36 +419,28 @@ class MainWindow (QMainWindow):
       self.new_entry_dialog.setDefaultDirs(*purrer.watched_dirs);
       self.view_entry_dialog.setDefaultDirs(*purrer.watched_dirs);
       self.view_entry_dialog.hide();
+      self.viewer_dialog.hide();
       self._viewing_ientry = None;
       self._setEntries(self.purrer.getLogEntries());
       self._viewer_timestamp = None;
       self._updateViewer();
       self._updateNames();
-      # set autopounce property from purrer. Reset _pounce to false -- this will cause
-      # checkPounceStatus() into a rescan if autopounce is on.
-      self.setPounceMode(purrer.autopounce);
+      # update directory widgets
+      self._clearWatchedDirectories();
+      self._addWatchedDirectories(*purrer.watched_dirs);
+      # Reset _pounce to false -- this will cause checkPounceStatus() into a rescan 
       self._pounce = False;
       self._checkPounceStatus();
     return True;
     
   def setLogTitle (self,title):
-    self.purrer.setLogTitle(title);
+    if title != self.purrer.logtitle:
+      self.purrer.setLogTitle(title);
+      self._updateViewer();
     self._updateNames();
-    self._updateViewer();
-    
-  def setPounceMode (self,enable=PounceShow):
-    enable = int(enable)%len(self.pounce_labels);
-    if enable != self.PounceIgnore and not self.purrer:
-      self.attachDirectory('.');
-    self._autopounce = enable;
-    if self.purrer:
-      self.purrer.autopounce = enable;
-    self.wpounce.setCurrentIndex(enable%len(self.pounce_labels));
-    self._checkPounceStatus();
     
   def _updateNames (self):
     self.wnewbtn.setEnabled(True);
-    self.wrename.setEnabled(True);
     self.wviewlog.setEnabled(True);
     self._about_dialog.setText(self.about_message + """
     <P>Your current log resides in:<PRE>  <tt>%s</tt></PRE>To see your log in all its HTML-rendered glory, point your browser to <tt>index.html</tt> therein, or use the handy "View" button provided by PURR.</P>
@@ -435,9 +450,9 @@ class MainWindow (QMainWindow):
     """%(self.purrer.logdir,
       "".join([ "<PRE>  <tt>%s</tt></PRE>"%name for name in self.purrer.watched_dirs ])
     ));
-    self.dir_label.setText("Directory: %s"%self.purrer.dirname);
+    # self.dir_label.setText("Directory: %s"%self.purrer.dirname);
     title = self.purrer.logtitle or "Unnamed log"
-    self.title_label.setText("Log title: <B>%s</B>"%title);
+    self.title_editor.setText(title);
     self.viewer_dialog.setWindowTitle(title);
     
   def _showViewerDialog (self):
@@ -482,14 +497,11 @@ class MainWindow (QMainWindow):
     for i,entry in enumerate(entries):
       item = self._addEntryItem(entry,i,item);
       
-  def _renameLogDialog (self):
-    (title,ok) = QInputDialog.getText(self,"PURR: Rename Log",
-                  "Enter new name for this log",QLineEdit.Normal,self.purrer.logtitle);
-    if ok and title != self.purrer.logtitle:
-      self.setLogTitle(title);
+  def _titleChanged (self):
+    self.setLogTitle(str(self.title_editor.text()));
       
   def _checkPounceStatus (self):
-    pounce = self._autopounce != self.PounceIgnore or self.new_entry_dialog.isVisible();
+    pounce = bool([ entry for entry in self._dir_entries.itervalues() if entry.watching ]);
     # rescan, if going from not-pounce to pounce
     if pounce and not self._pounce:
       self._rescan();
@@ -510,7 +522,7 @@ class MainWindow (QMainWindow):
         filenames = [dp.filename for dp in dps];
         dprint(2,"new data products:",filenames);
         self.message("Pounced on "+", ".join(filenames));
-        if self.new_entry_dialog.addDataProducts(dps) and (force or self._autopounce == self.PounceShow):
+        if self.new_entry_dialog.addDataProducts(dps) and (force or self.wshownew.checkState() ):
           dprint(2,"showing dialog");
           self.new_entry_dialog.show();
     # else read stuff from pipe

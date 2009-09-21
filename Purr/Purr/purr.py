@@ -45,7 +45,6 @@ if __name__ == "__main__":
 
   purrwin = Purr.MainWindow.MainWindow(None);
   if purrwin.attachDirectory(dirnames[0],dirnames):
-    purrwin.setPounceMode(purrwin.PounceShow);
     # app.setMainWidget(purrwin);
     purrwin.show();
     QObject.connect(app,SIGNAL("lastWindowClosed()"),app,SLOT("quit()"));

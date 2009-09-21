@@ -71,6 +71,7 @@ class Purrer (QObject):
       """
       QObject.__init__(self);
       self.path = path;
+      self.enabled = True;
       self.quiet = quiet;
       self.mtime = mtime or self.getmtime();
       self.survive_deletion = survive_deletion;
@@ -88,6 +89,8 @@ class Purrer (QObject):
     def isUpdated (self):
       """Checks if file was updated (i.e. mtime changed) since last check. Returns True if so.
       Returns None on access error."""
+      if not self.enabled:
+	return None;
       mtime = self.getmtime();
       if mtime is None:
         return None;
@@ -154,6 +157,8 @@ class Purrer (QObject):
       """Returns new files (since last call to newFiles, or since creation).
       Return value is an iterable of (full) paths.
       Returns None on access error."""
+      if not self.enabled:
+	return None;
       if self.fileset is None:
         return None;
       newfiles = set(self._newfiles);  # some newfiles may have been found in __init__
@@ -415,7 +420,13 @@ class Purrer (QObject):
     dprint(1,"ignoring patterns",self._ignore_patterns);
     Config.set("watch-patterns",make_pattern_list(self._watch));
     Config.set("ignore-patterns",make_pattern_list(self._ignore));
-    
+
+  def enableWatching (self,path):
+    self._unwatched_paths.discard(path);
+
+  def disableWatching (self,path):
+    self._unwatched_paths.add(path);
+ 
   def watchDirectories (self,dirs):
     """Starts watching the specified directories for changes"""
     # see if we're alredy watching this exact set of directories -- do nothing if so
@@ -426,6 +437,7 @@ class Purrer (QObject):
     # collect timestamps of specified directories
     dprintf(2,"scanning directories, our timestamp is %s\n",
               time.strftime("%x %X",time.localtime(self.timestamp)));
+    self._unwatched_paths = set();
     for dirname in newset:
       wdir = Purrer.WatchedDir(dirname,mtime=self.timestamp,
               watch_patterns=self._watch_patterns,ignore_patterns=self._ignore_patterns);
@@ -551,7 +563,7 @@ class Purrer (QObject):
     
   def rescan (self):
     """Checks files and directories on watchlist for updates, rescans them for new data products.
-    If any are found, returns them.
+    If any are found, returns them. Skips those in directories disabled with disableWatching().
     """;
     if not self.attached:
       return;
@@ -575,6 +587,8 @@ class Purrer (QObject):
           watcher.disappeared = True;
         continue;
       dprintf(5,"%s: %d new file(s)\n",watcher.path,len(newfiles));
+      # skip files in self._unwatched_paths
+      newfiles = [ filename for filename in newfiles if os.path.dirname(filename) not in self._unwatched_paths ];
       # Now go through files and add them to the newstuff dict
       for newfile in newfiles:
         # if quiet flag is explicitly set on watcher, use it, else compare filename to quiet patterns
