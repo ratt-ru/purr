@@ -114,10 +114,10 @@ class MainWindow (QMainWindow):
     a stable version, or "<B>P</B>URR <B>U</B>sually <B>R</B>emembers <B>R</B>eductions", for those 
     working with a development version, or "<B>P</B>URR <B>U</B>sed to <B>R</B>emember <B>R</B>eductions", 
     for those working with a broken version) is a tool for
-    automatically keeping a log of your data reduction operations. PURR will watch your working directories
-    for new files (called "data products"), and upon seeing any, it can "pounce" -- that is, offer
-    you the option of saving them to a log, along with descriptive comments. It will then
-    generate an HTML page with a rendering of your log and data products.</P>
+    automatically keeping a log of your data reduction operations. PURR will monitor your working directories
+    for new or updated files (called "data products"), and upon seeing any, it can "pounce" -- that is, offer
+    you the option of saving the files to a log, along with descriptive comments. It will then
+    generate an HTML page with a pretty rendering of your log and data products.</P>
   """;
   
   def __init__ (self,parent,hide_on_close=False):
@@ -147,8 +147,8 @@ class MainWindow (QMainWindow):
     self._about_dialog = QMessageBox(self);
     self._about_dialog.setWindowTitle("About PURR");
     self._about_dialog.setText(self.about_message + """
-        <P>PURR is not watching any directories right now. Click on the "Updated files" option to start
-        watching your current directory.</P>""");
+        <P>PURR is not watching any directories right now. You may need to restart it, and give it 
+	some directory names on the command line.</P>""");
     # Log viewer dialog
     self.viewer_dialog = HTMLViewerDialog(self,config_name="log-viewer",
           buttons=[(pixmaps.blue_round_reload,"Regenerate",
@@ -194,15 +194,9 @@ class MainWindow (QMainWindow):
     self._dirs_tip = """<P>PURR can monitor your working directories for new or updated files. If there's a checkmark
       next to the directory name in this list, PURR is monitoring it. 
 
-      When a new or updated file is detected, it is added to the "New entry..." dialog box. 
-      happens when a new or updated file is detected depends on the setting of the per-directory mode selector to the
-      right of the directory name:
-      </P>
-      <DL>
-      <DT><B>pounce & show</B></DT><DD>PURR displays the "New entry..." dialog, and adds the file to it.</DD>
-      <DT><B>pounce</B></DT><DD>PURR quietly adds the file to the dialog, without displaying it.</DD>
-      <DT><B>ignore</B></DT><DD>PURR ignores the file. In this mode, use the "Rescan" button to check for new files.</DD>
-      </DL>
+      When a new or updated file is detected, it is added to the list of files in the "New entry" window. 
+      This is called "pouncing". If the "show new files" option is checked, the "New entry" window will pop
+      up automatically whenever a file is pounced on.</P>
       """
     label.setToolTip(self._dirs_tip);
     label.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.Minimum);
@@ -212,9 +206,9 @@ class MainWindow (QMainWindow):
     self.wshownew = QCheckBox("show new files",dirs_tb);
     dirs_tb.addWidget(self.wshownew);
     self.wshownew.setCheckState(Qt.Checked);
-    self.wshownew.setToolTip("""<P>If this is checked, the "New entry" dialog will pop up automatically whenever 
-	new or updated files are detected. If this is unchecked, the files will be added to the dialog quietly; 
-	you can show it manually by clicking on the "New entry..." button below.</P>""");
+    self.wshownew.setToolTip("""<P>If this is checked, the "New entry" window will pop up automatically whenever 
+	new or updated files are detected. If this is unchecked, the files will be added to the window quietly
+        and unobtrusively; you can show the window manually by clicking on the "New entry..." button below.</P>""");
     self._dir_entries = {};
 
     cwlo.addSpacing(5);
@@ -413,6 +407,17 @@ class MainWindow (QMainWindow):
     if purrer is not self.purrer:
       self.message("Attached to directory %s"%purrer.dirname);
       dprint(1,"current Purrer changed, updating state");
+      # set window title
+      path = purrer.logdir;
+      home = os.path.expanduser("~");
+      if not home.endswith("/"):
+	home += "/";
+      if not path.endswith("/"):
+	path += "/";
+      if path.startswith(home):
+	path = "~/"+path[len(home):];
+      self.setWindowTitle("PURR - %s"%path);
+      # other init
       self.purrer = purrer;
       self.new_entry_dialog.hide();
       self.new_entry_dialog.reset();
