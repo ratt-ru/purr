@@ -103,7 +103,7 @@ class DataProduct (object):
     exists = os.path.exists(self.sourcepath);
     if parent:
       msg = """<P>Do you really want to restore <tt>%s</tt> from 
-            this entry's archived copy of <tt>%s</tt>?</P>"""%(self.sourcepath,self.filename);
+            this entry's copy of <tt>%s</tt>?</P>"""%(self.sourcepath,self.filename);
       exists = os.path.exists(self.sourcepath);
       if exists:
         msg += """<P>Current file exists, and will be overwritten.</P>""";
@@ -125,14 +125,26 @@ class DataProduct (object):
             The text console may have more information.</P>"""%self.sourcepath,
             QMessageBox.Ok,0);
         return False;
-    # copy over archived file
-    if os.system("/bin/cp -a '%s' '%s'"%(self.fullpath,self.sourcepath)):
-      busy = None;
-      if parent:
-        QMessageBox.warning(parent,"Error copying file","""<P>
-          There was an error copying the archived version to %s. The text console may have more information.</P>"""%self.sourcepath,
-          QMessageBox.Ok,0);
-      return False;
+    # unpack archived file
+    if self.fullpath.endswith('.tgz'):
+      parent_dir = os.path.dirname(self.sourcepath.rstrip('/'));
+      os.system("/bin/rm -fr %s"%self.sourcepath);
+      if os.system("tar zxf '%s' -C '%s'"%(self.fullpath,parent_dir)):
+        busy = None;
+        if parent:
+          QMessageBox.warning(parent,"Error unpacking file","""<P>
+            There was an error unpacking the archived version to %s. The text console may have more information.</P>"""%self.sourcepath,
+            QMessageBox.Ok,0);
+        return False;
+    # else simply copy over
+    else:
+      if os.system("/bin/cp -a '%s' '%s'"%(self.fullpath,self.sourcepath)):
+        busy = None;
+        if parent:
+          QMessageBox.warning(parent,"Error copying file","""<P>
+            There was an error copying the archived version to %s. The text console may have more information.</P>"""%self.sourcepath,
+            QMessageBox.Ok,0);
+        return False;
     busy = None;
     if parent:
       QMessageBox.information(parent,"Restored file","""<P>Restored %s from this entry's 
@@ -224,7 +236,7 @@ class LogEntry (object):
     # mark entry as unchanged, if renderers are older than index
     self.updated = (Purr.Render.youngest_renderer > os.path.getmtime(self.index_file));
       
-  def save (self,dirname=None,refresh=False):
+  def save (self,dirname=None,refresh=0):
     """Saves entry in the given directory. Data products will be copied over if not
     residing in that directory.
     If refresh=True, all caches will be ignored and everything will be rerendered from scratch.
@@ -245,9 +257,9 @@ class LogEntry (object):
       self.timestamp = int(time.time());
     # get canonized path to output directory
     pathname = Purr.canonizePath(pathname);
-    # now save content
     if not os.path.exists(pathname):
       os.mkdir(pathname);
+    # now save content
     # get device of pathname -- need to know whether we move or copy
     devnum = os.stat(pathname).st_dev;
     # copy data products as needed
@@ -281,29 +293,33 @@ class LogEntry (object):
           print "Error removing %s, which is in the way of %s"%(destname,sourcepath);
           print "This data product is not saved.";
           continue;
-      # now copy/move it over
-      if dp.policy == "copy":
-        dprintf(2,"copying\n");
-        if os.system("/bin/cp -ua '%s' '%s'"%(sourcepath,destname)):
-          print "Error copying %s to %s"%(sourcepath,destname);
-          print "This data product is not saved.";
-          continue;
-      elif dp.policy.startswith('move'):
-        # files or directories on same device may be moved directly
-        if not os.path.isdir(sourcepath) or os.stat(sourcepath).st_dev == devnum:
-          dprintf(2,"same filesystem, moving\n");
+      # for directories, compress with tar
+      if os.path.isdir(sourcepath):
+        sourcepath = sourcepath.rstrip('/');
+        if dp.policy == "copy" or dp.policy.startswith("move"):
+          dprintf(2,"archiving to tgz\n");
+          if os.system("tar zcf '%s' -C '%s' '%s'"%(destname,
+                                                     os.path.dirname(sourcepath),
+                                                     os.path.basename(sourcepath))):
+            print "Error archiving %s to %s"%(sourcepath,destname);
+            print "This data product is not saved.";
+            continue;
+          if dp.policy.startswith("move"):
+            os.system("/bin/rm -fr '%s'"%sourcepath);
+      # else just a file
+      else:
+        # now copy/move it over
+        if dp.policy == "copy":
+          dprintf(2,"copying\n");
+          if os.system("/bin/cp -ua '%s' '%s'"%(sourcepath,destname)):
+            print "Error copying %s to %s"%(sourcepath,destname);
+            print "This data product is not saved.";
+            continue;
+        elif dp.policy.startswith('move'):
           if os.system("/bin/mv -fu '%s' '%s'"%(sourcepath,destname)):
             print "Error moving %s to %s"%(sourcepath,destname);
             print "This data product is not saved.";
             continue;
-        # else copy, then remove
-        else:
-          dprintf(2,"different filesystem, copying & removing\n");
-          if os.system("/bin/cp -ua '%s' '%s'"%(sourcepath,destname)):
-            print "Error moving %s to %s"%(sourcepath,destname);
-            print "This data product is not saved.";
-            continue;
-          os.system("/bin/rm -fr '%s'"%sourcepath);
       # success, set timestamp and append
       dp.timestamp = os.path.getmtime(destname);
       dp.archived = True;
@@ -327,21 +343,25 @@ class LogEntry (object):
   def timeLabel (self):
     return time.strftime("%x %X",time.localtime(self.timestamp));
    
-  def renderIndex (self,relpath="",refresh=False):
+  def renderIndex (self,relpath="",refresh=0):
     """Returns HTML index code for this entry.
     If relpath is empty, renders complete index.html file.
     If relpath is not empty, then index is being included into a top-level log, and
     relpath should be passed to all sub-renderers.
     In this case the entry may make use of its cached_include file, if that is valid.
-    If refresh=True, all caches will be ignored and everything will be rerendered from scratch.
+    If refresh is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than
+    the timestamp will need to be regenerated.
     """;
     # check if cache can be used
-    if refresh:
-      self.cached_include_valid = False;
+    dprintf(2,"%s: rendering HTML index with relpath='%s', refresh=%s\n",self.pathname,relpath,refresh);
     if relpath and self.cached_include_valid:
       try:
-        dprintf(2,"using include cache %s\n",self.cached_include);
-        return file(self.cached_include).read();
+        if os.path.getmtime(self._cached_include) >= refresh:
+          dprintf(2,"using include cache %s\n",self.cached_include);
+          return file(self.cached_include).read();
+        else:
+          dprintf(2,"include cache %s out of date, will regenerate\n",self.cached_include);
+          self.cached_include_valid = False;
       except:
         print "Error reading cached include code from %s, will regenerate"%self.cached_include;
         self.cached_include_valid = False;

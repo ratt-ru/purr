@@ -257,6 +257,9 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # make sure new filenames are unique
     filename = dp.filename;
     if not dp.archived:
+      # tack on .tgz prefix onto dirs
+      if os.path.isdir(dp.sourcepath) and not filename.endswith(".tgz"):
+        filename += ".tgz";
       # form up set of taken names
       taken_names = set();
       for i0,dp0 in self.getItemDPList():
@@ -1040,6 +1043,7 @@ class ExistingLogEntryDialog (QDialog):
     self.setWindowTitle(entry.title);
     self._viewer_source = QUrl.fromLocalFile(self.entry.index_file);
     self.viewer.setSource(self._viewer_source);
+    self.viewer.reload();
     self.wprev.setEnabled(has_prev);
     self.wnext.setEnabled(has_next);
     self.wstack.setCurrentWidget(self.viewer_panel);

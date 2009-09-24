@@ -543,8 +543,7 @@ class Purrer (QObject):
   
   def save (self,refresh=False):
     """Saves the log.
-    If 'refresh' is True, it will ignore all cached documents and regenerate the log from
-    scratch.
+    If refresh is True, it will regenerate the log from scratch
     """;
     # create directory if it doesn't exist
     # error will be thrown if this is not possible
@@ -554,11 +553,12 @@ class Purrer (QObject):
       dprint(1,"created",self.logdir);
     outfile = file(self.indexfile,"wt");
     Purr.progressMessage("Generating %s"%self.indexfile);
-    # if refresh is True, re-save all entries. This will clear all caches
+    # if refresh is True, re-save all entries. 
     if refresh:
+      refresh = time.time();
       for entry in self.entries:
-        entry.save(refresh=True);
-    Purr.Parsers.writeLogIndex(outfile,self.logtitle,self.timestamp,self.entries);
+        entry.save(refresh=refresh);
+    Purr.Parsers.writeLogIndex(outfile,self.logtitle,self.timestamp,self.entries,refresh=refresh);
     Purr.progressMessage("Wrote %s"%self.indexfile);
     
   def rescan (self):

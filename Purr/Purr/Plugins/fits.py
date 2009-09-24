@@ -26,19 +26,20 @@ numpy is available from http://numpy.scipy.org/, or as Debian package python-num
   raise
 
   
-# pylab needed for rendering histograms, but we can get on without it
-pylab = None;
-#try:
-  #import pylab
-#except:
-  #print """matplotlib (aka pylab) package not found, rendering of FITS histograms will not be available.
-#matplotlib is available from http://matplotlib.sourceforge.net/, or as Debian package python-matplotlib.
-#""";
-  #pylab = None;
+# pychart needed for rendering histograms, but we can get on without it
+try:
+  from pychart import *
+  pychart = True;
+except:
+  pychart = None;
+  print """PyChart package not found, rendering of FITS histograms will not be available.
+PyChart is available from http://home.gna.org/pychart/, or as Debian package python-pychart.
+""";
   
 import os.path
 import traceback
 import math
+import cPickle
 
 import Purr
 from Purr.Render import dprint,dprintf
@@ -64,21 +65,65 @@ class FITSRenderer (CachingRenderer):
   # define renderer options
   CachingRenderer.addOption("image-thumbnail-width",512,dtype=int,doc="Maximum width of thumbnails");
   CachingRenderer.addOption("image-thumbnail-height",256,dtype=int,doc="Maximum height of thumbnails");
-  CachingRenderer.addOption("hist-thumbnail-width",256,dtype=int,doc="Maximum width of thumbnails");
+  CachingRenderer.addOption("hist-width",1024,dtype=int,doc="Width of histogram plot");
+  CachingRenderer.addOption("hist-height",1024,dtype=int,doc="Height of histogram plot");
+  CachingRenderer.addOption("hist-thumbnail-width",128,dtype=int,doc="Maximum width of thumbnails");
   CachingRenderer.addOption("hist-thumbnail-height",128,dtype=int,doc="Maximum height of thumbnails");
   CachingRenderer.addOption("fits-nimage",4,dtype=int,doc="Maximum number of planes to include, when dealing with cubes");
-  CachingRenderer.addOption("fits-hist-nbin",1024,dtype=int,doc="Number of bins to use when making histograms""");
+  CachingRenderer.addOption("fits-hist-nbin",512,dtype=int,doc="Number of bins to use when making histograms""");
   CachingRenderer.addOption("fits-hist-clip",.95,dtype=float,doc="Apply histogram clipping");
   
   def _renderCacheFile (self,cachetype,relpath):
     return ("-cache-%s-rel-%s.html"%(cachetype,bool(relpath))).lower();
-  
+    
+  @staticmethod
+  def compute_tics (x0,x1):
+    # work out tic interval
+    dx = x1-x0;
+    tic = 10**math.floor(math.log10(dx));
+    if dx/tic < 2:
+      tic /= 5;
+    elif dx/tic < 5:
+      tic /= 2;
+    # work out where the tics are (in terms of i*interval)
+    it0 = int(math.floor(x0/tic));
+    it1 = int(math.floor(x1/tic));
+    if it0*tic < x0:
+      it0 += 1;
+    # scale back up and return
+    return [ i*tic for i in range(it0,it1+1) ];
+
+  def _make_histogram (self,path,title,x,y):
+    # make histogram by doubling up each x point to make "horizontals"
+    x = map(float,x);
+    y = map(int,y);
+    width = x[1]-x[0];
+    xy = [];
+    for a,b in zip(x,y):
+      xy += [(a,b),(a+width,b)];
+    canv = canvas.init(path);
+    ar = area.T(
+      x_axis=axis.X(label="/20{}"+title,format="/20{}%g",tic_interval=self.compute_tics),
+      y_axis=axis.Y(label=None,format="/20{}%s"),
+      x_grid_style=line_style.gray70,
+      y_grid_style=line_style.gray70,
+      legend=None,
+      size=self.hist_size
+    );
+    ar.add_plot(line_plot.T(
+      data=xy,xcol=0,ycol=1,
+      line_style=line_style.black,
+      label=None,
+      data_label_format=None
+    ));
+    ar.draw(canv);
+    canv.close();
+
   def regenerate (self):
     Purr.progressMessage("reading %s"%self.dp.filename,sub=True);
-    # read in data array
-    fitsfile = pyfits.open(self.dp.fullpath)
-    fitsdata = numpy.array(fitsfile[0].data);
-    self.cubesize = 'x'.join(map(str,fitsdata.shape));
+    # init fitsfile to None, so that _read() above is forced to re-read it
+    fitsfile = pyfits.open(self.dp.fullpath);
+    header = fitsfile[0].header;
     
     # write out FITS header
     self.headerfile,path,uptodate = self.subproduct("-fitsheader.html");
@@ -87,8 +132,7 @@ class FITSRenderer (CachingRenderer):
       html = """<HTML><BODY><TITLE>%s</TITLE>
       <H2>%s</H2>
       <PRE>"""%(title,title);
-      hdrcard = fitsfile[0].header.ascard;
-      for line in hdrcard:
+      for line in header.ascard:
         line = str(line).replace("<","&lt;").replace(">","&gt;");
         html += line+"\n";
       html += """
@@ -99,30 +143,35 @@ class FITSRenderer (CachingRenderer):
         print "Error writing file %s"%path;
         traceback.print_exc();
         self.headerfile = None;
-    # close FITS file
-    fitsfile = None;
-    
+	
     # figure out number of images to include
-    if fitsdata.ndim < 2:
+    ndim = header['NAXIS'];
+    fitsshape = [ header['NAXIS%d'%i] for i in range(1,ndim+1) ];
+    self.cubesize = 'x'.join(map(str,fitsshape));
+    if ndim < 2:
       raise TypeError,"can't render one-dimensional FITS files""";
-    elif fitsdata.ndim == 2:
-      images = [ fitsdata ];
-      shape = fitsdata.shape;
+    elif ndim == 2:
+      fitsdata_to_images = lambda fdata:[fdata];
+      shape = fitsshape;
+      nplanes = 1;
     else:
-      shape = fitsdata.shape[-2:];
+      shape = fitsshape[:2];
       # figure out number of planes in the cube
-      nplanes = fitsdata.size/(shape[0]*shape[1]);
-      # reshape to collapse into a 3D cube
-      fitsdata = fitsdata.reshape((nplanes,shape[0],shape[1]));
+      nplanes = 1;
+      for i in range(2,ndim):
+        nplanes *= fitsshape[i];
       nplanes = min(self.getOption('fits-nimage'),nplanes);
-      # now extract subplanes
-      images = [ fitsdata[i,:,:] for i in range(nplanes) ];
-      fitsdata = None;
+      def fitsdata_to_images (fdata): 
+        # reshape to collapse into a 3D cube
+        fdata = fdata.reshape((nplanes,shape[0],shape[1]));
+        # now extract subplanes
+        img = [ fdata[i,:,:] for i in range(nplanes) ];
+        return img;
       
     # OK, now cycle over all images
-    dprintf(3,"%s: rendering %d planes\n",self.dp.fullpath,len(images));
+    dprintf(3,"%s: rendering %d planes\n",self.dp.fullpath,nplanes);
     
-    self.imgrec = [None]*len(images);
+    self.imgrec = [None]*nplanes;
     # get number of bins (0 or None means no histogram)
     nbins = self.getOption("fits-hist-nbin");
     # see if histogram clipping is enabled, set hclip to None if not
@@ -130,59 +179,83 @@ class FITSRenderer (CachingRenderer):
     if hclip == 1 or not nbins:
       hclip = None;
       
-    tsize_img = self.getOption("image-thumbnail-width"),self.getOption("image-thumbnail-height");
+    tsize_img  = self.getOption("image-thumbnail-width"),self.getOption("image-thumbnail-height");
     tsize_hist = self.getOption("hist-thumbnail-width"),self.getOption("hist-thumbnail-height");
+    self.hist_size = self.getOption("hist-width"),self.getOption("hist-height");
     
-    for num_image,data in enumerate(images):
+    # filled once we read the data
+    images = None;
+    
+    for num_image in range(nplanes):
+      # do we have a cached status record for this image?
+      recfile,recpath,uptodate = self.subproduct("-%d-stats"%num_image);
+      if uptodate:
+        dprintf(3,"%s(%d): stats file %s up-to-date, reading in\n",self.dp.fullpath,num_image,recfile);
+        try:
+          self.imgrec[num_image] = cPickle.load(file(recpath));
+          continue;
+        except:
+          print "Error reading stats file %s, regenerating everything"%recpath;
+          traceback.print_exc();
+      # out of date, so we regenerate everything
+      # build up record of stuff associated with this image
+      rec = self.imgrec[num_image] = Kittens.utils.recdict();
+      
+      # generate paths for images
+      rec.fullimage,img_path  = self.subproductPath("-%d-full.png"%num_image);
+      rec.thumbnail,img_thumb = self.subproductPath("-%d-thumb.png"%num_image);
+      if pychart:
+        rec.histogram_full,hf_path = self.subproductPath("-%d-hist-full.png"%num_image);
+        rec.histogram_zoom,hz_path = self.subproductPath("-%d-hist-zoom.png"%num_image);
+        rec.histogram_full_thumb,hf_thumb = self.subproductPath("-%d-hist-full-thumb.png"%num_image);
+        rec.histogram_zoom_thumb,hz_thumb = self.subproductPath("-%d-hist-zoom-thumb.png"%num_image);
+      else:
+        rec.histogram_full = rec.histogram_zoom = rec.histogram_full_thumb = rec.histogram_zoom_thumb = None;
+
+      # need to read in data at last
+      if not images:
+        fitsdata = fitsfile[0].data;
+        fitsfile = None;
+        images = fitsdata_to_images(fitsdata);
+        fitsdata = None;
+      
+      data = images[num_image];
+      
       title = self.dp.filename;
-      if len(images) > 1:
+      if nplanes > 1:
         title += ", plane #%d"%num_image;
       Purr.progressMessage("rendering %s"%title,sub=True);
         
-      # build up record of stuff associated with this image
-      rec = self.imgrec[num_image] = Kittens.utils.recdict();
       # min/max data values
       datamin,datamax = float(data.min()),float(data.max());
       rec.datamin,rec.datamax = datamin,datamax;
       # mean and sigma
       rec.datamean = float(data.mean());
       rec.datastd = float((data-rec.datamean).std());
-      # relative filenames of histogram plots, or None if none are generated
       # thumbnail files will be "" if images are small enough to be inlined.
-      rec.histogram_full = rec.histogram_full_thumb = None;
-      rec.histogram_zoom = rec.histogram_zoom_thumb  = None;
-      # relative filenames of full image and thumbnail in png format
-      # None if not generated
-      rec.fullimage = rec.thumbnail = None;
       # these will be None if no histogram clipping is applied
       rec.clipmin,rec.clipmax = None,None;
       dprintf(3,"%s plane %d: datamin %g, datamax %g\n",self.dp.fullpath,num_image,rec.datamin,rec.datamax);
       # compute histogram of data only if this is enabled,
-      # and either pylab is available (so we can produce plots), or histogram clipping is in effect
-      if nbins and (pylab or hclip):
+      # and either pychart is available (so we can produce plots), or histogram clipping is in effect
+      if nbins and (pychart or hclip):
         dprintf(3,"%s plane %d: computing histogram\n",self.dp.fullpath,num_image);
-	try:
-	  counts,edges = numpy.histogram(data,nbins,new=True); # needed for 1.3+ to avoid warnings
-	  edges = edges[:-1];
-	except TypeError:
-	  counts,edges = numpy.histogram(data,nbins);
+        try:
+          counts,edges = numpy.histogram(data,nbins,new=True); # needed for 1.3+ to avoid warnings
+          edges = edges[:-1];
+        except TypeError:
+          counts,edges = numpy.histogram(data,nbins);
         # render histogram
-        if pylab:
-          rec.histogram_full,path,uptodate = self.subproduct("-%d-hist-full.png"%num_image);
-          if not uptodate:
-            try:
-              pylab.close();
-              pylab.plot(edges,counts,linestyle='steps',linewidth=2);
-              pylab.title("Histogram of %s"%title);
-              pylab.savefig(path);
-              pylab.close();
-            except:
-              print "Error rendering histogram %s"%path;
-              traceback.print_exc();
-              rec.histogram_full = None;
+        if pychart:
+          try:
+            self._make_histogram(hf_path,"Histogram of %s"%title,edges,counts);
+          except:
+            print "Error rendering histogram %s"%hf_path;
+            traceback.print_exc();
+            rec.histogram_full = None;
           # if histogram was rendered, make a thumbnail
           if rec.histogram_full:
-            rec.histogram_full_thumb = self.makeThumb(path,"-%d-hist-full-thumb.png"%num_image,tsize_hist);
+            self.makeThumb(hf_path,hf_thumb,tsize_hist);
           else:
             rec.histogram_full_thumb = None;
         # now, compute clipped data if needed
@@ -214,22 +287,16 @@ class FITSRenderer (CachingRenderer):
           rec.clipmin,rec.clipmax = datamin,datamax;
           dprintf(3,"%s plane %d: clipping to %g,%g\n",self.dp.fullpath,num_image,rec.clipmin,rec.clipmax);
           # render zoomed histogram
-          if pylab:
-            rec.histogram_zoom,path,uptodate = self.subproduct("-%d-hist-zoom.png"%num_image);
-            if not uptodate:
-              try:
-                pylab.close();
-                pylab.plot(edges[ih0:ih1],counts[ih0:ih1],linestyle='steps',linewidth=2);
-                pylab.title("Histogram zoom of %s"%title);
-                pylab.savefig(path);
-                pylab.close();
-              except:
-                print "Error rendering histogram %s"%path;
-                traceback.print_exc();
-                rec.histogram_zoom = None;
+          if pychart:
+            try:
+              self._make_histogram(hz_path,"Histogram zoom of %s"%title,edges[ih0:ih1],counts[ih0:ih1]);
+            except:
+              print "Error rendering histogram %s"%hz_path;
+              traceback.print_exc();
+              rec.histogram_zoom = None;
             # if histogram was rendered, make a thumbnail
             if rec.histogram_zoom:
-              rec.histogram_zoom_thumb = self.makeThumb(path,"-%d-hist-zoom-thumb.png"%num_image,tsize_hist);
+              histogram_zoom_thumb = self.makeThumb(hz_path,hz_thumb,tsize_hist);
             else:
               rec.histogram_zoom_thumb = None;
           # clip data
@@ -244,31 +311,34 @@ class FITSRenderer (CachingRenderer):
         data = zeros(data.shape,dtype='int16');
       dprintf(3,"%s plane %d: rescaled to %d:%d\n",self.dp.fullpath,num_image,data.min(),data.max());
       # generate PNG image
-      rec.fullimage,path,uptodate = self.subproduct("-%d-full.png"%num_image);
       img = None;
-      if not uptodate:
-        try:
-          img = PIL.Image.new('L',data.shape);
-          img.putdata(data.reshape((data.size,)));
-          img.save(path,'PNG');
-        except:
-          print "Error rendering image %s"%path;
-          traceback.print_exc();
-          rec.fullimage = img = None;
+      try:
+        img = PIL.Image.new('L',data.shape);
+        img.putdata(data.reshape((data.size,)));
+        img.save(img_path,'PNG');
+      except:
+        print "Error rendering image %s"%path;
+        traceback.print_exc();
+        rec.fullimage = img = None;
       # if image was rendered, make a thumbnail
       if rec.fullimage:
-        rec.thumbnail = self.makeThumb(path,"-%d-thumb.png"%num_image,tsize_img,img=img);
+        self.makeThumb(img_path,img_thumb,tsize_img,img=img);
       else:
         rec.thumbnail = None;
+      # write stats
+      try:
+        cPickle.dump(rec,file(recpath,'w'));
+      except:
+        print "Error writing stats file  %s"%recpath;
+        traceback.print_exc();
         
-  def makeThumb (self,imagepath,extension,tsize,img=None):
+  def makeThumb (self,imagepath,thumbpath,tsize,img=None):
     """makes a thumbnail for the given image.
     imagepath refers to an image file
     img can be an open PIL.Image -- if None, then imagepath is opened
     tsize is a width,height tuple giving the max thumbnail size
     extension is the extension of the thumbnail file 
     """
-    thumbpath = imagepath;  # in case exception is raised before we assign it
     try:
       # open image if needed
       if not img:
@@ -278,14 +348,10 @@ class FITSRenderer (CachingRenderer):
       factor = max(width/float(tsize[0]),height/float(tsize[1]));
       if factor <= 1:
         return "";
-      # see if thumbnail is up-to-date
-      thumbfile,thumbpath,uptodate = self.subproduct(extension);
-      if uptodate:
-        return thumbfile;
       # generate the thumbnail
       img = img.resize((int(width/factor),int(height/factor)),PIL.Image.ANTIALIAS);
       img.save(thumbpath,"PNG");
-      return thumbfile;
+      return os.path.basename(thumbpath);
     except:
       print "Error rendering thumbnail %s"%thumbpath;
       traceback.print_exc();

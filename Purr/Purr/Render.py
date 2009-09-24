@@ -43,14 +43,14 @@ class DefaultRenderer (object):
     return 1000000;
   canRender = staticmethod(canRender);
   
-  def __init__ (self,dp,refresh=False):
+  def __init__ (self,dp,refresh=0):
     """A renderer is initialized with a LogEntry.DataProduct object.
     If a renderer has been initialized, it is guaranteed to be used, so any "heavy" activity
     such as making of thumbnails, etc. can already be undertaken here.
-    If refresh=True, any document caches should be ignored and everything should be rerendered from scratch.
+    If refresh is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than
+    the timestamp will need to be regenerated.
     """
     self.dp = dp;
-    self.refresh = refresh;
     # setup some convenient attributes
     # filename: base filename of DP (w/o path)
     self.filename  = dp.filename;
@@ -61,8 +61,7 @@ class DefaultRenderer (object):
     # base path to DP, without extension
     self.basepath  = os.path.splitext(dp.fullpath)[0];
     # modification time of DP
-    self.file_mtime = os.path.getmtime(dp.fullpath);
-    #
+    self.file_mtime = max(os.path.getmtime(dp.fullpath),refresh);
     
   def subproductPath (self,ext):
     """Makes a subproduct filename by appending 'ext' to the subproduct directory.
@@ -76,8 +75,7 @@ class DefaultRenderer (object):
     """Returns True if the path is up-to-date w.r.t. our data product: i.e. exists, and is no older 
     than the DP itself, or the module itself (the last check ensures that subproducts are remade
     if the rendering code changes.)""";
-    if self.refresh:
-      return False;
+    # subproduct is up-to-date if it is older than the file mtime
     if not os.path.exists(self.dp.subproduct_dir()):
       os.mkdir(self.dp.subproduct_dir());
 ## This caused many re-rendering whenever a plugin got recompiled, so I disabled it.

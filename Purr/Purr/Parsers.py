@@ -14,7 +14,7 @@ dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
     
-def writeLogIndex (fobj,title,timestamp,entries):
+def writeLogIndex (fobj,title,timestamp,entries,refresh=0):
   fobj.write("""<HTML><BODY>\n
     <TITLE>%s</TITLE>
     
@@ -22,7 +22,7 @@ def writeLogIndex (fobj,title,timestamp,entries):
     
     """%(title,timestamp,title));
   for entry in entries:
-    fobj.write(entry.renderIndex(os.path.join(os.path.basename(entry.pathname),"")));
+    fobj.write(entry.renderIndex(os.path.join(os.path.basename(entry.pathname),""),refresh=refresh));
   fobj.write("<HR>\n");
   fobj.write("""<DIV ALIGN=right><I><SMALL>This log was generated 
              by PURR version %s.</SMALL></I></DIV>\n"""%Purr.Version);
