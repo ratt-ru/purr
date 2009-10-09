@@ -13,7 +13,8 @@ import Kittens.pixmaps
 pixmaps = Kittens.pixmaps.PixmapCache("purr");
 
 import Kittens.config
-Config = Kittens.config.section("Purr");
+ConfigFile = Kittens.config.DualConfigParser("purr.conf");
+Config = Kittens.config.SectionParser(ConfigFile,"Purr");
 
 from LogEntry import DataProduct,LogEntry
 from Purrer import Purrer

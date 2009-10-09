@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 #
 #% $Id$ 
@@ -30,21 +31,25 @@ import os
 import os.path
 import sys
 
-_system_files = [ 
-  "/usr/local/Timba/timba.conf",
-  "/usr/Timba/timba.conf",
-  "/etc/timba.conf" ];
+_default_system_paths = [ 
+  "/usr/local/Timba",
+  "/usr/Timba/",
+  "/etc/" ];
 
-_user_file = os.path.expanduser("~/.timba.conf");
+_default_user_path = os.path.expanduser("~/");
 
 class DualConfigParser (object):
   """A dual config parser taking into account both system-wide files
   and user defaults. Any changes are stored in the user defaults."""
-  def __init__ (self):
+  def __init__ (self,filename="timba.conf",
+		system_paths=_default_system_paths,
+		user_path=_default_user_path):
     self.syscp = ConfigParser();
-    self.syscp.read(_system_files);
+    system_paths = [ os.path.join(path,filename) for path in system_paths ];
+    self.syscp.read(system_paths);
     self.usercp = ConfigParser();
-    self.usercp.read([_user_file]);
+    self._user_file = os.path.join(user_path,"."+filename);
+    self.usercp.read([self._user_file]);
     
   def add_section(self,section):
     if not self.syscp.has_section(section):
@@ -83,7 +88,7 @@ class DualConfigParser (object):
     except DuplicateSectionError: pass;
     self.usercp.set(section,option,value);
     if save:
-      self.usercp.write(file(_user_file,"w"));
+      self.usercp.write(file(self._user_file,"w"));
       
   def has_option (self,section,option):
     return self.syscp.has_option(section,option) or \

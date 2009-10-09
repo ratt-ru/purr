@@ -11,8 +11,9 @@ import traceback
 
 import Purr
 
-from Purr import Config
+from Purr import ConfigFile
 import Kittens.utils
+import Kittens.config
 
 _verbosity = Kittens.utils.verbosity(name="render");
 dprint = _verbosity.dprint;
@@ -119,15 +120,18 @@ class DefaultRenderer (object):
     'doc' is a doc string.
     Options will be initialized from config file here.
     """;
+    # make a config object
+    if not hasattr(classobj,'_config'):
+      classobj._config = Kittens.config.SectionParser(ConfigFile,"render-"+classobj.renderer_id);
     # make a class-specific copy of the current option set
     if classobj._options_owner is not classobj:
       classobj.options = dict(DefaultRenderer.options);
       classobj._options_owner = classobj;
     # overrid default value from config file
     if dtype is bool:
-      value = Config.getbool(name,default);
+      value = classobj._config.getbool(name,default);
     else:
-      value = dtype(Config.get(name,default));
+      value = dtype(classobj._config.get(name,default));
     # insert into dict
     classobj.options[name] = (value,default,dtype,doc);
   addOption = classmethod(addOption);
@@ -141,7 +145,8 @@ class DefaultRenderer (object):
     if self._options_owner is not self:
       self.options = dict(self.options);
       self._options_owner = self;
-    return self.options[name][0];
+    self.options[name][0] = value;
+    classobj._config.set(name,value);
 
   # provide default implementations of rendering methods
 
