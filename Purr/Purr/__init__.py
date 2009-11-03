@@ -5,9 +5,9 @@ import os.path
 
 # init debug printing
 import Kittens.utils
-_verbosity = Kittens.utils.verbosity(name="purr");
-dprint = _verbosity.dprint;
-dprintf = _verbosity.dprintf;
+verbosity = Kittens.utils.verbosity(name="purr");
+dprint = verbosity.dprint;
+dprintf = verbosity.dprintf;
 
 import Kittens.pixmaps 
 pixmaps = Kittens.pixmaps.PixmapCache("purr");

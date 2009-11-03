@@ -19,9 +19,14 @@ _verbosity = Kittens.utils.verbosity(name="render");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
+try:
+  from urllib2 import quote as quote_url
+except ImportError:
+  from urllib import quote as quote_url
+
 def renderDefault (dp,relpath):
   """Fall-back rendering method (if all else fails), renders DP as a link""";
-  return """<A HREF="%s%s">%s</A>"""%(relpath,dp.filename,dp.filename);
+  return """<A HREF="%s">%s</A>"""%(quote_url(relpath+dp.filename),dp.filename);
 
 class DefaultRenderer (object):
   # this gives a short ID for the class (used in GUIs and such)
@@ -151,7 +156,7 @@ class DefaultRenderer (object):
   # provide default implementations of rendering methods
 
   def renderLink (self,relpath=""):
-    """renderInline() is called to render a link to the DP inline (e.g. embedded in text).
+    """renderDefault() is called to render a link to the DP inline (e.g. embedded in text).
     relpath specifies a relative path to the DP location (relative to the HTML page being
     rendered), so should be added to all links. It is guaranteed to end with an "/" if not
     empty.

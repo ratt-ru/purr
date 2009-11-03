@@ -4,9 +4,10 @@ import os
 import time
 import os.path
 import re
+import traceback
 
 import Purr
-from Purr import dprint,dprintf
+from Purr import dprint,dprintf,verbosity
 import Purr.Render
 
 class DataProduct (object):
@@ -356,7 +357,7 @@ class LogEntry (object):
     dprintf(2,"%s: rendering HTML index with relpath='%s', refresh=%s\n",self.pathname,relpath,refresh);
     if relpath and self.cached_include_valid:
       try:
-        if os.path.getmtime(self._cached_include) >= refresh:
+        if os.path.getmtime(self.cached_include) >= refresh:
           dprintf(2,"using include cache %s\n",self.cached_include);
           return file(self.cached_include).read();
         else:
@@ -364,6 +365,9 @@ class LogEntry (object):
           self.cached_include_valid = False;
       except:
         print "Error reading cached include code from %s, will regenerate"%self.cached_include;
+        if verbosity.get_verbose() > 0:
+          dprint(1,"Error traceback follows:");
+          traceback.print_exc();
         self.cached_include_valid = False;
     # form up attributes for % operator
     attrs = dict(self.__dict__);

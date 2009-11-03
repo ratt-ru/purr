@@ -4,6 +4,7 @@ from PyQt4.Qt import *
 import time
 import os
 import os.path
+import string
 
 from Purr import Config,pixmaps,dprint,dprintf
 import Purr.LogEntry
@@ -27,6 +28,20 @@ def _makeUniqueFilename (taken_names,name):
   # finally, enter name into set
   taken_names.add(name);
   return name;
+
+
+_sanitize_chars = "\\:*?\"<>|";
+_sanitize_trans = string.maketrans(_sanitize_chars,'_'*len(_sanitize_chars));
+
+def _sanitizeFilename (filename):
+  """Sanitizes filename for use on Windows and other brain-dead systems, by replacing a number of illegal characters
+  with underscores."""
+  global _sanitize_trans;
+  out = filename.translate(_sanitize_trans);
+  # leading dot becomes "_"
+  if out[0] == '/':
+    out = '_'+out[1:];
+  return out;
 
 class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
   """This class implements a QTreeWidget for data products.
@@ -255,7 +270,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     item.setToolTip(self.ColType,basename);
     item.setData(self.ColComment,Qt.EditRole,QVariant(dp.comment or ""));
     # make sure new filenames are unique
-    filename = dp.filename;
+    filename = _sanitizeFilename(dp.filename);
     if not dp.archived:
       # tack on .tgz prefix onto dirs
       if os.path.isdir(dp.sourcepath) and not filename.endswith(".tgz"):
@@ -290,11 +305,14 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       if self._editing == (item,column):
         return;
       else:
+        item,column = self._editing;
         self.closePersistentEditor(*self._editing);
         self._editing = None;	
+        if column == self.ColRename:
+          item.setText(self.ColRename,_sanitizeFilename(str(item.text(self.ColRename))));
     if item and column in [self.ColRename,self.ColComment]:
       self._editing = item,column;
-      dprint(0,"opening editor for",item,column);
+      dprint(2,"opening editor for",item,column);
       self.openPersistentEditor(item,column);
   
   def _itemClicked (self,button,item,point,column):
