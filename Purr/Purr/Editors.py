@@ -39,7 +39,7 @@ def _sanitizeFilename (filename):
   global _sanitize_trans;
   out = filename.translate(_sanitize_trans);
   # leading dot becomes "_"
-  if out[0] == '/':
+  if out and out[0] == '.':
     out = '_'+out[1:];
   return out;
 
@@ -76,7 +76,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self.header().show();
     self.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.MinimumExpanding);
     self.connect(self,SIGNAL("mouseButtonClicked"),self._itemClicked);
-    self.connect(self,SIGNAL("itemActivated(QTreeWidgetItem*,int)"),self._startOrStopEditing);
+    self.connect(self,SIGNAL("itemActivated(QTreeWidgetItem*,int)"),self._itemActivated);
     self.connect(self,SIGNAL("itemChanged(QTreeWidgetItem*,int)"),self._itemRenamed);
     self.connect(self,SIGNAL("currentItemChanged(QTreeWidgetItem*,QTreeWidgetItem*)"),self._currentItemChanged);
     self.connect(self,SIGNAL("itemcontextMenuRequested"),self._showItemContextMenu);
@@ -300,21 +300,60 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self.dpitems[dp.fullpath or dp.sourcepath] = item;
     return item;
     
+  def focusOutEvent (self,ev):
+    """Redefine focusOut events to stop editing""";
+    Kittens.widgets.ClickableTreeWidget.focusOutEvent(self,ev);
+    # if focus is going to a child of ours, do nothing
+    wid = QApplication.focusWidget();
+    while wid:
+      if wid is self:
+        return;
+      wid = wid.parent();
+    # else we're truly losing focus -- stop the editor
+    self._startOrStopEditing();
+
+  def keyPressEvent (self,ev):
+    """Stop editing if enter is pressed""";
+    if ev.key() in (Qt.Key_Enter,Qt.Key_Return):
+      self._startOrStopEditing();
+    elif ev.key() == Qt.Key_Escape:
+      self._cancelEditing();
+    else:
+      Kittens.widgets.ClickableTreeWidget.keyPressEvent(self,ev);
+
+  def _cancelEditing (self):
+    dprint(2,"cancelling editor");
+    if not self._editing:
+      return;
+    item0,column0 = self._editing;
+    dprint(2,"cancelling editor for",item0.text(1),column0);
+    self.closePersistentEditor(*self._editing);
+    self._editing = None;   
+    item0.setText(column0,self._editing_oldtext);
+
   def _startOrStopEditing (self,item=None,column=None):
     if self._editing:
       if self._editing == (item,column):
         return;
       else:
-        item,column = self._editing;
+        item0,column0 = self._editing;
+        dprint(2,"closing editor for",item0.text(1),column0);
         self.closePersistentEditor(*self._editing);
         self._editing = None;	
-        if column == self.ColRename:
-          item.setText(self.ColRename,_sanitizeFilename(str(item.text(self.ColRename))));
+        if column0 == self.ColRename:
+          item0.setText(self.ColRename,_sanitizeFilename(str(item0.text(self.ColRename))));
     if item and column in [self.ColRename,self.ColComment]:
       self._editing = item,column;
-      dprint(2,"opening editor for",item,column);
+      dprint(2,"opening editor for",item.text(1),column);
+      self._editing_oldtext = item.text(column);
+      self.setCurrentItem(item,column);
       self.openPersistentEditor(item,column);
-  
+      self.itemWidget(item,column).setFocus(Qt.OtherFocusReason);
+
+  def _itemActivated (self,item,col):
+    dprint(2,"_itemActivated",item.text(1),col);
+    self._startOrStopEditing(item,col);
+
   def _itemClicked (self,button,item,point,column):
     self._startOrStopEditing(); # stop editing
     if not item or button != Qt.LeftButton:
@@ -322,7 +361,9 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self._startOrStopEditing(item,column);  # start editing if editable column
   
   def _itemRenamed (self,item,col):
-    self._startOrStopEditing();
+    if col == self.ColRename:
+      item.setText(col,_sanitizeFilename(str(item.text(col))));
+    self._editing = None;   
     self.emit(SIGNAL("updated"));
     
   def _currentItemChanged(self,item,previous):
@@ -330,6 +371,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
   
   def _showItemContextMenu (self,item,point,col):
     """Callback for contextMenuRequested() signal. Pops up item menu, if defined""";
+    self._startOrStopEditing();
     menu = getattr(item,'_menu',None);
     if menu: 
       # self._current_item tells callbacks what item the menu was referring to
@@ -532,8 +574,10 @@ class LogEntryEditor (QWidget):
     lo_dpline.addStretch(1);
     wnewdp = QPushButton(pixmaps.folder_open.icon(),"Add file...",dpline);
     self.connect(wnewdp,SIGNAL("clicked()"),self._showAddFileDialog);
+    wnewdp.setAutoDefault(False);
     wnewdp_dir = QPushButton(pixmaps.folder_open.icon(),"Add dir...",dpline);
     self.connect(wnewdp_dir,SIGNAL("clicked()"),self._showAddDirDialog);
+    wnewdp_dir.setAutoDefault(False);
     self._add_dp_dialog = None;
     lo_dpline.addWidget(wnewdp);
     lo_dpline.addWidget(wnewdp_dir);
@@ -881,6 +925,8 @@ class NewLogEntryDialog (QDialog):
     QObject.connect(newbtn,SIGNAL("clicked()"),self.addNewEntry);
     QObject.connect(self.ignorebtn,SIGNAL("clicked()"),self.ignoreAllDataProducts);
     QObject.connect(cancelbtn,SIGNAL("clicked()"),self.hide);
+    for btn in (newbtn,self.ignorebtn,cancelbtn):
+      btn.setAutoDefault(False);
     btnfr_lo.setMargin(0);
     btnfr_lo.addWidget(newbtn,2);
     btnfr_lo.addStretch(1);
@@ -988,6 +1034,8 @@ class ExistingLogEntryDialog (QDialog):
     QObject.connect(self.wsave,SIGNAL("clicked()"),self._saveEntry);
     cancelbtn = QPushButton(pixmaps.grey_round_cross.icon(),"Cancel",btnfr);
     QObject.connect(cancelbtn,SIGNAL("clicked()"),self._cancelEntry);
+    for btn in (self.wsave,cancelbtn):
+      btn.setAutoDefault(False);
     btnfr_lo.setMargin(0);
     btnfr_lo.addWidget(self.wsave,1);
     btnfr_lo.addStretch(1);
