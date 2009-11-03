@@ -149,6 +149,7 @@ class MainWindow (QMainWindow):
     self._about_dialog.setText(self.about_message + """
         <P>PURR is not watching any directories right now. You may need to restart it, and give it 
 	some directory names on the command line.</P>""");
+    self._about_dialog.setIconPixmap(pixmaps.purr_logo.pm());  
     # Log viewer dialog
     self.viewer_dialog = HTMLViewerDialog(self,config_name="log-viewer",
           buttons=[(pixmaps.blue_round_reload,"Regenerate",
