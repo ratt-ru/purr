@@ -56,6 +56,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self.setSortingEnabled(False);
     self.setRootIsDecorated(False);
     self.setEditTriggers(QAbstractItemView.AllEditTriggers);
+    self.setDragEnabled(True);
     # sort out resizing modes
     self.header().setMovable(False);
     self.header().setResizeMode(self.ColFilename,QHeaderView.Interactive);
@@ -130,11 +131,9 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # use function above to accept event if it contains a file URL
     files = self._checkDragDropEvent(ev);
     if files:
-      # see which item the event was dropped on
-      pos = self.viewport().mapFrom(self,ev.pos());
+      pos = ev.pos();
       dropitem = self.itemAt(pos);
-#      print "dropped on",pos.x(),pos.y(),dropitem, \
-#        dropitem and hasattr(dropitem,'_dp') and (dropitem._dp.fullpath or dropitem._dp.sourcepath);
+      dprint(1,"dropped on",pos.x(),pos.y(),dropitem and str(dropitem.text(1)));
       # if event originated with ourselves, reorder items
       if ev.source() is self:
         self.reorderItems(dropitem,*files);
@@ -145,36 +144,45 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
         # if event originated with another DPTreeWidget, emit a draggedAwayFiles() signal on its behalf
         if isinstance(ev.source(),DPTreeWidget):
           ev.source().emit(SIGNAL("draggedAwayFiles"),*files);
+
+  def reorderItems (self,beforeitem,*files):
+    # make list of items to be moved
+    moving_items = []; 
+    for ff in files:
+      item = self.dpitems.get(ff,None);
+      # if dropping item on top of itself, ignore the operation
+      if item is beforeitem:
+        return;
+      if item:
+        dum = QWidget();
+        for col in self.ColAction,self.ColRender:
+          widget = self.itemWidget(item,self.ColRender);
+          widget and widget.setParent(dum);
+        moving_items.append(self.takeTopLevelItem(self.indexOfTopLevelItem(item)));
+    dprint(1,"moving items",[str(item.text(1)) for item in moving_items]);
+    dprint(1,"to before",beforeitem and str(beforeitem.text(1)));
+    # move them to specified location
+    if moving_items:
+      index = self.indexOfTopLevelItem(beforeitem) if beforeitem else self.topLevelItemCount();
+      self.insertTopLevelItems(index,moving_items);
+      for item in moving_items:
+        for col in self.ColAction,self.ColRender:
+          self._itemComboBox(item,col);
+      self.emit(SIGNAL("updated"));
+    
       
   def mimeTypes (self):
-    return [ "text/x-url" ];
+    return ["text/x-url"];
   
   def mimeData (self,itemlist):
     mimedata = QMimeData();
     urls = [];
     for item in itemlist:
       if item._dp:
-        urls.append(QUrl.fromLocalFile(dp.fullpath or dp.sourcepath));
+        urls.append(QUrl.fromLocalFile(item._dp.fullpath or item._dp.sourcepath));
     mimedata.setUrls(urls);
     return mimedata;
       
-  def dragObject (self):
-    """Called when a drag is started. Creates a text drag object from
-    selected files.""";
-    
-    # collect list of selected files
-    filelist = [];
-    for item,dp in self.getItemDPList():
-      if item.isSelected():
-        filelist.append('file://'+(dp.fullpath or dp.sourcepath));
-    # generate drag object if list is not empty
-    if filelist:
-      text = "\n".join(filelist);
-      dobj = QTextDrag(text,self);
-      return dobj;
-    else:
-      return None;
-    
   def clear (self):
     QTreeWidget.clear(self);
     self.dpitems = {};
@@ -396,21 +404,6 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     if dp and dp.archived:
       dp.restore_from_archive(parent=self);
         
-  def reorderItems(self,beforeitem,*files):
-    # make list of items to be moved
-    moving_items = []; 
-    for file in files:
-      item = self.dpitems.get(file,None);
-      if item:
-        moving_items.append(self.takeTopLevelItem(self.indexOfTopLevelItem(item)));
-    # move them to specified location
-    if beforeitem:
-      index = self.indexOfTopLevelItem(beforeitem);
-    else:
-      index = self.topLevelItemCount();
-    if moving_items:
-      self.insertTopLevelItems(index,moving_items);
-    
   def fillDataProducts(self,dps):
     """Fills listview with existing data products""";
     item = None;

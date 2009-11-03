@@ -614,7 +614,7 @@ class Purrer (QObject):
     return self.makeDataProducts(newstuff.iteritems());
           
 
-  def makeDataProducts (self,files,unbanish=False):
+  def makeDataProducts (self,files,unbanish=False,unignore=False):
     """makes a list of DPs from a list of (filename,quiet) pairs.
     If unbanish is False, DPs with a default "banish" policy will be skipped
     """;
@@ -630,7 +630,10 @@ class Purrer (QObject):
           policy = "copy";
         else:
           continue;
+      if unignore and policy == "ignore":
+        policy = "copy";
       dps.append(Purr.DataProduct(filename=filename,sourcepath=sourcepath,
+
                                   policy=policy,comment=comment,quiet=quiet));
     return dps;
 

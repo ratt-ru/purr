@@ -553,13 +553,13 @@ class MainWindow (QMainWindow):
     """callback to add DPs corresponding to files.""";
     # quiet flag is always true
     self.new_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
-                          [(file,True) for file in files],unbanish=True));
+                          [(file,True) for file in files],unbanish=True,unignore=True));
     
   def _addDPFilesToOldEntry (self,*files):
     """callback to add DPs corresponding to files.""";
     # quiet flag is always true
     self.view_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
-                          [(file,True) for file in files],unbanish=True));
+                          [(file,True) for file in files],unbanish=True,unignore=True));
     
   def _entrySelectionChanged (self):
     selected = [ item for item in self.etw.iterator(self.etw.Iterator.Selected) if item._ientry is not None ];
