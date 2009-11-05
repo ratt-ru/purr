@@ -38,7 +38,7 @@ def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
     fobj.write("""<DIV ALIGN=right><P><A HREF=%s>Printable version (single HTML page).</A></P></DIV>"""%FULLINDEX);
     # write entries
     for i,entry in enumerate(entries):
-      fobj.write("""<P><A HREF="%s">%d. %s</A></P>"""%(quote_url(entry.index_file),i, entry.title));
+      fobj.write("""<P><A HREF="%s">%d. %s</A></P>"""%(quote_url(entry.index_file),i+1, entry.title));
     # write footer
     fobj.write("<HR>\n");
     fobj.write("""<DIV ALIGN=right><I><SMALL>This log was generated

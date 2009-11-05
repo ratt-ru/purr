@@ -498,8 +498,11 @@ class Purrer (QObject):
     else:
       self.entries.append(entry);
       Purr.progressMessage("Saving new log entry");
-      entry.save(self.logdir);
+      entry.save(self.logdir, prev=self.entries[-2] if len(self.entries)>1 else None, up=os.path.join("..",Purr.RenderIndex.INDEX));
       self.timestamp = self.last_scan_timestamp;
+      # regenerate links of previous entry
+      if len(self.entries) > 1:
+        self.entries[-2].generateIndex(next=entry);
       # and our log may need to be regenerated
       if save:
         self.save();
@@ -541,6 +544,9 @@ class Purrer (QObject):
           dprintf(4,"watching file %s, timestamp %s\n",
                     dp.sourcepath,time.strftime("%x %X",time.localtime(dp.timestamp)));
 
+  def _relIndexLink (self):
+    """Returns relative link to index.html of this entry. Link will be of the form ../entry-xxx/index.html"""
+    return os.path.join("..",os.path.basename(self.pathname), "index.html");
 
   def save (self,refresh=False):
     """Saves the log.
@@ -557,7 +563,7 @@ class Purrer (QObject):
     if refresh:
       refresh = time.time();
       for i, entry in enumerate(self.entries):
-        entry.save(refresh=refresh, prev=self.entries[i-1] if i else None,next=self.entries[i+1] if i<len(self.entries)-1 else None,up=os.path.join("..","index.html"));
+        entry.save(refresh=refresh, prev=self.entries[i-1] if i else None,next=self.entries[i+1] if i<len(self.entries)-1 else None,up=os.path.join("..",Purr.RenderIndex.INDEX));
     Purr.RenderIndex.writeLogIndex(self.logdir,self.logtitle,self.timestamp,self.entries,refresh=refresh);
     Purr.progressMessage("Wrote %s"%self.logdir);
 

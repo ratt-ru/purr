@@ -176,6 +176,8 @@ class LogEntry (object):
       self.load(load);
     # QTreeWidgetItem associated with this log entry
     self.tw_item = None;
+    # next/prev/up links
+    self._next_link = self._prev_link = self._up_link = None;
 
   _entry_re = re.compile(".*/(entry|ignore)-(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$");
 
@@ -238,6 +240,10 @@ class LogEntry (object):
     # mark entry as unchanged, if renderers are older than index
     self.updated = (Purr.Render.youngest_renderer > os.path.getmtime(self.index_file));
 
+  def _relIndexLink (self):
+    """Returns relative link to index.html of this entry. Link will be of the form ../entry-xxx/index.html"""
+    return os.path.join("..",os.path.basename(self.pathname), "index.html");
+
   def save (self,dirname=None,refresh=0,next=None,prev=None,up=None):
     """Saves entry in the given directory. Data products will be copied over if not
     residing in that directory.
@@ -262,9 +268,6 @@ class LogEntry (object):
     pathname = Purr.canonizePath(pathname);
     if not os.path.exists(pathname):
       os.mkdir(pathname);
-    # make next/prev links
-    next = next and next.pathname and os.path.join(next.pathname, "index.html");
-    prev = prev and prev.pathname and os.path.join(prev.pathname, "index.html");
     # now save content
     # get device of pathname -- need to know whether we move or copy
     devnum = os.stat(pathname).st_dev;
@@ -334,10 +337,21 @@ class LogEntry (object):
     self.dps = dps;
     # now write out content
     self.cached_include = os.path.join(pathname,'index.include.html');
-    self.cached_include_valid = False;  # cache will need to be regenerated now
+    self.cached_include_valid = False;
     self.index_file = os.path.join(pathname,"index.html");
-    file(self.index_file,"wt").write(self.renderIndex(refresh=refresh, prev=prev, next=next, up=up));
+    self.generateIndex(refresh=refresh, prev=prev, next=next, up=up);
     self.updated = False;
+
+  def generateIndex (self, refresh=0, prev=None, next=None, up=None):
+    """Writes the index file"""
+    # make next/prev links
+    if prev:
+      self._prev_link = quote_url(prev._relIndexLink());
+    if next:
+      self._next_link = quote_url(next._relIndexLink());
+    if up:
+      self._up_link = quote_url(up);
+    file(self.index_file,"wt").write(self.renderIndex(refresh=refresh));
 
   def remove_directory (self):
     """Removes this entry's directory from disk""";
@@ -349,7 +363,7 @@ class LogEntry (object):
   def timeLabel (self):
     return time.strftime("%x %X",time.localtime(self.timestamp));
 
-  def renderIndex (self,relpath="",refresh=0, prev=None, next=None, up=None):
+  def renderIndex (self,relpath="",refresh=0):
     """Returns HTML index code for this entry.
     If 'relpath' is empty, renders complete index.html file.
     If 'relpath' is not empty, then index is being included into a top-level log, and
@@ -392,12 +406,12 @@ class LogEntry (object):
     # write header if asked
     if not relpath:
       html += """<HTML><BODY>
-      <TITLE>%(title)s</TITLE>""";
-      if prev or next or up:
+      <TITLE>%(title)s</TITLE>"""%attrs;
+      if self._prev_link or self._next_link or self._up_link:
         html +="""<DIV ALIGN=right><P>%s %s %s</P></DIV>"""%(
-                                                             (prev and "<A HREF=\"%s\">&lt;&lt;Previous</A>"%quote_url(prev)) or "",
-                                                             (up and "<A HREF=\"%s\">Up</A>"%quote_url(up)) or "",
-                                                             (next and "<A HREF=\"%s\">Next&gt;&gt;</A>"%quote_url(next)) or ""
+                                                             (self._prev_link and "<A HREF=\"%s\">&lt;&lt;Previous</A>"%self._prev_link) or "",
+                                                             (self._up_link and "<A HREF=\"%s\">Up</A>"%self._up_link) or "",
+                                                             (self._next_link and "<A HREF=\"%s\">Next&gt;&gt;</A>"%self._next_link) or ""
                                                   );
       html += """<H2><A CLASS="TITLE" TIMESTAMP=%(timestamp)d>%(title)s</A></H2>"""%attrs;
     else:
