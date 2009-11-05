@@ -10,6 +10,7 @@ import Purr
 import Purr.Editors
 import Purr.LogEntry
 import Purr.Pipe
+import Purr.RenderIndex
 from Purr import Config,pixmaps,dprint,dprintf
 import Kittens.widgets
 import Kittens.utils
@@ -25,8 +26,8 @@ class HTMLViewerDialog (QDialog):
   def __init__ (self,parent,config_name=None,buttons=[],*args):
     """Creates dialog.
     'config_name' is used to get/set default window size from Config object
-    'buttons' can be a list of names or (QPixmapWrapper,name[,tooltip]) tuples to provide 
-    custom buttons at the bottom of the dialog. When a button is clicked, the dialog 
+    'buttons' can be a list of names or (QPixmapWrapper,name[,tooltip]) tuples to provide
+    custom buttons at the bottom of the dialog. When a button is clicked, the dialog
     emits SIGNAL("name").
     A "Close" button is always provided, this simply hides the dialog.
     """;
@@ -82,24 +83,24 @@ class HTMLViewerDialog (QDialog):
     width = Config.getint('%s-width'%self.config_name,512);
     height = Config.getint('%s-height'%self.config_name,512);
     self.resize(QSize(width,height));
-   
+
   def resizeEvent (self,ev):
     QDialog.resizeEvent(self,ev);
     sz = ev.size();
     Config.set('%s-width'%self.config_name,sz.width());
     Config.set('%s-height'%self.config_name,sz.height());
-    
+
   def setDocument (self,filename):
     """Sets the HTML text to be displayed. """;
     self._source = QUrl.fromLocalFile(filename);
     self.viewer.setSource(self._source);
-    
+
   def _resetSource (self,*dum):
     self.viewer.setSource(self._source);
 
   def reload (self):
     self.viewer.reload();
-    
+
   def setLabel (self,label=None):
     if label is None:
       self.label.hide();
@@ -108,18 +109,18 @@ class HTMLViewerDialog (QDialog):
       self.label.show();
 
 class MainWindow (QMainWindow):
-  
+
   about_message = """
     <P>PURR ("<B>P</B>URR is <B>U</B>seful for <B>R</B>emembering <B>R</B>eductions", for those working with
-    a stable version, or "<B>P</B>URR <B>U</B>sually <B>R</B>emembers <B>R</B>eductions", for those 
-    working with a development version, or "<B>P</B>URR <B>U</B>sed to <B>R</B>emember <B>R</B>eductions", 
+    a stable version, or "<B>P</B>URR <B>U</B>sually <B>R</B>emembers <B>R</B>eductions", for those
+    working with a development version, or "<B>P</B>URR <B>U</B>sed to <B>R</B>emember <B>R</B>eductions",
     for those working with a broken version) is a tool for
     automatically keeping a log of your data reduction operations. PURR will monitor your working directories
     for new or updated files (called "data products"), and upon seeing any, it can "pounce" -- that is, offer
     you the option of saving the files to a log, along with descriptive comments. It will then
     generate an HTML page with a pretty rendering of your log and data products.</P>
   """;
-  
+
   def __init__ (self,parent,hide_on_close=False):
     QMainWindow.__init__(self,parent);
     self._hide_on_close = hide_on_close;
@@ -147,9 +148,9 @@ class MainWindow (QMainWindow):
     self._about_dialog = QMessageBox(self);
     self._about_dialog.setWindowTitle("About PURR");
     self._about_dialog.setText(self.about_message + """
-        <P>PURR is not watching any directories right now. You may need to restart it, and give it 
-	some directory names on the command line.</P>""");
-    self._about_dialog.setIconPixmap(pixmaps.purr_logo.pm());  
+        <P>PURR is not watching any directories right now. You may need to restart it, and give it
+  some directory names on the command line.</P>""");
+    self._about_dialog.setIconPixmap(pixmaps.purr_logo.pm());
     # Log viewer dialog
     self.viewer_dialog = HTMLViewerDialog(self,config_name="log-viewer",
           buttons=[(pixmaps.blue_round_reload,"Regenerate",
@@ -193,9 +194,9 @@ class MainWindow (QMainWindow):
     self.dirs_lo.addWidget(dirs_tb);
     label = QLabel("Monitoring directories:",dirs_tb);
     self._dirs_tip = """<P>PURR can monitor your working directories for new or updated files. If there's a checkmark
-      next to the directory name in this list, PURR is monitoring it. 
+      next to the directory name in this list, PURR is monitoring it.
 
-      When a new or updated file is detected, it is added to the list of files in the "New entry" window. 
+      When a new or updated file is detected, it is added to the list of files in the "New entry" window.
       This is called "pouncing". If the "show new files" option is checked, the "New entry" window will pop
       up automatically whenever a file is pounced on.</P>
       """
@@ -207,8 +208,8 @@ class MainWindow (QMainWindow):
     self.wshownew = QCheckBox("show new files",dirs_tb);
     dirs_tb.addWidget(self.wshownew);
     self.wshownew.setCheckState(Qt.Checked);
-    self.wshownew.setToolTip("""<P>If this is checked, the "New entry" window will pop up automatically whenever 
-	new or updated files are detected. If this is unchecked, the files will be added to the window quietly
+    self.wshownew.setToolTip("""<P>If this is checked, the "New entry" window will pop up automatically whenever
+  new or updated files are detected. If this is unchecked, the files will be added to the window quietly
         and unobtrusively; you can show the window manually by clicking on the "New entry..." button below.</P>""");
     self._dir_entries = {};
 
@@ -228,7 +229,7 @@ class MainWindow (QMainWindow):
     self.etw.header().setResizeMode(1,QHeaderView.Interactive);
     self.etw.header().setResizeMode(2,QHeaderView.Stretch);
     self.etw.header().show();
-    try: self.etw.setAllColumnsShowFocus(True); 
+    try: self.etw.setAllColumnsShowFocus(True);
     except AttributeError: pass; # Qt 4.2+
     # self.etw.setShowToolTips(True);
     self.etw.setSortingEnabled(False);
@@ -249,7 +250,7 @@ class MainWindow (QMainWindow):
     menu.addAction(pixmaps.editdelete.icon(),"Delete",self._deleteSelectedEntries);
     # buttons at bottom
     cwlo.addSpacing(5);
-    btnlo = QHBoxLayout(); cwlo.addLayout(btnlo); 
+    btnlo = QHBoxLayout(); cwlo.addLayout(btnlo);
     self.wnewbtn = QPushButton(pixmaps.filenew.icon(),"New entry...",cw);
     self.wnewbtn.setToolTip("Click to add a new log entry");
     # self.wnewbtn.setFlat(True);
@@ -296,13 +297,13 @@ class MainWindow (QMainWindow):
     # create timer for pouncing
     self._timer = QTimer(self);
     self.connect(self._timer,SIGNAL("timeout()"),self._rescan);
-    
+
   def resizeEvent (self,ev):
     QMainWindow.resizeEvent(self,ev);
     sz = ev.size();
     Config.set('main-window-width',sz.width());
     Config.set('main-window-height',sz.height());
-    
+
   def closeEvent (self,ev):
     if self._hide_on_close:
       ev.ignore();
@@ -312,7 +313,7 @@ class MainWindow (QMainWindow):
       if self.purrer:
         self.purrer.detach();
       return QMainWindow.closeEvent(self,ev);
-    
+
   def message (self,msg,ms=2000,sub=False):
     if sub:
       if self._prev_msg:
@@ -334,9 +335,9 @@ class MainWindow (QMainWindow):
     def enable_watching (self,enable):
       self.watching = bool(enable);
       if enable:
-	self.purrer.enableWatching(self.path);
+        self.purrer.enableWatching(self.path);
       else:
-	self.purrer.disableWatching(self.path);
+        self.purrer.disableWatching(self.path);
       self.mainwin._checkPounceStatus();
 
   def _addWatchedDirectories (self,*dirs):
@@ -359,11 +360,11 @@ class MainWindow (QMainWindow):
       self.dirs_lo.removeWidget(entry.tb);
       entry.tb.setParent(dum);
     self._dir_entries = {};
-      
+
   def detachDirectory (self):
     self._clearWatchedDirectories();
     self.purrer and self.purrer.detach();
-    
+
   def attachDirectory (self,dirname,watchdirs=None):
     """Attaches Purr to the given directory. If watchdirs is None,
     the current directory will be watched, otherwise the given directories will be watched."""
@@ -378,7 +379,7 @@ class MainWindow (QMainWindow):
         # update purrer with watched directories, in case they have changed
         if watchdirs:
           purrer.watchDirectories(watchdirs);
-	break;
+        break;
     # no purrer found, make a new one
     else:
       dprint(1,"creating new Purrer object");
@@ -412,11 +413,11 @@ class MainWindow (QMainWindow):
       path = purrer.logdir;
       home = os.path.expanduser("~");
       if not home.endswith("/"):
-	home += "/";
+        home += "/";
       if not path.endswith("/"):
-	path += "/";
+        path += "/";
       if path.startswith(home):
-	path = "~/"+path[len(home):];
+        path = "~/"+path[len(home):];
       self.setWindowTitle("PURR - %s"%path);
       # other init
       self.purrer = purrer;
@@ -434,23 +435,23 @@ class MainWindow (QMainWindow):
       # update directory widgets
       self._clearWatchedDirectories();
       self._addWatchedDirectories(*purrer.watched_dirs);
-      # Reset _pounce to false -- this will cause checkPounceStatus() into a rescan 
+      # Reset _pounce to false -- this will cause checkPounceStatus() into a rescan
       self._pounce = False;
       self._checkPounceStatus();
     return True;
-    
+
   def setLogTitle (self,title):
     if title != self.purrer.logtitle:
       self.purrer.setLogTitle(title);
       self._updateViewer();
     self._updateNames();
-    
+
   def _updateNames (self):
     self.wnewbtn.setEnabled(True);
     self.wviewlog.setEnabled(True);
     self._about_dialog.setText(self.about_message + """
     <P>Your current log resides in:<PRE>  <tt>%s</tt></PRE>To see your log in all its HTML-rendered glory, point your browser to <tt>index.html</tt> therein, or use the handy "View" button provided by PURR.</P>
-    
+
     <P>Your current working directories are:</P>
     <P>%s</P>
     """%(self.purrer.logdir,
@@ -460,11 +461,18 @@ class MainWindow (QMainWindow):
     title = self.purrer.logtitle or "Unnamed log"
     self.title_editor.setText(title);
     self.viewer_dialog.setWindowTitle(title);
-    
+
   def _showViewerDialog (self):
     self._updateViewer(True);
     self.viewer_dialog.show();
-    
+
+  @staticmethod
+  def fileModTime (path):
+    try:
+      return os.path.getmtime(path);
+    except:
+      return None;
+
   def _updateViewer (self,force=False):
     """Updates the viewer dialog.
     If dialog is not visible and force=False, does nothing.
@@ -475,37 +483,34 @@ class MainWindow (QMainWindow):
       return;
     # default text if nothing is found
     text = "<P>Nothing in the log yet. Try adding some entries first.</P>";
-    try:
-      mtime = os.path.getmtime(self.purrer.indexfile);
-    except:
-      mtime = None;
+    for filename in Purr.RenderIndex.FULLINDEX, Purr.RenderIndex.INDEX:
+      path = os.path.join(self.purrer.logdir, filename);
+      mtime = self.fileModTime(path);
+      if mtime:
+        break;
     # return if file is older than our content
-    if mtime and mtime < (self._viewer_timestamp or 0):
+    if mtime and mtime <= (self._viewer_timestamp or 0):
       return;
     busy = BusyIndicator();
-    try:
-      text = file(self.purrer.indexfile).read();
-    except:
-      pass;
-    self.viewer_dialog.setDocument(self.purrer.indexfile);
+    self.viewer_dialog.setDocument(path);
     self.viewer_dialog.reload();
-    self.viewer_dialog.setLabel("""<P>Below is your full HTML-rendered log. Note that this window 
+    self.viewer_dialog.setLabel("""<P>Below is your full HTML-rendered log. Note that this window
       is only a bare-bones viewer, not a real browser. You can't
       click on links, or do anything else besides simply look. For a fully-functional view, use your
       browser to look at the index file residing here:<BR>
-      <tt>%s</tt></P> 
+      <tt>%s</tt></P>
       """%self.purrer.indexfile);
     self._viewer_timestamp = mtime;
-    
+
   def _setEntries (self,entries):
     self.etw.clear();
     item = None;
     for i,entry in enumerate(entries):
       item = self._addEntryItem(entry,i,item);
-      
+
   def _titleChanged (self):
     self.setLogTitle(str(self.title_editor.text()));
-      
+
   def _checkPounceStatus (self):
     pounce = bool([ entry for entry in self._dir_entries.itervalues() if entry.watching ]);
     # rescan, if going from not-pounce to pounce
@@ -514,12 +519,12 @@ class MainWindow (QMainWindow):
     self._pounce = pounce;
     # start timer -- we need it running to check the purr pipe, anyway
     self._timer.start(2000);
-      
+
   def _forceRescan (self):
     if not self.purrer:
       self.attachDirectory('.');
     self._rescan(force=True);
-    
+
   def _rescan (self,force=False):
     # if pounce is on, tell the Purrer to rescan directories
     if self._pounce or force:
@@ -548,24 +553,24 @@ class MainWindow (QMainWindow):
         do_show = do_show or show;
       if do_show:
         self.new_entry_dialog.show();
-        
+
   def _addDPFiles (self,*files):
     """callback to add DPs corresponding to files.""";
     # quiet flag is always true
     self.new_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
                           [(file,True) for file in files],unbanish=True,unignore=True));
-    
+
   def _addDPFilesToOldEntry (self,*files):
     """callback to add DPs corresponding to files.""";
     # quiet flag is always true
     self.view_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
                           [(file,True) for file in files],unbanish=True,unignore=True));
-    
+
   def _entrySelectionChanged (self):
     selected = [ item for item in self.etw.iterator(self.etw.Iterator.Selected) if item._ientry is not None ];
     self.weditbtn.setEnabled(len(selected) == 1);
     self.wdelbtn.setEnabled(bool(selected));
-      
+
   def _viewEntryItem (self,item=None,*dum):
     """Pops up the viewer dialog for the entry associated with the given item.
     If 'item' is None, looks for a selected item in the listview.
@@ -586,7 +591,7 @@ class MainWindow (QMainWindow):
     ientry = getattr(item,'_ientry',None);
     if ientry is not None:
       self._viewEntryNumber(ientry,select=select);
-      
+
   def _viewEntryNumber (self,ientry,select=True):
     """views entry #ientry. Also selects entry in listview if select=True""";
     # pass entry to viewer dialog
@@ -598,19 +603,19 @@ class MainWindow (QMainWindow):
     if select:
       self.etw.clearSelection();
       self.etw.setItemSelected(self.etw.topLevelItem(ientry),True);
-     
+
   def _viewPrevEntry (self):
     if self._viewing_ientry is not None and self._viewing_ientry > 0:
       self._viewEntryNumber(self._viewing_ientry-1);
-    
+
   def _viewNextEntry (self):
     if self._viewing_ientry is not None and self._viewing_ientry < len(self.purrer.entries)-1:
       self._viewEntryNumber(self._viewing_ientry+1);
-      
+
   def _showItemContextMenu (self,item,point,col):
     """Callback for contextMenuRequested() signal. Pops up item menu, if defined""";
     menu = getattr(item,'_menu',None);
-    if menu: 
+    if menu:
       # self._current_item tells callbacks what item the menu was referring to
       point = self.etw.mapToGlobal(point);
       self._current_item = item;
@@ -619,7 +624,7 @@ class MainWindow (QMainWindow):
       menu.exec_(point);
     else:
       self._current_item = None;
-      
+
   def _copyItemToClipboard (self):
     """Callback for item menu.""";
     if self._current_item is None:
@@ -629,7 +634,7 @@ class MainWindow (QMainWindow):
       path = dp.fullpath.replace(" ","\\ ");
       QApplication.clipboard().setText(path,QClipboard.Clipboard);
       QApplication.clipboard().setText(path,QClipboard.Selection);
-      
+
   def _restoreItemFromArchive (self):
     """Callback for item menu.""";
     if self._current_item is None:
@@ -637,7 +642,7 @@ class MainWindow (QMainWindow):
     dp = getattr(self._current_item,'_dp',None);
     if dp and dp.archived:
       dp.restore_from_archive(parent=self);
-  
+
   def _deleteSelectedEntries (self):
     remaining_entries = [];
     del_entries = list(self.etw.iterator(self.etw.Iterator.Selected));
@@ -651,7 +656,7 @@ class MainWindow (QMainWindow):
     if len(del_entries) == 1:
       msg = """<P><NOBR>Permanently delete the log entry</NOBR> "%s"?</P>"""%del_entries[0].title;
       if del_entries[0].dps:
-        msg += """<P>%d data product(s) saved with this 
+        msg += """<P>%d data product(s) saved with this
                   entry will be deleted as well.</P>"""%len(del_entries[0].dps);
     else:
       msg = """<P>Permanently delete the %d selected log entries?</P>"""%len(del_entries);
@@ -693,7 +698,7 @@ class MainWindow (QMainWindow):
         subitem = self._addDPSubItem(dp,item,subitem);
     self.etw.collapseItem(item);
     return item;
-    
+
   def _addDPSubItem (self,dp,parent,after):
     item = QTreeWidgetItem(parent,after);
     item.setText(1,dp.filename);
@@ -706,7 +711,7 @@ class MainWindow (QMainWindow):
 
   def _make_time_label (self,timestamp):
     return time.strftime("%b %d %H:%M",time.localtime(timestamp));
-    
+
   def _newLogEntry (self,entry):
     """This is called when a new log entry is created""";
     # add entry to purrer
@@ -723,7 +728,7 @@ class MainWindow (QMainWindow):
     if not entry.ignore:
       self._updateViewer();
       self.show();
-    
+
   def _entryChanged (self,entry):
     """This is called when a log entry is changed""";
     # resave the log
@@ -734,13 +739,13 @@ class MainWindow (QMainWindow):
       entry.tw_item = None;
       self.etw.takeTopLevelItem(number);
       if number:
-	after = self.etw.topLevelItem(number-1);
+        after = self.etw.topLevelItem(number-1);
       else:
-	after = None;
+        after = None;
       self._addEntryItem(entry,number,after);
     # log will have changed, so update the viewer
     self._updateViewer();
-    
+
   def _regenerateLog (self):
     if QMessageBox.question(self.viewer_dialog,"Regenerate log","""<P><NOBR>Do you really want to regenerate the
       entire</NOBR> log? This can be a time-consuming operation.</P>""",
@@ -748,4 +753,3 @@ class MainWindow (QMainWindow):
       return;
     self.purrer.save(refresh=True);
     self._updateViewer();
-  

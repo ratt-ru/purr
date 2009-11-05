@@ -21,6 +21,7 @@ import fcntl
 import Purr
 import Purr.Parsers
 import Purr.Render
+import Purr.RenderIndex
 import Purr.Plugins
 from Purr import Config,dprint,dprintf
 
@@ -41,7 +42,7 @@ def parse_pattern_list (liststr):
       patt = match.group(2).split(',');
       patterns.append((desc,patt));
   return patterns;
-    
+
 def make_pattern_list (patterns):
   """Makes a string of filename patterns from a list of (description,[patterns]) tuples."""
   pattstrs = [];
@@ -51,11 +52,11 @@ def make_pattern_list (patterns):
     desc = desc.replace(";","").replace(",","");
     pattstrs.append("%s=%s"%(desc,','.join(patts)));
   return ";".join(pattstrs);
-  
+
 def _printexc (message,*args):
   print message%args;
   traceback.print_exc();
-    
+
 def matches_patterns (filename,patterns):
   return bool([ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]);
 
@@ -77,7 +78,7 @@ class Purrer (QObject):
       self.survive_deletion = survive_deletion;
       self.disappeared = False;
       dprintf(3,"creating WatchedFile %s, mtime %s\n",self.path,time.strftime("%x %X",time.localtime(self.mtime)));
-      
+
     def getmtime (self):
       """Returns the file's modification time.
       Returns None on access error (i.e. file doesn't exist)"""
@@ -85,12 +86,12 @@ class Purrer (QObject):
         return os.path.getmtime(self.path);
       except:
         return None;
-      
+
     def isUpdated (self):
       """Checks if file was updated (i.e. mtime changed) since last check. Returns True if so.
       Returns None on access error."""
       if not self.enabled:
-	return None;
+        return None;
       mtime = self.getmtime();
       if mtime is None:
         return None;
@@ -99,7 +100,7 @@ class Purrer (QObject):
       updated = (mtime or 0) > (self.mtime or 0);
       self.mtime = mtime;
       return updated;
-    
+
     def newFiles (self):
       """Checks if there are any new files, returns iterable of (full) paths.
       (For a single file, this is just the file itself, if it has been updated.)
@@ -108,13 +109,13 @@ class Purrer (QObject):
       if updated is None:
         return None;
       return (updated and [self.path]) or [];
-    
+
   class WatchedDir (WatchedFile):
     """A WatchedDir represents a directory being watched for new files.
     """
     def __init__(self,path,watch_patterns=[],ignore_patterns=[],**kw):
-      """Initializes directory. 
-      'ignore_patterns' is a list of patterns to be ignored. 
+      """Initializes directory.
+      'ignore_patterns' is a list of patterns to be ignored.
       'watch_patterns' is a list of patterns to be watched.
       New files will be reported only if they don't match any of the ignore patterns, or
       match a watch pattern.
@@ -152,13 +153,13 @@ class Purrer (QObject):
                       time.strftime("%x %X",time.localtime(ctime)));
             # append basename to _newfiles: full path added in newFiles() below
             self._newfiles.append(fname);
-    
+
     def newFiles (self):
       """Returns new files (since last call to newFiles, or since creation).
       Return value is an iterable of (full) paths.
       Returns None on access error."""
       if not self.enabled:
-	return None;
+        return None;
       if self.fileset is None:
         return None;
       newfiles = set(self._newfiles);  # some newfiles may have been found in __init__
@@ -193,10 +194,10 @@ class Purrer (QObject):
         ## If file is new, that's reason enough to include it.
         nfs.append(path);
       return nfs;
-    
+
   class WatchedSubdir (WatchedDir):
     """A WatchedSubdir represents a directory being watched for updates
-    to specific files (called "canaries") within that directory. The directory itself 
+    to specific files (called "canaries") within that directory. The directory itself
     is reported as a "new file" if the directory mtime changes, or a canary has changed.
     """
     def __init__(self,path,canary_patterns=[],**kw):
@@ -211,12 +212,12 @@ class Purrer (QObject):
             self.canaries[fullname] = Purrer.WatchedFile(fullname,mtime=self.mtime);
             dprintf(3,"watching canary file %s, timestamp %s\n",
                       fullname,time.strftime("%x %X",time.localtime(self.mtime)));
-      
+
     def newFiles (self):
       """Returns new files (since last call to newFiles, or since creation).
       The only possible new file is the subdirectory itself, which is considered
       new if updated, or if a canary has changed.
-      Return value is an iterable, or None on access error.""" 
+      Return value is an iterable, or None on access error."""
       # check directory itself for updates
       if self.fileset is None:
         return None;
@@ -253,7 +254,7 @@ class Purrer (QObject):
             watcher.mtime = timestamp;
       # returns ourselves (as new file) if something has updated
       return (newfiles and [self.path]) or [];
-    
+
   def __init__ (self,dirname,watchdirs=None):
     QObject.__init__(self);
     # load and parse configuration
@@ -271,7 +272,7 @@ class Purrer (QObject):
     for desc,patts in self._quiet:
       self._quiet_patterns.update(patts);
     dprint(1,"quietly watching patterns",self._quiet_patterns);
-    # ignored files 
+    # ignored files
     ignore = Config.get("ignore-patterns","Hidden files=.*;Purr logs=purrlog;MeqTree logs=meqtree.log;Python files=*.py*;Backup files=*~,*.bck;Measurement sets=*.MS,*.ms;CASA tables=table.f*,table.dat,table.info,table.lock");
     self._ignore = parse_pattern_list(ignore);
     self._ignore_patterns = set();
@@ -296,10 +297,10 @@ class Purrer (QObject):
     self.lockfile_fd = None;
     self.lockfile_fobj = None;
     self._attach(dirname,watchdirs);
-    
+
   def __del__ (self):
     self.detach();
-    
+
   def detach (self):
     if self.lockfile_fobj:
       try:
@@ -314,13 +315,13 @@ class Purrer (QObject):
       except:
         pass;
     self.attached = False;
-      
+
   class LockedError (RuntimeError):
     pass;
-  
+
   class LockFailError (RuntimeError):
     pass;
-    
+
   def _attach (self,dirname,watchdirs=None):
     """Attaches Purr to a directory (typically, an MS), and loads content.
     Returns False if nothing new has been loaded (because directory is the same),
@@ -406,7 +407,7 @@ class Purrer (QObject):
     self.watchDirectories(watchdirs);
     self.attached = True;
     return True;
-  
+
   def setWatchedFilePatterns (self,watch,ignore=[]):
     self._watch = watch;
     self._ignore = ignore;
@@ -426,7 +427,7 @@ class Purrer (QObject):
 
   def disableWatching (self,path):
     self._unwatched_paths.add(path);
- 
+
   def watchDirectories (self,dirs):
     """Starts watching the specified directories for changes"""
     # see if we're alredy watching this exact set of directories -- do nothing if so
@@ -472,12 +473,12 @@ class Purrer (QObject):
               dprintf(3,"watching subdirectory %s/{%s}, timestamp %s, quiet %d\n",
                         fullname,",".join(canary_patts),time.strftime("%x %X",time.localtime(wdir.mtime)),quiet);
               break;
-            
+
   def setLogTitle (self,title,save=True):
     self.logtitle = title;
     if save:
       self.save();
-  
+
   def addLogEntry (self,entry,save=True):
     """This is called when a new log entry is created""";
     # create log directory if it doesn't exist
@@ -486,7 +487,7 @@ class Purrer (QObject):
     if not os.path.exists(self.logdir):
       os.mkdir(self.logdir);
       dprint(1,"created",self.logdir);
-    # discard temporary watchers -- these are only used to keep track of 
+    # discard temporary watchers -- these are only used to keep track of
     # deleted files
     self.temp_watchers = {};
     # ignored entries are only there to carry info on ignored data products
@@ -503,10 +504,10 @@ class Purrer (QObject):
       if save:
         self.save();
     self.updatePoliciesFromEntry(entry);
-      
+
   def getLogEntries (self):
     return self.entries;
-      
+
   def setLogEntries (self,entries,save=True):
     self.entries = [ entry for entry in entries if not entry.ignore ];
     if save:
@@ -516,7 +517,7 @@ class Purrer (QObject):
     for entry in entries:
       self.updatePoliciesFromEntry(entry);
     dprint(4,"default policies:",self._default_dp_props);
-      
+
   def updatePoliciesFromEntry (self,entry):
     # populate default policies and renames based on entry list
     for dp in entry.dps:
@@ -539,11 +540,11 @@ class Purrer (QObject):
           self.watchers[dp.sourcepath] = wfile;
           dprintf(4,"watching file %s, timestamp %s\n",
                     dp.sourcepath,time.strftime("%x %X",time.localtime(dp.timestamp)));
-          
-  
+
+
   def save (self,refresh=False):
     """Saves the log.
-    If refresh is True, it will regenerate the log from scratch
+    If refresh is set to a timestamp, will regenerate everything from scratch.
     """;
     # create directory if it doesn't exist
     # error will be thrown if this is not possible
@@ -551,16 +552,15 @@ class Purrer (QObject):
     if not os.path.exists(self.logdir):
       os.mkdir(self.logdir);
       dprint(1,"created",self.logdir);
-    outfile = file(self.indexfile,"wt");
-    Purr.progressMessage("Generating %s"%self.indexfile);
-    # if refresh is True, re-save all entries. 
+    Purr.progressMessage("Generating index in %s"%self.logdir);
+    # if refresh is True, re-save all entries.
     if refresh:
       refresh = time.time();
-      for entry in self.entries:
-        entry.save(refresh=refresh);
-    Purr.Parsers.writeLogIndex(outfile,self.logtitle,self.timestamp,self.entries,refresh=refresh);
-    Purr.progressMessage("Wrote %s"%self.indexfile);
-    
+      for i, entry in enumerate(self.entries):
+        entry.save(refresh=refresh, prev=self.entries[i-1] if i else None,next=self.entries[i+1] if i<len(self.entries)-1 else None,up=os.path.join("..","index.html"));
+    Purr.RenderIndex.writeLogIndex(self.logdir,self.logtitle,self.timestamp,self.entries,refresh=refresh);
+    Purr.progressMessage("Wrote %s"%self.logdir);
+
   def rescan (self):
     """Checks files and directories on watchlist for updates, rescans them for new data products.
     If any are found, returns them. Skips those in directories disabled with disableWatching().
@@ -576,8 +576,8 @@ class Purrer (QObject):
       # get list of new files from watcher
       newfiles = watcher.newFiles();
       # None indicates access error, so drop it from watcher set
-      if newfiles is None: 
-        if watcher.survive_deletion: 
+      if newfiles is None:
+        if watcher.survive_deletion:
           dprintf(5,"access error on %s, but will still be watched",watcher.path);
         else:
           dprintf(2,"access error on %s, will no longer be watched",watcher.path);
@@ -612,7 +612,7 @@ class Purrer (QObject):
         self.emit(SIGNAL("disappearedFile"),path);
     # if we have new data products, send them to the main window
     return self.makeDataProducts(newstuff.iteritems());
-          
+
 
   def makeDataProducts (self,files,unbanish=False,unignore=False):
     """makes a list of DPs from a list of (filename,quiet) pairs.
@@ -633,7 +633,6 @@ class Purrer (QObject):
       if unignore and policy == "ignore":
         policy = "copy";
       dps.append(Purr.DataProduct(filename=filename,sourcepath=sourcepath,
-
                                   policy=policy,comment=comment,quiet=quiet));
     return dps;
 

@@ -9,6 +9,7 @@ import traceback
 import Purr
 from Purr import dprint,dprintf,verbosity
 import Purr.Render
+from Purr.Render import quote_url
 
 class DataProduct (object):
   def __init__ (self,filename=None,sourcepath=None,fullpath=None,
@@ -38,23 +39,23 @@ class DataProduct (object):
     # if True, dp is ignored (policy is "ignore" or "banish")
     # not that policy should not be changed after a DP has been created
     self.ignored = policy in ("ignore","banish");
-  
+
   def set_policy (self,policy):
     if self.archived:
       raise TypeError,"cannot change policy of archived DP";
     self.policy = policy;
     self.ignored = policy in ("ignore","banish");
-  
+
   def subproduct_dir (self):
     """Returns name of subdirectory used to store subproducts of this data product
     during rendering.""";
     return self.fullpath+".purr-products";
-  
+
   def remove_file (self):
     """Removes archived file associated with this DP""";
     if not self.fullpath or not self.archived:
       raise RuntimeError,"""Can't remove a non-archived data product""";
-    try: 
+    try:
       os.remove(self.fullpath);
     except:
       print "Error removing %s: %s"%(self.fullpath,sys.exc_info()[1]);
@@ -65,16 +66,16 @@ class DataProduct (object):
       raise RuntimeError,"""Can't remove a non-archived data product""";
     for root, dirs, files in os.walk(self.subproduct_dir(),topdown=False):
       for name in files:
-        try: 
-          os.remove(os.path.join(root, name)); 
-        except: 
+        try:
+          os.remove(os.path.join(root, name));
+        except:
           pass;
       for name in dirs:
-        try: 
-          os.remove(os.path.join(root, name)); 
-        except: 
+        try:
+          os.remove(os.path.join(root, name));
+        except:
           pass;
-      
+
   def rename (self,newname):
     # rename file if needed
     if newname == self.filename:
@@ -94,7 +95,7 @@ class DataProduct (object):
     # set new paths and names
     self.fullpath = newpath;
     self.filename = newname;
-    
+
   def restore_from_archive (self,parent=None):
     """Function to restore a DP from archived copy
     Asks for confirmation along the way if parent is not None
@@ -103,7 +104,7 @@ class DataProduct (object):
     from PyQt4.Qt import QMessageBox;
     exists = os.path.exists(self.sourcepath);
     if parent:
-      msg = """<P>Do you really want to restore <tt>%s</tt> from 
+      msg = """<P>Do you really want to restore <tt>%s</tt> from
             this entry's copy of <tt>%s</tt>?</P>"""%(self.sourcepath,self.filename);
       exists = os.path.exists(self.sourcepath);
       if exists:
@@ -122,7 +123,7 @@ class DataProduct (object):
         busy = None;
         if parent:
           QMessageBox.warning(parent,"Error removing file","""<P>
-            There was an error removing %s. Archived copy was not restored. 
+            There was an error removing %s. Archived copy was not restored.
             The text console may have more information.</P>"""%self.sourcepath,
             QMessageBox.Ok,0);
         return False;
@@ -148,7 +149,7 @@ class DataProduct (object):
         return False;
     busy = None;
     if parent:
-      QMessageBox.information(parent,"Restored file","""<P>Restored %s from this entry's 
+      QMessageBox.information(parent,"Restored file","""<P>Restored %s from this entry's
           archived copy.</P>"""%self.sourcepath,
         QMessageBox.Ok,0);
     return True;
@@ -175,13 +176,13 @@ class LogEntry (object):
       self.load(load);
     # QTreeWidgetItem associated with this log entry
     self.tw_item = None;
-    
+
   _entry_re = re.compile(".*/(entry|ignore)-(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$");
-  
+
   def isValidPathname (name):
     return os.path.isdir(name) and LogEntry._entry_re.match(name);
   isValidPathname = staticmethod(isValidPathname);
-  
+
   def update (self,title=None,comment=None,dps=None,timestamp=None):
     self.updated = True;
     if title is not None:
@@ -192,7 +193,7 @@ class LogEntry (object):
       self.dps = dps;
     if timestamp is not None:
       self.timestamp = timestamp;
-  
+
   def load (self,pathname):
     """Loads entry from directory.""";
     match = self. _entry_re.match(pathname);
@@ -236,11 +237,12 @@ class LogEntry (object):
       self.cached_include_valid = False;
     # mark entry as unchanged, if renderers are older than index
     self.updated = (Purr.Render.youngest_renderer > os.path.getmtime(self.index_file));
-      
-  def save (self,dirname=None,refresh=0):
+
+  def save (self,dirname=None,refresh=0,next=None,prev=None,up=None):
     """Saves entry in the given directory. Data products will be copied over if not
     residing in that directory.
-    If refresh=True, all caches will be ignored and everything will be rerendered from scratch.
+    If 'prev' and/or 'next' is set to another LogEntry object, "Next" and "Prev" links will be inserted.
+    'refresh' is a timestamp, passed to renderIndex(), causing all data products OLDER than the specified time to be regenerated.
     """;
     if not refresh and not self.updated:
       return;
@@ -260,6 +262,9 @@ class LogEntry (object):
     pathname = Purr.canonizePath(pathname);
     if not os.path.exists(pathname):
       os.mkdir(pathname);
+    # make next/prev links
+    next = next and next.pathname and os.path.join(next.pathname, "index.html");
+    prev = prev and prev.pathname and os.path.join(prev.pathname, "index.html");
     # now save content
     # get device of pathname -- need to know whether we move or copy
     devnum = os.stat(pathname).st_dev;
@@ -331,27 +336,28 @@ class LogEntry (object):
     self.cached_include = os.path.join(pathname,'index.include.html');
     self.cached_include_valid = False;  # cache will need to be regenerated now
     self.index_file = os.path.join(pathname,"index.html");
-    file(self.index_file,"wt").write(self.renderIndex(refresh=refresh));
+    file(self.index_file,"wt").write(self.renderIndex(refresh=refresh, prev=prev, next=next, up=up));
     self.updated = False;
-    
+
   def remove_directory (self):
     """Removes this entry's directory from disk""";
     if not self.pathname:
       return;
     if os.system("/bin/rm -fr '%s'"%self.pathname):
       print "Error removing %s";
-    
+
   def timeLabel (self):
     return time.strftime("%x %X",time.localtime(self.timestamp));
-   
-  def renderIndex (self,relpath="",refresh=0):
+
+  def renderIndex (self,relpath="",refresh=0, prev=None, next=None, up=None):
     """Returns HTML index code for this entry.
-    If relpath is empty, renders complete index.html file.
-    If relpath is not empty, then index is being included into a top-level log, and
+    If 'relpath' is empty, renders complete index.html file.
+    If 'relpath' is not empty, then index is being included into a top-level log, and
     relpath should be passed to all sub-renderers.
     In this case the entry may make use of its cached_include file, if that is valid.
-    If refresh is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than
+    If 'refresh' is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than
     the timestamp will need to be regenerated.
+    If 'relpath' is empty and 'prev', 'next' and/or 'up' is set, then Prev/Next/Up links will be inserted
     """;
     # check if cache can be used
     dprintf(2,"%s: rendering HTML index with relpath='%s', refresh=%s\n",self.pathname,relpath,refresh);
@@ -379,15 +385,21 @@ class LogEntry (object):
       attrs['title'] = "This is not a real log entry";
       attrs['comment'] = """This entry was saved by PURR because the user
       chose to ignore and/or banish some data products. PURR has stored this
-      information here for its opwn internal and highly nefarious purposes. 
+      information here for its opwn internal and highly nefarious purposes.
       This entry is will not appear in the log.""";
     # replace < and > in title and comments
     attrs['title'] = attrs['title'].replace("<","&lt;").replace(">","&gt;");
     # write header if asked
     if not relpath:
       html += """<HTML><BODY>
-      <TITLE>%(title)s</TITLE>
-      <H2><A CLASS="TITLE" TIMESTAMP=%(timestamp)d>%(title)s</A></H2>"""%attrs;
+      <TITLE>%(title)s</TITLE>""";
+      if prev or next or up:
+        html +="""<DIV ALIGN=right><P>%s %s %s</P></DIV>"""%(
+                                                             (prev and "<A HREF=\"%s\">&lt;&lt;Previous</A>"%quote_url(prev)) or "",
+                                                             (up and "<A HREF=\"%s\">Up</A>"%quote_url(up)) or "",
+                                                             (next and "<A HREF=\"%s\">Next&gt;&gt;</A>"%quote_url(next)) or ""
+                                                  );
+      html += """<H2><A CLASS="TITLE" TIMESTAMP=%(timestamp)d>%(title)s</A></H2>"""%attrs;
     else:
       html += """
         <HR WIDTH=100%%>
@@ -395,7 +407,7 @@ class LogEntry (object):
     # write comments
     html += """
         <DIV ALIGN=right><P><SMALL>Logged on %(timestr)s</SMALL></P></DIV>\n
-        
+
         <A CLASS="COMMENTS">\n"""%attrs;
     # add comments
     for cmt in self.comment.split("\n"):
@@ -439,4 +451,4 @@ class LogEntry (object):
       file(self.cached_include,'w').write(html);
       self.cached_include_valid = True;
     return html;
-      
+

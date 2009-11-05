@@ -20,25 +20,25 @@ if __name__ == "__main__":
   (options, rem_args) = parser.parse_args();
 
   print "Please wait a second while the GUI starts up."
-  
+
   import sys
   import signal
   import os.path
-  
+
   from PyQt4.Qt import *
-  
+
   import Purr
   import Purr.MainWindow
   import Purr.Render
-  
-  
+
+
   app = QApplication(sys.argv);
   app.setDesktopSettingsAware(True);
-  
+
   dirnames = list(rem_args);
   if not options.no_cwd and '.' not in dirnames:
     dirnames.append('.');
-    
+
   if not os.path.isdir(dirnames[0]):
     print "Argument must be an existing directory name";
     sys.exit(1);
@@ -48,13 +48,14 @@ if __name__ == "__main__":
     # app.setMainWidget(purrwin);
     purrwin.show();
     QObject.connect(app,SIGNAL("lastWindowClosed()"),app,SLOT("quit()"));
-    
+
     # handle SIGINT
     def sigint_handler (sig,stackframe):
+      print "Caught Ctrl+C"
       purrwin.detachDirectory();
       app.quit();
     signal.signal(signal.SIGINT,sigint_handler);
-  
-    
-    app.exec_(); 
-    print "PURR exiting normally, goodbye!";
+
+
+    app.exec_();
+    print "PURR exiting, goodbye!";
