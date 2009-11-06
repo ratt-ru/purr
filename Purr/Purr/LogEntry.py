@@ -9,6 +9,7 @@ import traceback
 import Purr
 from Purr import dprint,dprintf,verbosity
 import Purr.Render
+import Purr.RenderIndex
 from Purr.Render import quote_url
 
 class DataProduct (object):
@@ -405,6 +406,7 @@ class LogEntry (object):
     attrs['title'] = attrs['title'].replace("<","&lt;").replace(">","&gt;");
     # write header if asked
     if not relpath:
+      icon = Purr.RenderIndex.renderIcon(24,"..");
       html += """<HTML><BODY>
       <TITLE>%(title)s</TITLE>"""%attrs;
       if self._prev_link or self._next_link or self._up_link:
@@ -413,11 +415,12 @@ class LogEntry (object):
                                                              (self._up_link and "<A HREF=\"%s\">Up</A>"%self._up_link) or "",
                                                              (self._next_link and "<A HREF=\"%s\">Next&gt;&gt;</A>"%self._next_link) or ""
                                                   );
-      html += """<H2><A CLASS="TITLE" TIMESTAMP=%(timestamp)d>%(title)s</A></H2>"""%attrs;
+      html += """<H2><A CLASS="TITLE" TIMESTAMP=%(timestamp)d>"""+icon+""" %(title)s</A></H2>"""%attrs;
     else:
+      icon = Purr.RenderIndex.renderIcon(24);
       html += """
         <HR WIDTH=100%%>
-        <H2>%(title)s</H2>"""%attrs;
+        <H2>""" + icon + """ %(title)s</H2>"""%attrs;
     # write comments
     html += """
         <DIV ALIGN=right><P><SMALL>Logged on %(timestr)s</SMALL></P></DIV>\n

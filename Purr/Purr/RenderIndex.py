@@ -7,8 +7,25 @@ from Purr import dprint,dprintf,verbosity
 import Purr.Render
 from Purr.Render import quote_url
 
+from PyQt4.Qt import *
+
+
 FULLINDEX = "fullindex.html";
 INDEX = "index.html";
+
+PURR_ICONS =  { 16:"purr16.png", 24:"purr24.png",32:"purr32.png" };
+
+def initIndexDir (logdir):
+  for sz,filename in PURR_ICONS.iteritems():
+    path = os.path.join(logdir, filename);
+    if not os.path.exists(path):
+      Purr.pixmaps.purr_logo.pm().scaled(QSize(sz,sz),Qt.KeepAspectRatioByExpanding,Qt.SmoothTransformation).save(path);
+
+def renderIcon (size,path=None):
+  filename = PURR_ICONS[size];
+  if path:
+    filename = os.path.join(path,filename);
+  return """<IMG SRC="%s"></IMG>"""%quote_url(filename);
 
 def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
   fullindex = os.path.join(logdir, FULLINDEX);
@@ -41,8 +58,8 @@ def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
       fobj.write("""<P><A HREF="%s">%d. %s</A></P>"""%(quote_url(entry.index_file),i+1, entry.title));
     # write footer
     fobj.write("<HR>\n");
-    fobj.write("""<DIV ALIGN=right><I><SMALL>This log was generated
-               by PURR version %s.</SMALL></I></DIV>\n"""%Purr.Version);
+    fobj.write("""<DIV ALIGN=right>%s <I><SMALL>This log was generated
+               by PURR version %s.</SMALL></I></DIV>\n"""%(renderIcon(16),Purr.Version));
     fobj.write("</BODY></HTML>\n");
     fobj = None;
 
@@ -61,7 +78,7 @@ def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
       fobj.write(entry.renderIndex(os.path.join(os.path.basename(entry.pathname),""),refresh=refresh));
     # write footer
     fobj.write("<HR>\n");
-    fobj.write("""<DIV ALIGN=right><I><SMALL>This log was generated
-               by PURR version %s.</SMALL></I></DIV>\n"""%Purr.Version);
+    fobj.write("""<DIV ALIGN=right>%s <I><SMALL>This log was generated
+               by PURR version %s.</SMALL></I></DIV>\n"""%(renderIcon(16),Purr.Version));
     fobj.write("</BODY></HTML>\n");
     fobj = None;

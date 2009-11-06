@@ -484,9 +484,7 @@ class Purrer (QObject):
     # create log directory if it doesn't exist
     # error will be thrown if this is not possible
     _busy = Purr.BusyIndicator();
-    if not os.path.exists(self.logdir):
-      os.mkdir(self.logdir);
-      dprint(1,"created",self.logdir);
+    self._initIndexDir();
     # discard temporary watchers -- these are only used to keep track of
     # deleted files
     self.temp_watchers = {};
@@ -548,6 +546,13 @@ class Purrer (QObject):
     """Returns relative link to index.html of this entry. Link will be of the form ../entry-xxx/index.html"""
     return os.path.join("..",os.path.basename(self.pathname), "index.html");
 
+  def _initIndexDir (self):
+    """makes sure pullog directory is properly set up""";
+    if not os.path.exists(self.logdir):
+      os.mkdir(self.logdir);
+      dprint(1,"created",self.logdir);
+    Purr.RenderIndex.initIndexDir(self.logdir);
+
   def save (self,refresh=False):
     """Saves the log.
     If refresh is set to a timestamp, will regenerate everything from scratch.
@@ -555,10 +560,8 @@ class Purrer (QObject):
     # create directory if it doesn't exist
     # error will be thrown if this is not possible
     _busy = Purr.BusyIndicator();
-    if not os.path.exists(self.logdir):
-      os.mkdir(self.logdir);
-      dprint(1,"created",self.logdir);
     Purr.progressMessage("Generating index in %s"%self.logdir);
+    self._initIndexDir();
     # if refresh is True, re-save all entries.
     if refresh:
       refresh = time.time();
