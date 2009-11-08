@@ -2,15 +2,15 @@
 from PyQt4.Qt import *
 
 def PYSIGNAL (sig):
-  """PyQt4 no longer supports PYSIGNAL(). Instead, everything goes through SIGNAL(). "Proper" user-defined 
+  """PyQt4 no longer supports PYSIGNAL(). Instead, everything goes through SIGNAL(). "Proper" user-defined
   signals must include an argument list, just like standard Qt signals. This will prove troublesome
   to old code using a lot of PYSIGNALS(), since proper argument lists would have to be inserted.
-  Fortunately, PyQt3-PYSIGNAL-style argument passing -- where an arbitrary argument list was passed to 
-  emit(), and from there on to the slot -- is available in PyQt4 via "short-circuited" signals:. 
-    
+  Fortunately, PyQt3-PYSIGNAL-style argument passing -- where an arbitrary argument list was passed to
+  emit(), and from there on to the slot -- is available in PyQt4 via "short-circuited" signals:.
+
     http://www.riverbankcomputing.co.uk/static/Docs/PyQt4/pyqt4ref.html#new-style-signal-and-slot-support
-    
-  A short-circuited signal has no parentheses at the end. Hence this function here to turn 
+
+  A short-circuited signal has no parentheses at the end. Hence this function here to turn
   PYSIGNAL("x()") into SIGNAL("x"), to support old PyQt3-derived code.
   """;
   if sig.endswith("()"):
@@ -46,35 +46,35 @@ class ClickableTreeWidget (QTreeWidget):
     QObject.connect(self,SIGNAL('customContextMenuRequested(const QPoint &)'),self._request_context_menu);
     QObject.connect(self,SIGNAL('itemExpanded(QTreeWidgetItem *)'),self._item_expanded_collapsed);
     QObject.connect(self,SIGNAL('itemCollapsed(QTreeWidgetItem *)'),self._item_expanded_collapsed);
-  
+
   def mousePressEvent (self,ev):
     self._expanded_item = None;
     self._mouse_press_pos = ev.pos();
     QTreeWidget.mousePressEvent(self,ev);
-  
+
   def mouseReleaseEvent (self,ev):
     item = self.itemAt(self._mouse_press_pos);
     if item:
       col = self.header().logicalIndexAt(self._mouse_press_pos);
     # pass event to parent
     QTreeWidget.mouseReleaseEvent(self,ev);
-    # now see if the item was expanded or collapsed because of the event. Only emit signal if this was 
+    # now see if the item was expanded or collapsed because of the event. Only emit signal if this was
     # not the case (i.e. swallow the clicks that have to do with expansion/collapse of items)
     if item and item is not self._expanded_item:
       self.emit(SIGNAL("mouseButtonClicked"),ev.button(),item,self._mouse_press_pos,col);
-      
+
   def _item_expanded_collapsed (self,item):
     self._expanded_item = item;
-  
+
   def _request_context_menu (self,pos):
     item = self.itemAt(pos);
     if item:
       col = self.header().logicalIndexAt(pos);
       self.emit(SIGNAL("itemContextMenuRequested"),item,pos,col);
-      
+
   class Iterator (QTreeWidgetItemIterator):
-    def __init__(self, *args,**kw): 
-      QTreeWidgetItemIterator.__init__(self,*args) 
+    def __init__(self, *args,**kw):
+      QTreeWidgetItemIterator.__init__(self,*args)
       self._include_children = kw.get('children',False);
       parent = args[0];
       if isinstance(parent,QTreeWidget):
@@ -94,7 +94,7 @@ class ClickableTreeWidget (QTreeWidget):
           raise StopIteration;
         if self._include_children or value.parent() is None or value.parent() is self._parent:
           return value;
-    
+
   def iterator (self,*args):
     """Returns a child item iterator.
     iterator([flags]) returns an iterator for the tree widget itself
@@ -106,3 +106,15 @@ class ClickableTreeWidget (QTreeWidget):
       return ClickableTreeWidget.Iterator(self,*args);
 
 TreeWidgetItemIterator = ClickableTreeWidget.Iterator;
+
+class ClickableListWidget (QListWidget):
+  def __init__ (self,*args):
+    QListWidget.__init__(self,*args);
+    self.setContextMenuPolicy(Qt.CustomContextMenu);
+    QObject.connect(self,SIGNAL('customContextMenuRequested(const QPoint &)'),self._request_context_menu);
+
+  def _request_context_menu (self,pos):
+    item = self.itemAt(pos);
+    if item:
+      self.emit(SIGNAL("itemContextMenuRequested"),item,pos);
+

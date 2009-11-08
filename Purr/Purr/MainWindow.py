@@ -108,6 +108,111 @@ class HTMLViewerDialog (QDialog):
       self.label.setText(label);
       self.label.show();
 
+
+
+      #self.watching = bool(enable);
+      #if enable:
+      #  self.purrer.enableWatching(self.path);
+      #else:
+      #  self.purrer.disableWatching(self.path);
+      #self.mainwin._checkPounceStatus();
+
+
+
+class DirectoryListWidget (Kittens.widgets.ClickableListWidget):
+  """This class implements a QTreeWidget for data products.
+  """;
+  def __init__ (self,*args):
+    Kittens.widgets.ClickableListWidget.__init__(self,*args);
+    # insert columns, and numbers for them
+    # setup other properties of the listview
+    self.setAcceptDrops(True);
+    self.setSelectionMode(QListWidget.SingleSelection);
+    self.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.Minimum);
+    QObject.connect(self,SIGNAL("itemSelectionChanged()"),self._selectionChanged);
+    QObject.connect(self,SIGNAL("itemChanged(QListWidgetItem *)"),self._itemChanged);
+    self._items = {};
+    self._item_height = None;
+    self._max_height_items = 5;
+    self._min_height = 8;
+    self.setMaximumSize(1000000,self._min_height);
+
+  class DirItem (QListWidgetItem):
+      # these represent the watch-states
+      ToCheckState =  { Purr.UNWATCHED:Qt.Unchecked,Purr.WATCHED:Qt.PartiallyChecked,Purr.POUNCE:Qt.Checked };
+      FromCheckState = dict([(state,watch) for watch,state in ToCheckState.iteritems()]);
+
+      def __init__ (self,pathname,parent=None,watching=Purr.WATCHED):
+        self._pathname = pathname;
+        pathname = Kittens.utils.collapseuser(pathname);
+        self._in_setWatching = True;
+        QListWidgetItem.__init__(self,pathname,parent);
+        self.setFlags(Qt.ItemIsSelectable|Qt.ItemIsUserCheckable|Qt.ItemIsEnabled|Qt.ItemIsTristate);
+        self.setWatching(watching);
+
+      def pathname (self):
+        return self._pathname;
+
+      def watching (self):
+        return self.FromCheckState[self.checkState()];
+
+      def setWatching (self,watching):
+        self._in_setWatching = True;
+        self._watching = watching;
+        self.setCheckState(self.ToCheckState[watching]);
+        self._in_setWatching = False;
+
+  def _selectionChanged (self):
+    sel = self.selectedItems();
+    self.emit(SIGNAL("directorySelected"),sel and sel[0].pathname());
+    self.emit(SIGNAL("hasSelection"),bool(sel));
+
+  def _itemChanged (self,item):
+    if not getattr(item,'_in_setWatching',False):
+      item.setWatching((item._watching+1)%(Purr.POUNCE+1));
+      self.emit(SIGNAL("directoryStateChanged"),item.pathname(),item.watching());
+
+  def _checkSize (self):
+    """Automatically resizes widget to display at most max_height_items items""";
+    if self._item_height is not None:
+      sz = min(self._max_height_items,self.count())*self._item_height + 5;
+      self.setMinimumSize(0,sz);
+      self.setMaximumSize(1000000,sz);
+      self.resize(self.width(),sz);
+
+  def clear (self):
+    Kittens.widgets.ClickableListWidget.clear(self);
+    self._items = {};
+
+  def add (self,pathname,watching=Purr.WATCHED):
+    if pathname in self._items:
+      return;
+    item = self._items[pathname] = self.DirItem(pathname,parent=self,watching=watching);
+    # init item height, if inserting first item
+    if self._item_height is None:
+      self._item_height = self.visualItemRect(item).height();
+    self._checkSize();
+
+  def remove (self,pathname):
+    item = self._items.get(pathname,None);
+    return item and self._removeItem(item);
+
+  def _removeItem (self,item):
+    del self._items[item.pathname()];
+    self.emit(SIGNAL("directoryStateChanged"),item.pathname(),Purr.REMOVED);
+    self.takeItem(self.row(item));
+    self._checkSize();
+
+  def removeCurrent (self,confirm=True):
+    sel = self.selectedItems();
+    if sel:
+      if confirm:
+        if QMessageBox.warning(self,"Detaching from directory","""Do you really want to stop monitoring the directory <tt>%s</tt>?"""%sel[0].pathname(),
+              QMessageBox.Yes,QMessageBox.No) == QMessageBox.Yes:
+          return self._removeItem(sel[0]);
+    return None;
+
+
 class MainWindow (QMainWindow):
 
   about_message = """
@@ -175,49 +280,70 @@ class MainWindow (QMainWindow):
     title_label.setToolTip(tip);
     self.title_editor.setToolTip(tip);
     self.wviewlog = title_tb.addAction(pixmaps.openbook.icon(),"View",self._showViewerDialog);
-    self.wviewlog.setToolTip("Click to see an HTML rendering of the log");
+    self.wviewlog.setToolTip("Click to see an HTML rendering of your current log.");
     qa = title_tb.addAction(pixmaps.purr_logo.icon(),"About...",self._about_dialog.exec_);
-    qa.setToolTip("<P>Click to see the About... dialog</P>");
+    qa.setToolTip("<P>Click to see the About... dialog, which will tell you something about PURR.</P>");
 
     self.wdirframe = QFrame(cw);
     cwlo.addWidget(self.wdirframe);
     self.dirs_lo = QVBoxLayout(self.wdirframe);
     self.dirs_lo.setMargin(5);
+    self.dirs_lo.setContentsMargins(5,0,5,5);
     self.dirs_lo.setSpacing(0);
     self.wdirframe.setFrameStyle(QFrame.Box|QFrame.Raised);
     self.wdirframe.setLineWidth(1);
 
     ## Directories toolbar
     dirs_tb = QToolBar(self.wdirframe);
-    dirs_tb.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
+    dirs_tb.setToolButtonStyle(Qt.ToolButtonIconOnly);
     dirs_tb.setIconSize(QSize(16,16));
     self.dirs_lo.addWidget(dirs_tb);
     label = QLabel("Monitoring directories:",dirs_tb);
     self._dirs_tip = """<P>PURR can monitor your working directories for new or updated files. If there's a checkmark
-      next to the directory name in this list, PURR is monitoring it.
+      next to the directory name in this list, PURR is monitoring it.</P>
 
-      When a new or updated file is detected, it is added to the list of files in the "New entry" window.
-      This is called "pouncing". If the "show new files" option is checked, the "New entry" window will pop
-      up automatically whenever a file is pounced on.</P>
+      <P>If the checkmark is grey, PURR is monitoring things unobtrusively. When a new or updated file is detected in he monitored directory,
+      it is quietly added to the list of files in the "New entry" window, even if this window is not currently visible.</P>
+
+      <P>If the checkmark is black, PURR will be more obtrusive. Whenever a new or updated file is detected, the "New entry" window will
+      pop up automatically. This is called "pouncing", and some people find it annoying.</P>
       """
     label.setToolTip(self._dirs_tip);
     label.setSizePolicy(QSizePolicy.MinimumExpanding,QSizePolicy.Minimum);
     dirs_tb.addWidget(label);
-    # qa = dirs_tb.addAction(pixmaps.blue_round_reload.icon(),"Rescan",self._forceRescan);
-    # qa.setToolTip("Click to rescan the directories for any new or updated files.");
-    self.wshownew = QCheckBox("show new files",dirs_tb);
-    dirs_tb.addWidget(self.wshownew);
-    self.wshownew.setCheckState(Qt.Checked);
-    self.wshownew.setToolTip("""<P>If this is checked, the "New entry" window will pop up automatically whenever
-  new or updated files are detected. If this is unchecked, the files will be added to the window quietly
-        and unobtrusively; you can show the window manually by clicking on the "New entry..." button below.</P>""");
-    self._dir_entries = {};
+
+    # add directory list widget
+    self.wdirlist = DirectoryListWidget(self.wdirframe);
+    self.wdirlist.setToolTip(self._dirs_tip);
+    QObject.connect(self.wdirlist,SIGNAL("directoryStateChanged"),self._changeWatchedDirState);
+    self.dirs_lo.addWidget(self.wdirlist);
+    # self.wdirlist.setMaximumSize(1000000,64)
+
+    # add directory button
+    add = dirs_tb.addAction(pixmaps.list_add.icon(),"Add",self._showAddDirectoryDialog);
+    add.setToolTip("<P>Click to add another directory to be monitored.</P>");
+
+    # remove directory button
+    delbtn = dirs_tb.addAction(pixmaps.list_remove.icon(),"Remove",self.wdirlist.removeCurrent);
+    delbtn.setEnabled(False);
+    delbtn.setToolTip("<P>Click to removed the currently selected directory from the list.</P>");
+    QObject.connect(self.wdirlist,SIGNAL("hasSelection"),delbtn.setEnabled);
+
+#    # qa = dirs_tb.addAction(pixmaps.blue_round_reload.icon(),"Rescan",self._forceRescan);
+#    # qa.setToolTip("Click to rescan the directories for any new or updated files.");
+#    self.wshownew = QCheckBox("show new files",dirs_tb);
+#    dirs_tb.addWidget(self.wshownew);
+#    self.wshownew.setCheckState(Qt.Checked);
+#    self.wshownew.setToolTip("""<P>If this is checked, the "New entry" window will pop up automatically whenever
+#  new or updated files are detected. If this is unchecked, the files will be added to the window quietly
+#        and unobtrusively; you can show the window manually by clicking on the "New entry..." button below.</P>""");
+#    self._dir_entries = {};
 
     cwlo.addSpacing(5);
 
     # listview of log entries
     self.etw = Kittens.widgets.ClickableTreeWidget(cw);
-    cwlo.addWidget(self.etw);
+    cwlo.addWidget(self.etw,1);
     self.etw.header().setDefaultSectionSize(128);
     self.etw.header().setMovable(False);
     self.etw.setHeaderLabels(["date","entry title","comment"]);
@@ -252,20 +378,20 @@ class MainWindow (QMainWindow):
     cwlo.addSpacing(5);
     btnlo = QHBoxLayout(); cwlo.addLayout(btnlo);
     self.wnewbtn = QPushButton(pixmaps.filenew.icon(),"New entry...",cw);
-    self.wnewbtn.setToolTip("Click to add a new log entry");
+    self.wnewbtn.setToolTip("Click to add a new log entry.");
     # self.wnewbtn.setFlat(True);
     self.wnewbtn.setEnabled(False);
     btnlo.addWidget(self.wnewbtn);
     btnlo.addSpacing(5);
     self.weditbtn = QPushButton(pixmaps.filefind.icon(),"View entry...",cw);
-    self.weditbtn.setToolTip("Click to view or edit the selected log entry");
+    self.weditbtn.setToolTip("Click to view or edit the selected log entry/");
     # self.weditbtn.setFlat(True);
     self.weditbtn.setEnabled(False);
     self.connect(self.weditbtn,SIGNAL("clicked()"),self._viewEntryItem);
     btnlo.addWidget(self.weditbtn);
     btnlo.addSpacing(5);
     self.wdelbtn = QPushButton(pixmaps.editdelete.icon(),"Delete",cw);
-    self.wdelbtn.setToolTip("Click to delete the selected log entry or entries");
+    self.wdelbtn.setToolTip("Click to delete the selected log entry or entries.");
     # self.wdelbtn.setFlat(True);
     self.wdelbtn.setEnabled(False);
     self.connect(self.wdelbtn,SIGNAL("clicked()"),self._deleteSelectedEntries);
@@ -323,46 +449,30 @@ class MainWindow (QMainWindow):
     self.statusBar().showMessage(msg,ms);
     QCoreApplication.processEvents(QEventLoop.ExcludeUserInputEvents);
 
-  class WatchedDirEntry (object):
-    def __init__ (self,path,mw,purrer):
-      self.path = path;
-      self.tb = self.wwatch = None;
-      self.purrer = purrer;
-      self.watching = True;
-      self.mainwin = mw;
-      self.purrer.enableWatching(self.path);
+  def _changeWatchedDirState (self,pathname,watching):
+    self.purrer.setWatchingState(pathname,watching);
+    # update dialogs if dir list has changed
+    if watching == Purr.REMOVED:
+      dirs = [ path for path,state in self.purrer.watchedDirectories() ];
+      self.new_entry_dialog.setDefaultDirs(*dirs);
+      self.view_entry_dialog.setDefaultDirs(*dirs);
+    pass;
 
-    def enable_watching (self,enable):
-      self.watching = bool(enable);
-      if enable:
-        self.purrer.enableWatching(self.path);
-      else:
-        self.purrer.disableWatching(self.path);
-      self.mainwin._checkPounceStatus();
-
-  def _addWatchedDirectories (self,*dirs):
-    for dirname in dirs:
-      entry = self._dir_entries[dirname] = MainWindow.WatchedDirEntry(dirname,self,self.purrer);
-      tb = entry.tb = QToolBar(self.wdirframe);
-      self.dirs_lo.addWidget(tb);
-      tb.setToolButtonStyle(Qt.ToolButtonTextBesideIcon);
-      tb.setIconSize(QSize(16,16));
-      # make QLabel with dirname
-      entry.wwatch = QCheckBox(dirname,tb);
-      tb.addWidget(entry.wwatch);
-      entry.wwatch.setToolTip(self._dirs_tip);
-      entry.wwatch.setCheckState(Qt.Checked);
-      self.connect(entry.wwatch,SIGNAL("stateChanged(int)"),entry.enable_watching);
-
-  def _clearWatchedDirectories (self):
-    dum = QWidget();
-    for entry in self._dir_entries.itervalues():
-      self.dirs_lo.removeWidget(entry.tb);
-      entry.tb.setParent(dum);
-    self._dir_entries = {};
+  def _showAddDirectoryDialog (self):
+    dd = str(QFileDialog.getExistingDirectory(self,"PURR: Add a directory to monitor")).strip();
+    if dd:
+      # adds a watched directory. Default initial setting of 'watching' is POUNCE if all
+      # directories are in POUNCE state, or WATCHED otherwise.
+      watching = max(Purr.WATCHED,min([state for path,state in self.purrer.watchedDirectories()]));
+      self.purrer.addWatchedDirectory(dd,watching);
+      self.wdirlist.add(dd,watching);
+      # update dialogs since dir list has changed
+      dirs = [ path for path,state in self.purrer.watchedDirectories() ];
+      self.new_entry_dialog.setDefaultDirs(*dirs);
+      self.view_entry_dialog.setDefaultDirs(*dirs);
 
   def detachDirectory (self):
-    self._clearWatchedDirectories();
+    self.wdirlist.clear();
     self.purrer and self.purrer.detach();
 
   def attachDirectory (self,dirname,watchdirs=None):
@@ -378,7 +488,8 @@ class MainWindow (QMainWindow):
         self.purrer_stack.insert(0,purrer);
         # update purrer with watched directories, in case they have changed
         if watchdirs:
-          purrer.watchDirectories(watchdirs);
+          for dd in watchdirs:
+            purrer.addWatchedDirectory(dd,watching=None);
         break;
     # no purrer found, make a new one
     else:
@@ -410,21 +521,15 @@ class MainWindow (QMainWindow):
       self.message("Attached to directory %s"%purrer.dirname);
       dprint(1,"current Purrer changed, updating state");
       # set window title
-      path = purrer.logdir;
-      home = os.path.expanduser("~");
-      if not home.endswith("/"):
-        home += "/";
-      if not path.endswith("/"):
-        path += "/";
-      if path.startswith(home):
-        path = "~/"+path[len(home):];
+      path = Kittens.utils.collapseuser(os.path.join(purrer.logdir,''));
       self.setWindowTitle("PURR - %s"%path);
       # other init
       self.purrer = purrer;
       self.new_entry_dialog.hide();
       self.new_entry_dialog.reset();
-      self.new_entry_dialog.setDefaultDirs(*purrer.watched_dirs);
-      self.view_entry_dialog.setDefaultDirs(*purrer.watched_dirs);
+      dirs = [ path for path,state in purrer.watchedDirectories() ];
+      self.new_entry_dialog.setDefaultDirs(*dirs);
+      self.view_entry_dialog.setDefaultDirs(*dirs);
       self.view_entry_dialog.hide();
       self.viewer_dialog.hide();
       self._viewing_ientry = None;
@@ -433,8 +538,9 @@ class MainWindow (QMainWindow):
       self._updateViewer();
       self._updateNames();
       # update directory widgets
-      self._clearWatchedDirectories();
-      self._addWatchedDirectories(*purrer.watched_dirs);
+      self.wdirlist.clear();
+      for pathname,state in purrer.watchedDirectories():
+        self.wdirlist.add(pathname,state);
       # Reset _pounce to false -- this will cause checkPounceStatus() into a rescan
       self._pounce = False;
       self._checkPounceStatus();
@@ -450,12 +556,13 @@ class MainWindow (QMainWindow):
     self.wnewbtn.setEnabled(True);
     self.wviewlog.setEnabled(True);
     self._about_dialog.setText(self.about_message + """
-    <P>Your current log resides in:<PRE>  <tt>%s</tt></PRE>To see your log in all its HTML-rendered glory, point your browser to <tt>index.html</tt> therein, or use the handy "View" button provided by PURR.</P>
+      <P>Your current log resides in:<PRE>  <tt>%s</tt></PRE>To see your log in all its HTML-rendered
+      glory, point your browser to <tt>index.html</tt> therein, or use the handy "View" button provided by PURR.</P>
 
-    <P>Your current working directories are:</P>
-    <P>%s</P>
-    """%(self.purrer.logdir,
-      "".join([ "<PRE>  <tt>%s</tt></PRE>"%name for name in self.purrer.watched_dirs ])
+      <P>Your current working directories are:</P>
+      <P>%s</P>
+      """%(self.purrer.logdir,
+      "".join([ "<PRE>  <tt>%s</tt></PRE>"%name for name,state in self.purrer.watchedDirectories()])
     ));
     # self.dir_label.setText("Directory: %s"%self.purrer.dirname);
     title = self.purrer.logtitle or "Unnamed log"
@@ -512,7 +619,8 @@ class MainWindow (QMainWindow):
     self.setLogTitle(str(self.title_editor.text()));
 
   def _checkPounceStatus (self):
-    pounce = bool([ entry for entry in self._dir_entries.itervalues() if entry.watching ]);
+    ## pounce = bool([ entry for entry in self._dir_entries.itervalues() if entry.watching ]);
+    pounce = bool([path for path,state in self.purrer.watchedDirectories() if state >= Purr.WATCHED ]);
     # rescan, if going from not-pounce to pounce
     if pounce and not self._pounce:
       self._rescan();
@@ -533,7 +641,7 @@ class MainWindow (QMainWindow):
         filenames = [dp.filename for dp in dps];
         dprint(2,"new data products:",filenames);
         self.message("Pounced on "+", ".join(filenames));
-        if self.new_entry_dialog.addDataProducts(dps) and (force or self.wshownew.checkState() ):
+        if self.new_entry_dialog.addDataProducts(dps):
           dprint(2,"showing dialog");
           self.new_entry_dialog.show();
     # else read stuff from pipe

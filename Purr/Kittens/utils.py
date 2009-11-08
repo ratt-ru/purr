@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 #
-#% $Id$ 
+#% $Id$
 #
 #
 # Copyright (C) 2002-2007
-# The MeqTree Foundation & 
+# The MeqTree Foundation &
 # ASTRON (Netherlands Foundation for Research in Astronomy)
 # P.O.Box 2, 7990 AA Dwingeloo, The Netherlands
 #
@@ -22,7 +22,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>,
-# or write to the Free Software Foundation, Inc., 
+# or write to the Free Software Foundation, Inc.,
 # 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
@@ -32,6 +32,7 @@ import sys
 import string
 import types
 import traceback
+import os.path
 
 class recdict (dict):
   """A recdict is basically a dict whose contents may also be
@@ -54,7 +55,14 @@ class recdict (dict):
     if name.startswith('__'):
       return dict.__delattr__(self,name,value);
     return dict.__delitem__(self,key);
-    
+
+def collapseuser (path):
+  """If path begins with the home directory, replaces the start of the path with "~/". Essentially the reverse of os.path.expanduser()""";
+  home = os.path.join(os.path.expanduser("~"),"");
+  if path.startswith(home):
+    path = os.path.join("~",path[len(home):]);
+  return path;
+
 
 def type_maker(objtype,**kwargs):
   def maker(x):
@@ -62,7 +70,7 @@ def type_maker(objtype,**kwargs):
       return x;
     return objtype(x);
   return maker;
-  
+
 def extract_stack (f=None,limit=None):
   """equivalent to traceback.extract_stack(), but also works with psyco
   """
@@ -89,9 +97,9 @@ def nonportable_extract_stack (f=None,limit=None):
     tb.insert(0,(fr.f_code.co_filename,fr.f_lineno,fr.f_code.co_name,None));
     fr = fr.f_back;
   return tb;
-  
-  
-# 
+
+
+#
 # === class verbosity ===
 # Verbosity includes methods for verbosity levels and conditional printing
 #
@@ -99,18 +107,18 @@ class verbosity:
   _verbosities = {};
   _levels = {};
   _parse_argv = True;
-  
+
   def set_verbosity_level (context,level):
-    verbosity._levels[context] = level; 
+    verbosity._levels[context] = level;
     vv = verbosity._verbosities.get(context,None);
     if vv:
       vv.set_verbose(level);
   set_verbosity_level = staticmethod(set_verbosity_level);
-  
+
   def disable_argv ():
     verbosity._parse_argv = False;
   disable_argv = staticmethod(disable_argv);
-  
+
   def __init__(self,verbose=0,stream=None,name=None,tb=2):
     if not __debug__:
       verbose=0;
@@ -137,7 +145,7 @@ class verbosity:
         for arg in argv[1:]:
           if arg.startswith('-d'):
             have_debug = True;
-          try: 
+          try:
             self.verbose = int(patt.match(arg).group(1));
           except: pass;
       if have_debug:
@@ -165,12 +173,12 @@ class verbosity:
     if level <= self.verbose:
       stream = self.stream or sys.stderr;
       stream.write(self.dheader(-3));
-      stream.write(string.join(map(str,args),' ')+'\n'); 
+      stream.write(string.join(map(str,args),' ')+'\n');
   def dprintf(self,level,format,*args):
     if level <= self.verbose:
       stream = self.stream or sys.stderr;
       try: s = format % args;
-      except: 
+      except:
         stream.write('dprintf format exception: ' + str(format) + '\n');
       else:
         stream.write(self.dheader(-3));
@@ -185,7 +193,7 @@ class verbosity:
     self.verbosity_name = name;
   def get_verbosity_name (self):
     return self.verbosity_name;
-    
+
 
 def _print_curry_exception ():
   (et,ev,etb) = sys.exc_info();
@@ -194,7 +202,7 @@ def _print_curry_exception ():
     print "  ",' '.join(map(str,ev.args));
   print '======== exception traceback follows:';
   traceback.print_tb(etb);
-  
+
 # curry() composes callbacks and such
 # See The Python Cookbook recipe 15.7
 def curry (func,*args,**kwds):
@@ -212,7 +220,7 @@ def curry (func,*args,**kwds):
       _print_curry_exception();
       raise;
   return callit;
-  
+
 # Extended curry() version
 # The _argslice argument is applied to the *args of the
 # curry when it is subsequently called; this allows only a subset of the
@@ -235,12 +243,12 @@ def xcurry (func,_args=(),_argslice=slice(0),_kwds={},**kwds):
       _print_curry_exception();
       raise;
   return callit;
-  
+
 class PersistentCurrier (object):
-  """This class provides curry() and xcurry() instance methods that 
+  """This class provides curry() and xcurry() instance methods that
   internally store the curries in a list. This is handy for currying
-  callbacks to be passed to, e.g., PyQt slots: since PyQt holds the callbacks 
-  via weakrefs, using the normal curry() method to compose a callback 
+  callbacks to be passed to, e.g., PyQt slots: since PyQt holds the callbacks
+  via weakrefs, using the normal curry() method to compose a callback
   on-the-fly would cause it to disappear immediately.
   """
   def _add_curry (self,cr):
@@ -253,7 +261,7 @@ class PersistentCurrier (object):
     return self._add_curry(xcurry(func,*args,**kwds));
   def clear (self):
     self._curries = [];
-  
+
 
 class WeakInstanceMethod (object):
   # return value indicating call of a weakinstancemethod whose object
@@ -279,4 +287,4 @@ def weakref_proxy (obj):
   else:
     return weakref.proxy(obj);
 
-  
+

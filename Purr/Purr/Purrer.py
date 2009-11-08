@@ -25,6 +25,9 @@ import Purr.RenderIndex
 import Purr.Plugins
 from Purr import Config,dprint,dprintf
 
+import Kittens.utils
+import ConfigParser
+
 from PyQt4.Qt import QObject,SIGNAL
 
 # this string is used to create lock files
@@ -341,6 +344,7 @@ class Purrer (QObject):
     self.watchers = {};
     self.temp_watchers = {};
     self.attached = False;
+    self._watching_state = {};
     # check that we hold a lock on the directory
     self.lockfile = os.path.join(self.dirname,".purrlock");
     # try to open lock file for r/w
@@ -401,10 +405,32 @@ class Purrer (QObject):
       # update own timestamp
       if entries:
         self.timestamp = max(self.timestamp,entries[-1].timestamp);
+    # else logfile doesn't exist, create it
+    else:
+      self._initIndexDir();
+    # load configuration if it exists
+    # init config file
+    self.dirconfig = ConfigParser.RawConfigParser();
+    self.dirconfigfile = os.path.join(self.logdir,"dirconfig");
+    if os.path.exists(self.dirconfigfile):
+      try:
+        self.dirconfig.read(self.dirconfigfile);
+      except:
+        print "Error loading config file %s"%self.dirconfigfile;
+        traceback.print_exc();
+      # load directory configuration
+      for dirname in self.dirconfig.sections():
+        try:
+          watching = self.dirconfig.getint(dirname,"watching");
+        except:
+          watching = Purr.WATCHED;
+        self.addWatchedDirectory(os.path.expanduser(dirname),watching,save_config=False);
     # start watching the specified directories
     if watchdirs is None:
       watchdirs = [dirname];
-    self.watchDirectories(watchdirs);
+    for name in watchdirs:
+      self.addWatchedDirectory(name,watching=None);
+    # init complete
     self.attached = True;
     return True;
 
@@ -422,29 +448,45 @@ class Purrer (QObject):
     Config.set("watch-patterns",make_pattern_list(self._watch));
     Config.set("ignore-patterns",make_pattern_list(self._ignore));
 
-  def enableWatching (self,path):
-    self._unwatched_paths.discard(path);
+  def setWatchingState (self,path,watching,save_config=True):
+    dprintf(2,"%s: watching state is %d\n",path,watching)
+    self._watching_state[path] = watching;
+    path = Kittens.utils.collapseuser(path);
+    if watching == Purr.REMOVED:
+      if self.dirconfig.has_section(path):
+        self.dirconfig.remove_section(path);
+    else:
+      if not self.dirconfig.has_section(path):
+        self.dirconfig.add_section(path);
+      self.dirconfig.set(path,"watching",str(watching));
+    if save_config:
+      self.dirconfig.write(file(self.dirconfigfile,'wt'));
 
-  def disableWatching (self,path):
-    self._unwatched_paths.add(path);
+  def watchingState (self,pathname):
+    return self._watching_state[pathname];
 
-  def watchDirectories (self,dirs):
+  def watchedDirectories (self):
+    return [ (dd,state) for dd,state in self._watching_state.iteritems() if state != Purr.REMOVED ];
+
+  def addWatchedDirectory (self,dirname,watching=Purr.WATCHED,save_config=True):
     """Starts watching the specified directories for changes"""
     # see if we're alredy watching this exact set of directories -- do nothing if so
-    newset = set([Purr.canonizePath(dd) for dd in dirs]);
-    if newset == set(self.watched_dirs):
-      dprint(1,"watchDirectories: no change to set of dirs");
-      return;
-    # collect timestamps of specified directories
-    dprintf(2,"scanning directories, our timestamp is %s\n",
-              time.strftime("%x %X",time.localtime(self.timestamp)));
-    self._unwatched_paths = set();
-    for dirname in newset:
+    dirname = Purr.canonizePath(dirname);
+    # do nothing if already watching
+    if dirname in self.watched_dirs:
+      dprint(1,"addWatchDirectory(): already watching %s\n",dirname);
+      # watching=None means do not change the watch-state
+      if watching is None:
+        return;
+    else:
+      if watching is None:
+        watching = Purr.WATCHED;
+      # make watcher object
       wdir = Purrer.WatchedDir(dirname,mtime=self.timestamp,
               watch_patterns=self._watch_patterns,ignore_patterns=self._ignore_patterns);
       # fileset=None indicates error reading directory, so ignore it
       if wdir.fileset is None:
-        continue;
+        return;
       self.watchers[dirname] = wdir;
       self.watched_dirs.append(dirname);
       dprintf(2,"watching directory %s, mtime %s, %d files\n",
@@ -473,6 +515,8 @@ class Purrer (QObject):
               dprintf(3,"watching subdirectory %s/{%s}, timestamp %s, quiet %d\n",
                         fullname,",".join(canary_patts),time.strftime("%x %X",time.localtime(wdir.mtime)),quiet);
               break;
+    # set state and save config
+    self.setWatchingState(dirname,watching,save_config=save_config);
 
   def setLogTitle (self,title,save=True):
     self.logtitle = title;
@@ -547,7 +591,7 @@ class Purrer (QObject):
     return os.path.join("..",os.path.basename(self.pathname), "index.html");
 
   def _initIndexDir (self):
-    """makes sure pullog directory is properly set up""";
+    """makes sure purrlog directory is properly set up""";
     if not os.path.exists(self.logdir):
       os.mkdir(self.logdir);
       dprint(1,"created",self.logdir);
@@ -572,7 +616,7 @@ class Purrer (QObject):
 
   def rescan (self):
     """Checks files and directories on watchlist for updates, rescans them for new data products.
-    If any are found, returns them. Skips those in directories disabled with disableWatching().
+    If any are found, returns them. Skips those in directories whose watchingState is set to Purr.UNWATCHED.
     """;
     if not self.attached:
       return;
@@ -597,12 +641,15 @@ class Purrer (QObject):
         continue;
       dprintf(5,"%s: %d new file(s)\n",watcher.path,len(newfiles));
       # skip files in self._unwatched_paths
-      newfiles = [ filename for filename in newfiles if os.path.dirname(filename) not in self._unwatched_paths ];
+      newfiles = [ filename for filename in newfiles if self._watching_state.get(os.path.dirname(filename)) > Purr.UNWATCHED ];
       # Now go through files and add them to the newstuff dict
       for newfile in newfiles:
-        # if quiet flag is explicitly set on watcher, use it, else compare filename to quiet patterns
-        quiet = watcher.quiet;
-        if quiet is None:
+        # if quiet flag is explicitly set on watcher, enforce it
+        # if not pouncing on directory, also add quietly
+        if watcher.quiet or self._watching_state.get(os.path.dirname(newfile)) < Purr.POUNCE:
+          quiet = True;
+        # else add quietly if file is not in the quiet patterns
+        else:
           quiet = matches_patterns(os.path.basename(newfile),self._quiet_patterns);
         # add file to list of new products. Since a file may be reported by multiple
         # watchers, make the quiet flag a logical AND of all the quiet flags (i.e. DP will be
