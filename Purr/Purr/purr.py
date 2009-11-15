@@ -15,8 +15,6 @@ if __name__ == "__main__":
   parser = OptionParser(usage=usage)
   parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
-  parser.add_option("-n", "--no-cwd",dest="no_cwd",action="store_true",
-                    help="Do not include '.' in directories to watch.");
   (options, rem_args) = parser.parse_args();
 
   print "Please wait a second while the GUI starts up."
@@ -30,32 +28,32 @@ if __name__ == "__main__":
   import Purr
   import Purr.MainWindow
   import Purr.Render
+  import Purr.Startup
 
+  import Kittens.pixmaps
 
   app = QApplication(sys.argv);
   app.setDesktopSettingsAware(True);
 
-  dirnames = list(rem_args);
-  if not options.no_cwd and '.' not in dirnames:
-    dirnames.append('.');
-
-  if not os.path.isdir(dirnames[0]):
-    print "Argument must be an existing directory name";
-    sys.exit(1);
+#  splash = QSplashScreen(Purr.pixmaps.purr_logo.pm());
+#  splash.showMessage("PURR!");
+#  splash.show();
 
   purrwin = Purr.MainWindow.MainWindow(None);
-  if purrwin.attachDirectory(dirnames[0],dirnames):
-    # app.setMainWidget(purrwin);
-    purrwin.show();
-    QObject.connect(app,SIGNAL("lastWindowClosed()"),app,SLOT("quit()"));
 
-    # handle SIGINT
-    def sigint_handler (sig,stackframe):
-      print "Caught Ctrl+C"
-      purrwin.detachDirectory();
-      app.quit();
-    signal.signal(signal.SIGINT,sigint_handler);
+  try:
+    if not Purr.Startup.startWizard(rem_args,purrwin):
+      print "Cancelled by user";
+      sys.exit(1);
+  except Purr.Startup.Error,err:
+    print err.error_message;
+    sys.exit(1);
 
+  # handle SIGINT
+  def sigint_handler (sig,stackframe):
+    print "Caught Ctrl+C, PURR exiting..."
+    purrwin.detachPurrlog();
+    app.quit();
+  signal.signal(signal.SIGINT,sigint_handler);
 
-    app.exec_();
-    print "PURR exiting, goodbye!";
+  app.exec_();

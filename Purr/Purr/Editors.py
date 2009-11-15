@@ -40,7 +40,7 @@ def _sanitizeFilename (filename):
   out = filename.translate(_sanitize_trans);
   # leading dot becomes "_"
   if out and out[0] == '.':
-    out = '_'+out[1:];
+    out = out[1:];
   return out;
 
 class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
@@ -70,7 +70,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self._fontmetrics = QFontMetrics(QFont());
     # setup other properties of the listview
     self.setAcceptDrops(True);
-    try: self.setAllColumnsShowFocus(True); 
+    try: self.setAllColumnsShowFocus(True);
     except AttributeError: pass; # qt 4.2+
     # self.setDefaultRenameAction(QTreeWidget.Accept);
     self.setSelectionMode(QTreeWidget.SingleSelection);
@@ -117,15 +117,15 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     else:
       ev.ignore();
       return None;
-    
+
   def dragEnterEvent (self,ev):
     """Process drag-enter event. Use function above to accept or ignore it"""
     self._checkDragDropEvent(ev);
-      
+
   def dragMoveEvent (self,ev):
     """Process drag-move event. Use function above to accept or ignore it"""
     self._checkDragDropEvent(ev);
-      
+
   def dropEvent (self,ev):
     """Process drop event."""
     # use function above to accept event if it contains a file URL
@@ -147,7 +147,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
 
   def reorderItems (self,beforeitem,*files):
     # make list of items to be moved
-    moving_items = []; 
+    moving_items = [];
     for ff in files:
       item = self.dpitems.get(ff,None);
       # if dropping item on top of itself, ignore the operation
@@ -169,11 +169,11 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
         for col in self.ColAction,self.ColRender:
           self._itemComboBox(item,col);
       self.emit(SIGNAL("updated"));
-    
-      
+
+
   def mimeTypes (self):
     return ["text/x-url"];
-  
+
   def mimeData (self,itemlist):
     mimedata = QMimeData();
     urls = [];
@@ -182,7 +182,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
         urls.append(QUrl.fromLocalFile(item._dp.fullpath or item._dp.sourcepath));
     mimedata.setUrls(urls);
     return mimedata;
-      
+
   def clear (self):
     QTreeWidget.clear(self);
     self.dpitems = {};
@@ -214,7 +214,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       if width > self.header().sectionSize(column):
 	self.header().resizeSection(column,width);
     return combobox;
-	
+
   def _emitUpdatedSignal (self,*dum):
     self.emit(SIGNAL("updated"));
 
@@ -236,7 +236,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     Not-yet-saved items will have dp=None.""";
     itemlist = [ (item,item._dp) for item in self.iterator() ];
     return itemlist;
-      
+
   def _makeDPItem (self,parent,dp,after=None):
     """Creates listview item for data product 'dp', inserts it after item 'after'""";
     if parent:
@@ -307,7 +307,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # add to map of items
     self.dpitems[dp.fullpath or dp.sourcepath] = item;
     return item;
-    
+
   def focusOutEvent (self,ev):
     """Redefine focusOut events to stop editing""";
     Kittens.widgets.ClickableTreeWidget.focusOutEvent(self,ev);
@@ -336,7 +336,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     item0,column0 = self._editing;
     dprint(2,"cancelling editor for",item0.text(1),column0);
     self.closePersistentEditor(*self._editing);
-    self._editing = None;   
+    self._editing = None;
     item0.setText(column0,self._editing_oldtext);
 
   def _startOrStopEditing (self,item=None,column=None):
@@ -347,7 +347,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
         item0,column0 = self._editing;
         dprint(2,"closing editor for",item0.text(1),column0);
         self.closePersistentEditor(*self._editing);
-        self._editing = None;	
+        self._editing = None;
         if column0 == self.ColRename:
           item0.setText(self.ColRename,_sanitizeFilename(str(item0.text(self.ColRename))));
     if item and column in [self.ColRename,self.ColComment]:
@@ -367,21 +367,21 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     if not item or button != Qt.LeftButton:
       return;
     self._startOrStopEditing(item,column);  # start editing if editable column
-  
+
   def _itemRenamed (self,item,col):
     if col == self.ColRename:
       item.setText(col,_sanitizeFilename(str(item.text(col))));
-    self._editing = None;   
+    self._editing = None;
     self.emit(SIGNAL("updated"));
-    
+
   def _currentItemChanged(self,item,previous):
     self._startOrStopEditing();
-  
+
   def _showItemContextMenu (self,item,point,col):
     """Callback for contextMenuRequested() signal. Pops up item menu, if defined""";
     self._startOrStopEditing();
     menu = getattr(item,'_menu',None);
-    if menu: 
+    if menu:
       # self._current_item tells callbacks what item the menu was referring to
       self._current_item = item;
       self.clearSelection();
@@ -389,7 +389,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       menu.exec_(point);
     else:
       self._current_item = None;
-      
+
   def _copyItemToClipboard (self):
     """Callback for item menu.""";
     dp = self._current_item and getattr(self._current_item,'_dp',None);
@@ -397,13 +397,13 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       path = dp.fullpath.replace(" ","\\ ");
       QApplication.clipboard().setText(path,QClipboard.Clipboard);
       QApplication.clipboard().setText(path,QClipboard.Selection);
-  
+
   def _restoreItemFromArchive (self):
     """Callback for item menu.""";
     dp = self._current_item and getattr(self._current_item,'_dp',None);
     if dp and dp.archived:
       dp.restore_from_archive(parent=self);
-        
+
   def fillDataProducts(self,dps):
     """Fills listview with existing data products""";
     item = None;
@@ -413,7 +413,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
 	# ensure combobox widgets are made
 	self._itemComboBox(item,self.ColAction);
 	self._itemComboBox(item,self.ColRender);
-      
+
   def addDataProducts(self,dps):
     """Adds new data products to listview. dps is a list of DP objects.
     Returns True if new (non-quiet) DPs are added, or if existing non-quiet dps are updated.
@@ -446,7 +446,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       self._itemComboBox(item,self.ColAction);
       self._itemComboBox(item,self.ColRender);
     return wakeup;
-  
+
   def dropDataProducts (self,*pathnames):
     """Drops (that is, deletes) new (i.e. non-archived) DP items matching the given pathnames.""";
     trash = QTreeWidget(None);
@@ -460,7 +460,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
         updated = True;
     if updated:
       self.emit(SIGNAL("updated"));
-        
+
   def resolveFilenameConflicts (self):
     """Goes through list of DPs to make sure that their destination names
     do not clash. Adjust names as needed. Returns True if some conflicts were resolved.
@@ -478,7 +478,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
           resolved = True;
           self.emit(SIGNAL("updated"));
     return resolved;
-       
+
   def buildDPList (self):
     """Builds list of data products."""
     dps = [];
@@ -504,7 +504,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
         dp.filename = str(item.text(self.ColRename));
       dps.append(dp);
     return dps;
-      
+
 class LogEntryEditor (QWidget):
   """This class provides a widget for editing log entries.
   """;
@@ -536,7 +536,7 @@ class LogEntryEditor (QWidget):
     lo_topline.addWidget(self.wtimestamp);
     # add title editor
     self.wtitle   = QLineEdit(editorpane);
-    lo_top.addWidget(self.wtitle); 
+    lo_top.addWidget(self.wtitle);
     self.connect(self.wtitle,SIGNAL("textChanged(const QString&)"),self._titleChanged);
     # add comment editor
     # lo_top.addSpacing(5);
@@ -584,16 +584,16 @@ class LogEntryEditor (QWidget):
     QObject.connect(self.wdplv,SIGNAL("draggedAwayFiles"),self,SIGNAL("draggedAwayFiles"));
     # other internal init
     self.reset();
-    
+
   data_product_help = \
-      """<P><I>Data products</I> are files that will be archived along with this log entry. If "pounce" 
+      """<P><I>Data products</I> are files that will be archived along with this log entry. If "pounce"
       is enabled, PURR will watch your directories for new or updated files, and insert them in this list
       automatically. You can also click on "Add..." to add files by hand.</P>
-      
-      <P>Click on the <I>action</I> column to select what to do with a file. Click on the <I>rename</I> column 
+
+      <P>Click on the <I>action</I> column to select what to do with a file. Click on the <I>rename</I> column
       to archive the file under a different name. Click on the <I>comment</I> column to enter a comment for the file. Click on the <I>render</I> column to select a rendering for the file. The basic rendering is "link", which makes a simple HTML link to the archived file. Certain file types (e.g. images) may support
       more elaborate renderings.</P>
-      
+
       <P>The meaning of the different actions is:</P>
       <DL>
       <DT><B>copy</B></DT><DD>data product will be copied to the log.</DD>
@@ -601,21 +601,21 @@ class LogEntryEditor (QWidget):
       <DT><B>ignore</B></DT><DD>data product will not appear in the log, however PURR will keep
       watching it, and will pounce on it if it changes again.</DD>
       <DT><B>banish</B></DT><DD>data product will not appear in the log, and PURR will stop
-      watching it (you can un-banish a data product later by adding it via the 
+      watching it (you can un-banish a data product later by adding it via the
       "Add..." button.)</DD>
       <DT><B>keep</B></DT><DD>(for existing products only) retain data product with this log entry.</DD>
       <DT><B>remove</B></DT><DD>(for existing products only) remove data product from this log entry.</DD>
       </DL>
       """;
-      
+
   def hideEvent (self,event):
     QWidget.hideEvent(self,event);
     if self._add_dp_dialog:
       self._add_dp_dialog.hide();
-    
+
   def resetDPs (self):
     self.wdplv.clear();
-    
+
   def reset (self):
     self.wdplv.clear();
     self.entry = self._timestamp = None;
@@ -631,17 +631,17 @@ class LogEntryEditor (QWidget):
     # _last_auto_comment is the last comment to have been added via addComment()
     self._last_auto_comment = None;
     self.updated = False;
-    
+
   def setUpdated (self,updated=True):
     self.updated = updated;
     if updated:
       self.emit(SIGNAL("updated"));
-    
+
   def setDefaultDirs (self,*dirnames):
     self._default_dirs = dirnames;
-    
+
   class AddDataProductDialog (QFileDialog):
-    """This is a file selection dialog with an extra quick-jump combobox for 
+    """This is a file selection dialog with an extra quick-jump combobox for
     multiple directories""";
     def __init__ (self,parent,directories=False):
       QFileDialog.__init__(self);
@@ -663,25 +663,25 @@ class LogEntryEditor (QWidget):
       width = Config.getint('%s-width'%self.config_name,768);
       height = Config.getint('%s-height'%self.config_name,512);
       self.resize(QSize(width,height));
-      
+
     def resizeEvent (self,ev):
       QFileDialog.resizeEvent(self,ev);
       sz = ev.size();
       Config.set('%s-width'%self.config_name,sz.width());
       Config.set('%s-height'%self.config_name,sz.height());
-      
+
     def show (self):
       QFileDialog.show(self);
       self._file = None;
-      
+
 #    def done (self,code):
 #      """Workaround for QFileDialog bug: if DirctoryOnly mode, it doesn't actually emit any
-#      fileSelected() when OK is pressed. So we catch the selected dir via fileHighlighted() 
+#      fileSelected() when OK is pressed. So we catch the selected dir via fileHighlighted()
 #      below, and report it here.""";
 #      if code == 1 and self.mode() == QFileDialog.DirectoryOnly and self._file:
 #        self.emit(SIGNAL("filesSelected"),self._file);
 #      QFileDialog.done(self,code);
-      
+
     def _filterSelected (self,file_filter):
       if str(file_filter) == self._dirfilter:
         self.setFileMode(QFileDialog.Directory);
@@ -689,22 +689,22 @@ class LogEntryEditor (QWidget):
       else:
         self.setFileMode(QFileDialog.ExistingFiles);
         self.setOption(0);
-    
+
     def setDirList (self,dirlist):
       if dirlist is not self.dirlist:
         self.dirlist = dirlist;
         if dirlist and hasattr(self,'setSidebarUrls'):
           self.setSidebarUrls([QUrl.fromLocalFile(path) for path in dirlist]);
-          
+
     def _filesSelected (self,filelist):
       self.emit(SIGNAL("filesSelected"),*map(str,filelist));
-      
+
     def _fileSelected (self,file):
       self.emit(SIGNAL("filesSelected"),str(file));
-      
+
     def _fileHighlighted (self,file):
       self._file = str(file);
-  
+
   def _showAddFileDialog (self,add_dir=False):
     # create dialog when first called
     dialog = self._add_dp_dialog;
@@ -721,25 +721,25 @@ class LogEntryEditor (QWidget):
     dialog.setDirectory(dialog.directory()); # hope this is the same as rereadDir() in qt3
     dialog.show();
     dialog.raise_();
-    
+
   def _showAddDirDialog (self):
     return self._showAddFileDialog(add_dir=True);
-  
+
   def _titleChanged (self,*dum):
     self._title_changed = True;
     self.setUpdated();
-    
+
   def _commentChanged (self,*dum):
     self._comment_changed = self._comment_edited = True;
     self.setUpdated();
-  
+
   def suggestTitle (self,title):
     """Suggests a title for the entry.
     If title has been manually edited, suggestion is ignored.""";
     if not self._title_changed or not str(self.wtitle.text()):
       self.wtitle.setText(title);
       self._title_changed = False;
-    
+
   def addComment (self,comment):
     # get current comment text, if nothing was changed at all, use empty text
     if self._comment_changed:
@@ -765,11 +765,11 @@ class LogEntryEditor (QWidget):
     self.comment_doc.setPlainText(cur_comment);
     if cpos:
       self.wcomment.setTextCursor(cpos);
-    
+
   def countRemovedDataProducts (self):
     """Returns number of DPs marked for removal""";
     return len([item for item,dp in self.wdplv.getItemDPList() if dp.policy == "remove"]);
-      
+
   def resolveFilenameConflicts (self,dialog=True):
     """Goes through list of DPs to make sure that their destination names
     do not clash. Applies new names. Returns True if some conflicts were resolved.
@@ -777,15 +777,15 @@ class LogEntryEditor (QWidget):
     resolved = self.wdplv.resolveFilenameConflicts();
     if resolved and dialog:
       QMessageBox.warning(self,"Filename conflicts","""<P>
-        <NOBR>PURR has found duplicate destination filenames among your data products.</NOBR> 
+        <NOBR>PURR has found duplicate destination filenames among your data products.</NOBR>
         This is not allowed, so some filenames have been adjusted to avoid name clashes.
         Please review the changes before saving this entry.
         </P>""",
         QMessageBox.Ok,0);
     return resolved;
-    
+
   def updateEntry (self):
-    """Updates entry object with current content of dialog. 
+    """Updates entry object with current content of dialog.
     In new entry mode (setEntry() not called, so self.entry=None), creates new entry object.
     In old entry mode (setEntry() called), updates and saves old entry object.
     """;
@@ -809,11 +809,11 @@ class LogEntryEditor (QWidget):
       return self.entry;
     else:
       return Purr.LogEntry(time.time(),title,comment,dps);
-    
+
   def updateIgnoredEntry (self):
     """Updates an ignore-entry object with current content of dialog, by
     marking all data products for ignore."""
-    # collect new DPs from items 
+    # collect new DPs from items
     dps = [];
     for item,dp in self.wdplv.getItemDPList():
       if dp and not dp.archived: # None means a new DP
@@ -824,7 +824,7 @@ class LogEntryEditor (QWidget):
         dps.append(dp);
     # return new entry
     return Purr.LogEntry(time.time(),dps=dps,ignore=True);
-    
+
   def setEntry (self,entry=None):
     """Populates the dialog with contents of an existing entry.""";
     busy = Purr.BusyIndicator();
@@ -835,36 +835,36 @@ class LogEntryEditor (QWidget):
     self.wdplv.fillDataProducts(entry.dps);
     self.setTimestamp(entry.timestamp);
     self.updated = False;
-  
+
   def addDataProducts(self,dps):
     """Adds data products to dialog.
       dps is a list of DP objects
     """;
     return self.wdplv.addDataProducts(dps);
-  
+
   def dropDataProducts (self,*pathnames):
     """Drops new (i.e. non-archived) DP items matching the given pathnames.""";
     return self.wdplv.dropDataProducts(*pathnames);
-  
+
   def entryTitle (self):
     return self.wtitle.text();
-  
+
   def setEntryTitle (self,title,select=True):
     self.wtitle.setText(title);
     if select:
       self.wtitle.selectAll();
-      
+
   def setEntryComment (self,comment,select=True):
     self.comment_doc.setPlainText(comment);
     if select:
       self.wcomment.selectAll();
-    
+
   def setTimestamp (self,timestamp):
     self._timestamp = timestamp;
     txt = time.strftime("%x %X",time.localtime(timestamp));
     self.wtimestamp.setText(txt);
     self.wtimestamp.show();
-      
+
 
 class NewLogEntryDialog (QDialog):
   #class DialogTip (QToolTip):
@@ -877,7 +877,7 @@ class NewLogEntryDialog (QDialog):
         #rect = QRect(pos.x()-20,pos.y()-20,40,40);
         #self.tip(rect,parent._has_tip);
         #parent._has_tip = None;
-  
+
   def __init__ (self,parent,*args):
     QDialog.__init__(self,parent,*args);
     self.setWindowTitle("Adding Log Entry");
@@ -932,38 +932,38 @@ class NewLogEntryDialog (QDialog):
     width = Config.getint('entry-editor-width',512);
     height = Config.getint('entry-editor-height',512);
     self.resize(QSize(width,height));
-    
+
   def resizeEvent (self,ev):
     QDialog.resizeEvent(self,ev);
     sz = ev.size();
     Config.set('entry-editor-width',sz.width());
     Config.set('entry-editor-height',sz.height());
-  
+
   def showEvent (self,ev):
     QDialog.showEvent(self,ev);
     self.emit(SIGNAL("shown"),True);
-    
+
   def hideEvent (self,ev):
     QDialog.hideEvent(self,ev);
     self.emit(SIGNAL("shown"),False);
 
   def reset (self):
     self.editor.reset();
-    
+
   def addDataProducts (self,dps):
     updated = self.editor.addDataProducts(dps);
     self.ignorebtn.setEnabled(True);
     return updated;
-  
+
   def suggestTitle(self,title):
     self.editor.suggestTitle(title);
-    
+
   def addComment(self,comment):
     self.editor.addComment(comment);
-    
+
   def setDefaultDirs (self,*dirs):
     self.editor.setDefaultDirs(*dirs);
-    
+
   def ignoreAllDataProducts (self):
     # confirm with user
     if QMessageBox.question(self,"Ignoring all data products","""<P><NOBR>Do you really
@@ -976,7 +976,7 @@ class NewLogEntryDialog (QDialog):
     self.emit(SIGNAL("newLogEntry"),entry);
     self.editor.resetDPs();
     self.hide();
-    
+
   def addNewEntry (self):
     # if some naming conflicts have been resolved, return -- user will need to re-save
     if self.editor.resolveFilenameConflicts():
@@ -991,7 +991,7 @@ class NewLogEntryDialog (QDialog):
     self.emit(SIGNAL("newLogEntry"),entry);
     self.editor.reset();
     self.hide();
-    
+
 class ExistingLogEntryDialog (QDialog):
   def __init__ (self,parent,*args):
     QDialog.__init__(self,parent,*args);
@@ -1033,14 +1033,14 @@ class ExistingLogEntryDialog (QDialog):
     btnfr_lo.addWidget(self.wsave,1);
     btnfr_lo.addStretch(1);
     btnfr_lo.addWidget(cancelbtn,1);
-    
+
     # create viewer panel
     self.viewer_panel = QWidget(self.wstack);
     self.viewer_panel.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
     self.wstack.addWidget(self.viewer_panel);
     lo = QVBoxLayout(self.viewer_panel);
     lo.setMargin(0);
-    label = QLabel("""<P>Below is an HTML rendering of your log entry. Note that this window 
+    label = QLabel("""<P>Below is an HTML rendering of your log entry. Note that this window
       is only a bare-bones viewer, not a real browser. You can't click on links! To get access
       to this entry's data products, click the Edit button below.
       </P>""",self.viewer_panel);
@@ -1076,7 +1076,7 @@ class ExistingLogEntryDialog (QDialog):
     btn = self.wclose = QPushButton(pixmaps.grey_round_cross.icon(),"Close",btnfr);
     QObject.connect(btn,SIGNAL("clicked()"),self.hide);
     btnfr_lo.addWidget(btn,1);
-    
+
     # resize selves
     width = Config.getint('entry-viewer-width',512);
     height = Config.getint('entry-viewer-height',512);
@@ -1084,13 +1084,13 @@ class ExistingLogEntryDialog (QDialog):
     # other init
     self.entry = None;
     self.updated = False;
-    
+
   def resizeEvent (self,ev):
     QDialog.resizeEvent(self,ev);
     sz = ev.size();
     Config.set('entry-viewer-width',sz.width());
     Config.set('entry-viewer-height',sz.height());
-    
+
   def viewEntry (self,entry,has_prev=True,has_next=True):
     # if editing previous entry, ask for confirmation
     if self.updated:
@@ -1106,18 +1106,18 @@ class ExistingLogEntryDialog (QDialog):
     self.wprev.setEnabled(has_prev);
     self.wnext.setEnabled(has_next);
     self.wstack.setCurrentWidget(self.viewer_panel);
-    
+
   def _resetSource (self,*dum):
     if self._viewer_source:
       self.viewer.setSource(self._viewer_source);
-    
+
   def setDefaultDirs (self,*dirs):
     self.editor.setDefaultDirs(*dirs);
-    
+
   def addDataProducts (self,dps):
     self.editor.addDataProducts(dps);
     self._entryUpdated();
-    
+
   def _editEntry (self):
     self.setWindowTitle("Editing entry");
     self.editor.setEntry(self.entry);
@@ -1145,7 +1145,7 @@ class ExistingLogEntryDialog (QDialog):
     self.wstack.setCurrentWidget(self.viewer_panel);
     # emit signal to regenerate log
     self.emit(SIGNAL("entryChanged"),self.entry);
-    
+
   def _cancelEntry (self):
     if self.updated and QMessageBox.question(self,"Abandoning changes",
           "Abandon changes to this log entry?",
@@ -1153,8 +1153,8 @@ class ExistingLogEntryDialog (QDialog):
       return;
     self.setWindowTitle(self.entry.title);
     self.wstack.setCurrentWidget(self.viewer_panel);
-    
+
   def _entryUpdated (self):
     self.updated = True;
     self.wsave.setEnabled(True);
-    
+

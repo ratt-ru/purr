@@ -176,6 +176,7 @@ class DirectoryListWidget (Kittens.widgets.ClickableListWidget):
     """Automatically resizes widget to display at most max_height_items items""";
     if self._item_height is not None:
       sz = min(self._max_height_items,self.count())*self._item_height + 5;
+      sz= max(sz,20);
       self.setMinimumSize(0,sz);
       self.setMaximumSize(1000000,sz);
       self.resize(self.width(),sz);
@@ -237,14 +238,15 @@ class MainWindow (QMainWindow):
     # current purrer
     self.purrer = None;
     self.purrer_stack = [];
-    # Purr pipe for receiving remote commands
-    self.purrpipe = None;
+    # Purr pipes for receiving remote commands
+    self.purrpipes = {}
     # init GUI
     self.setWindowTitle("PURR");
     self.setWindowIcon(pixmaps.purr_logo.icon());
     cw = QWidget(self);
     self.setCentralWidget(cw);
     cwlo = QVBoxLayout(cw);
+    cwlo.setContentsMargins(0,0,0,0);
     cwlo.setMargin(5);
     cwlo.setSpacing(0);
     toplo = QHBoxLayout(); cwlo.addLayout(toplo);
@@ -341,9 +343,18 @@ class MainWindow (QMainWindow):
 
     cwlo.addSpacing(5);
 
-    # listview of log entries
+    wlogframe = QFrame(cw);
+    cwlo.addWidget(wlogframe);
+    log_lo = QVBoxLayout(wlogframe);
+    log_lo.setMargin(5);
+    log_lo.setContentsMargins(5,5,5,5);
+    log_lo.setSpacing(0);
+    wlogframe.setFrameStyle(QFrame.Box|QFrame.Raised);
+    wlogframe.setLineWidth(1);
+
+# listview of log entries
     self.etw = Kittens.widgets.ClickableTreeWidget(cw);
-    cwlo.addWidget(self.etw,1);
+    log_lo.addWidget(self.etw,1);
     self.etw.header().setDefaultSectionSize(128);
     self.etw.header().setMovable(False);
     self.etw.setHeaderLabels(["date","entry title","comment"]);
@@ -375,8 +386,9 @@ class MainWindow (QMainWindow):
     menu.addAction(pixmaps.filefind.icon(),"View",self._viewEntryItem);
     menu.addAction(pixmaps.editdelete.icon(),"Delete",self._deleteSelectedEntries);
     # buttons at bottom
-    cwlo.addSpacing(5);
-    btnlo = QHBoxLayout(); cwlo.addLayout(btnlo);
+    log_lo.addSpacing(5);
+    btnlo = QHBoxLayout();
+    log_lo.addLayout(btnlo);
     self.wnewbtn = QPushButton(pixmaps.filenew.icon(),"New entry...",cw);
     self.wnewbtn.setToolTip("Click to add a new log entry.");
     # self.wnewbtn.setFlat(True);
@@ -453,6 +465,7 @@ class MainWindow (QMainWindow):
     self.purrer.setWatchingState(pathname,watching);
     # update dialogs if dir list has changed
     if watching == Purr.REMOVED:
+      self.purrpipes.pop(pathname);
       dirs = [ path for path,state in self.purrer.watchedDirectories() ];
       self.new_entry_dialog.setDefaultDirs(*dirs);
       self.view_entry_dialog.setDefaultDirs(*dirs);
@@ -463,39 +476,42 @@ class MainWindow (QMainWindow):
     if dd:
       # adds a watched directory. Default initial setting of 'watching' is POUNCE if all
       # directories are in POUNCE state, or WATCHED otherwise.
-      watching = max(Purr.WATCHED,min([state for path,state in self.purrer.watchedDirectories()]));
+      watching = max(Purr.WATCHED,min([state for path,state in self.purrer.watchedDirectories()] or [Purr.WATCHED]));
       self.purrer.addWatchedDirectory(dd,watching);
+      self.purrpipes[dd] = Purr.Pipe.open(dd);
       self.wdirlist.add(dd,watching);
       # update dialogs since dir list has changed
       dirs = [ path for path,state in self.purrer.watchedDirectories() ];
       self.new_entry_dialog.setDefaultDirs(*dirs);
       self.view_entry_dialog.setDefaultDirs(*dirs);
 
-  def detachDirectory (self):
+  def detachPurrlog (self):
     self.wdirlist.clear();
     self.purrer and self.purrer.detach();
+    self.purrer = None;
 
-  def attachDirectory (self,dirname,watchdirs=None):
-    """Attaches Purr to the given directory. If watchdirs is None,
-    the current directory will be watched, otherwise the given directories will be watched."""
+  def hasPurrlog (self):
+    return bool(self.purrer);
+
+  def attachPurrlog (self,purrlog,watchdirs=[]):
+    """Attaches Purr to the given purrlog directory. Arguments are passed to Purrer object as is."""
     # check purrer stack for a Purrer already watching this directory
-    dprint(1,"attaching to directory",dirname);
+    dprint(1,"attaching to purrlog",purrlog);
     for i,purrer in enumerate(self.purrer_stack):
-      if os.path.samefile(purrer.dirname,dirname):
+      if os.path.samefile(purrer.logdir,purrlog):
         dprint(1,"Purrer object found on stack (#%d),reusing\n",i);
         # found? move to front of stack
         self.purrer_stack.pop(i);
         self.purrer_stack.insert(0,purrer);
         # update purrer with watched directories, in case they have changed
-        if watchdirs:
-          for dd in watchdirs:
-            purrer.addWatchedDirectory(dd,watching=None);
+        for dd in (watchdirs or []):
+          purrer.addWatchedDirectory(dd,watching=None);
         break;
     # no purrer found, make a new one
     else:
       dprint(1,"creating new Purrer object");
       try:
-        purrer = Purr.Purrer(dirname,watchdirs or (dirname,));
+        purrer = Purr.Purrer(purrlog,watchdirs);
       except Purr.Purrer.LockedError,err:
         # check that we could attach, display message if not
         QMessageBox.warning(self,"Catfight!","""<P><NOBR>It appears that another PURR process (%s)</NOBR>
@@ -503,8 +519,8 @@ class MainWindow (QMainWindow):
           process first.</P>"""%(err.args[0],os.path.abspath(dirname)),QMessageBox.Ok,0);
         return False;
       except Purr.Purrer.LockFailError,err:
-        QMessageBox.warning(self,"Failed to lock directory","""<P><NOBR>PURR was unable to obtain a lock</NOBR>
-          on directory <tt>%s</tt> (error was "%s"). The most likely cause is insufficient permissions.</P>"""%(os.path.abspath(dirname),err.args[0]),QMessageBox.Ok,0);
+        QMessageBox.warning(self,"Failed to obtain lock","""<P><NOBR>PURR was unable to obtain a lock</NOBR>
+          on directory <tt>%s</tt> (error was "%s"). The most likely cause is insufficient permissions.</P>"""%(os.path.abspath(purrlog),err.args[0]),QMessageBox.Ok,0);
         return False;
       self.purrer_stack.insert(0,purrer);
       # discard end of stack
@@ -515,10 +531,12 @@ class MainWindow (QMainWindow):
       self.connect(purrer,SIGNAL("disappearedFile"),
                    self.view_entry_dialog.dropDataProducts);
     # have we changed the current purrer? Update our state then
-    # reopen pipe
-    self.purrpipe = Purr.Pipe.open(purrer.dirname);
+    # reopen Purr pipes
+    self.purrpipes = {};
+    for dd,state in purrer.watchedDirectories():
+      self.purrpipes[dd] = Purr.Pipe.open(dd);
     if purrer is not self.purrer:
-      self.message("Attached to directory %s"%purrer.dirname);
+      self.message("Attached to %s"%purrer.logdir,ms=10000);
       dprint(1,"current Purrer changed, updating state");
       # set window title
       path = Kittens.utils.collapseuser(os.path.join(purrer.logdir,''));
@@ -564,7 +582,6 @@ class MainWindow (QMainWindow):
       """%(self.purrer.logdir,
       "".join([ "<PRE>  <tt>%s</tt></PRE>"%name for name,state in self.purrer.watchedDirectories()])
     ));
-    # self.dir_label.setText("Directory: %s"%self.purrer.dirname);
     title = self.purrer.logtitle or "Unnamed log"
     self.title_editor.setText(title);
     self.viewer_dialog.setWindowTitle(title);
@@ -614,6 +631,7 @@ class MainWindow (QMainWindow):
     item = None;
     for i,entry in enumerate(entries):
       item = self._addEntryItem(entry,i,item);
+    self.etw.resizeColumnToContents(0);
 
   def _titleChanged (self):
     self.setLogTitle(str(self.title_editor.text()));
@@ -634,6 +652,8 @@ class MainWindow (QMainWindow):
     self._rescan(force=True);
 
   def _rescan (self,force=False):
+    if not self.purrer:
+      return;
     # if pounce is on, tell the Purrer to rescan directories
     if self._pounce or force:
       dps = self.purrer.rescan();
@@ -645,9 +665,9 @@ class MainWindow (QMainWindow):
           dprint(2,"showing dialog");
           self.new_entry_dialog.show();
     # else read stuff from pipe
-    if self.purrpipe:
+    for pipe in self.purrpipes.itervalues():
       do_show = False;
-      for command,show,content in self.purrpipe.read():
+      for command,show,content in pipe.read():
         if command == "title":
           self.new_entry_dialog.suggestTitle(content);
         elif command == "comment":

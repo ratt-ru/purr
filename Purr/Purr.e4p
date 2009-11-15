@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
 <!-- eric4 project file for project Purr -->
-<!-- Saved: 2009-11-05, 22:05:18 -->
+<!-- Saved: 2009-11-10, 17:47:11 -->
 <!-- Copyright (C) 2009 Oleg Smirnov, osmirnov@gmail.com -->
 <Project version="4.6">
   <Language></Language>
@@ -134,6 +134,7 @@
     <Source>Purr/MainWindow.py</Source>
     <Source>Purr/LogEntry.py</Source>
     <Source>Purr/RenderIndex.py</Source>
+    <Source>Purr/Startup.py</Source>
   </Sources>
   <Forms>
   </Forms>

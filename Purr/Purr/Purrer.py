@@ -11,6 +11,7 @@
 import sys
 import os
 import os.path
+import glob
 import re
 import time
 import traceback
@@ -32,6 +33,7 @@ from PyQt4.Qt import QObject,SIGNAL
 
 # this string is used to create lock files
 _lockstring = "%s:%d"%(os.uname()[1],os.getpid());
+
 
 def parse_pattern_list (liststr):
   """Parses a list of filename patterns of the form "Description=ptt,patt,...;Description=patt,...
@@ -64,6 +66,17 @@ def matches_patterns (filename,patterns):
   return bool([ patt for patt in patterns if fnmatch.fnmatch(filename,patt) ]);
 
 class Purrer (QObject):
+  @staticmethod
+  def is_purrlog (path):
+    """Checks if path refers to a valid purrlog.
+    Path must exist, and must contain either at least one directory called entry-YYYYMMDD-HHMMSS, or the file "dirconfig"
+    """;
+    if not os.path.isdir(path):
+      return False;
+    if filter(os.path.isdir,glob.glob(os.path.join(path,"entry-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]"))):
+      return True;
+    return os.path.exists(os.path.join(path,"dirconfig"));
+
   class WatchedFile (QObject):
     """A WatchedFile represents a single file being watched for changes."""
     def __init__ (self,path,quiet=None,mtime=None,survive_deletion=False):
@@ -258,7 +271,7 @@ class Purrer (QObject):
       # returns ourselves (as new file) if something has updated
       return (newfiles and [self.path]) or [];
 
-  def __init__ (self,dirname,watchdirs=None):
+  def __init__ (self,purrlog,watchdirs=None):
     QObject.__init__(self);
     # load and parse configuration
     # watched files
@@ -299,7 +312,7 @@ class Purrer (QObject):
     self.other_lock = None;   # will be not None if another PURR holds a lock on this directory
     self.lockfile_fd = None;
     self.lockfile_fobj = None;
-    self._attach(dirname,watchdirs);
+    self._attach(purrlog,watchdirs);
 
   def __del__ (self):
     self.detach();
@@ -325,17 +338,17 @@ class Purrer (QObject):
   class LockFailError (RuntimeError):
     pass;
 
-  def _attach (self,dirname,watchdirs=None):
-    """Attaches Purr to a directory (typically, an MS), and loads content.
+  def _attach (self,purrlog,watchdirs=None):
+    """Attaches Purr to a purrlog directory, and loads content.
     Returns False if nothing new has been loaded (because directory is the same),
     or True otherwise.""";
-    dirname = os.path.abspath(dirname);
-    dprint(1,"attaching to directory",dirname);
-    self.dirname = dirname;
-    self.logdir = os.path.join(self.dirname,"purrlog");
+    purrlog = os.path.abspath(purrlog);
+    dprint(1,"attaching to purrlog",purrlog);
+    self.logdir = purrlog;
     self.indexfile = os.path.join(self.logdir,"index.html");
     self.logtitle = "Unnamed log";
     self.timestamp = self.last_scan_timestamp = time.time();
+    self._initIndexDir();
     # reset internal state
     self.autopounce = False;
     self.watched_dirs = [];
@@ -346,7 +359,7 @@ class Purrer (QObject):
     self.attached = False;
     self._watching_state = {};
     # check that we hold a lock on the directory
-    self.lockfile = os.path.join(self.dirname,".purrlock");
+    self.lockfile = os.path.join(self.logdir,".purrlock");
     # try to open lock file for r/w
     try:
       self.lockfile_fd = os.open(self.lockfile,os.O_RDWR|os.O_CREAT);
@@ -426,9 +439,7 @@ class Purrer (QObject):
           watching = Purr.WATCHED;
         self.addWatchedDirectory(os.path.expanduser(dirname),watching,save_config=False);
     # start watching the specified directories
-    if watchdirs is None:
-      watchdirs = [dirname];
-    for name in watchdirs:
+    for name in (watchdirs or []):
       self.addWatchedDirectory(name,watching=None);
     # init complete
     self.attached = True;
