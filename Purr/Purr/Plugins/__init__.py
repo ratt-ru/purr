@@ -46,7 +46,8 @@ def loadPlugins (paths):
           fp.close();
     except:
       err = sys.exc_info()[1];
-      dprintf(1,"Error importing module %s: %s\n",pathname,err);
+      dprintf(0,"Error importing module %s: %s\n",pathname,err);
+      traceback.print_exc();
       bad_plugins[modname] = err;
       continue;
     # ok, we have a module, check for vital properties

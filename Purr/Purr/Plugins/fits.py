@@ -27,14 +27,14 @@ numpy is available from http://numpy.scipy.org/, or as Debian package python-num
 
   
 # pychart needed for rendering histograms, but we can get on without it
-try:
-  from pychart import *
-  pychart = True;
-except:
-  pychart = None;
-  print """PyChart package not found, rendering of FITS histograms will not be available.
-PyChart is available from http://home.gna.org/pychart/, or as Debian package python-pychart.
-""";
+from local_pychart import *
+pychart = True;
+
+#except:
+#  pychart = None;
+#  print """PyChart package not found, rendering of FITS histograms will not be available.
+#PyChart is available from http://home.gna.org/pychart/, or as Debian package python-pychart.
+#""";
   
 import os.path
 import traceback
