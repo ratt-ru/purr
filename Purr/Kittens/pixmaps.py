@@ -28,7 +28,7 @@
 from PyQt4.Qt import *
 PYSIGNAL = SIGNAL;
 
-from Timba.utils import verbosity
+from utils import verbosity
 
 import sys
 

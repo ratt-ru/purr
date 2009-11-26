@@ -15,12 +15,19 @@ class Error(RuntimeError):
     RuntimeError.__init__(self);
     self.error_message = message;
 
-def startWizard (args,mainwin,parent=None):
+wizard_dialog = None;
+
+def startWizard (args,mainwin,modal=True):
   """
-  Parses list of directories (args) and attaches to purrlogs appropriately.
+  Parses list of directories ('args') and attaches to purrlogs appropriately.
   'mainwin' is a Purr.MainWindow object.
 
-  Return value: True if arguments parse OK, False on error.
+  Return value: 
+    * if modal=True: True if arguments parse OK and Purr.MainWindow should be shown, False on error.
+    * if modal=False: True if attached to purrlog and Purr.MainWindow should be shown, False otherwise.
+
+  If modal=False, it will keep displaying the startup dialog as a modeless dialog, and attach the
+mainwin to the specified purrlog when the dialog is closed.
 
   Use cases:
    $ purr <dirname> [<more dirs>]
@@ -44,22 +51,21 @@ def startWizard (args,mainwin,parent=None):
   """;
 
   args = args or [ os.getcwd() ];
-  dirname = args[0];
+  dirname = os.path.abspath(args[0]);
   moredirs = args[1:];
 
   # case 1: dirname does not exist, or refers to a non-directory
   if not os.path.exists(dirname) or not os.path.isdir(dirname):
     message = """To begin with, PURR must load an existing purrlog, or start a new purrlog. <tt>%s</tt> does not look to be an existing purrlog.
             What would you like to do?"""%Kittens.utils.collapseuser(dirname);
-    # default creation name is then the given dirname, default dir is parent of given name
     create = dirname;
-    dirname = os.path.dirname(os.path.normpath(dirname)) or os.getcwd();
+    dirname = os.getcwd();
+    parent = os.path.dirname(os.path.normpath(create)) or os.getcwd();
     # if parent is valid dir, find purrlogs in parent (to offer as an option)
-    if os.path.isdir(dirname):
-      purrlogs = filter(Purr.Purrer.is_purrlog,glob.glob(os.path.join(dirname,"*")));
+    if os.path.isdir(parent):
+      purrlogs = filter(Purr.Purrer.is_purrlog,glob.glob(os.path.join(parent,"*")));
     # else use "." as dirname, and do not offer any purrlogs
     else:
-      dirname = os.getcwd();
       purrlogs = [];
   # case 2: dirname exists:
   else:
@@ -84,23 +90,28 @@ def startWizard (args,mainwin,parent=None):
       message = """To begin with, PURR must load an existing purrlog, or create a new purrlog. The directory <tt>%s</tt> contains
           no purrlogs. What would you like to do?"""%Kittens.utils.collapseuser(dirname);
 
-  # case 1, 2d or 2e: make dialog
-  dialog = PurrStartupWizard(mainwin,dirname,purrlogs,create=create,message=message);
-  if dialog.exec_() == QDialog.Rejected:
-    return False;
-  path = dialog.selectedPath();
-  if not path:
-    raise RuntimeError,"No path selected in StartupWizard. This is probably a bug, please report it!";
-    return False;
-  mainwin.show();
-  # if attaching to existing purrlog, cancel the moredirs argument
-  # if creating new purrlog, add parent directory to watchlist
-  if os.path.exists(path):
-    moredirs = None;
+  # case 1, 2d or 2e: make wizard dialog
+
+  # kill old wizard, if showing
+  global wizard_dialog;
+  if wizard_dialog:
+    wizard_dialog.hide();
+    dum = QWidget();
+    wizard_dialog.setParent(dum);
+    dum = wizard_dialog = None;
+
+  # create new wizard
+  wizard_dialog = PurrStartupWizard(mainwin,dirname,purrlogs,moredirs=moredirs,create=create,message=message);
+  
+  if modal:
+    if wizard_dialog.exec_() == QDialog.Rejected:
+      return False;
+    return True;        
   else:
-    moredirs = [dirname] + list(moredirs);
-  mainwin.attachPurrlog(path,moredirs);
-  return True;
+    wizard_dialog.setModal(False);
+    wizard_dialog.show();
+    return False;
+
 
 class PurrStartupWizard (QWizard):
 
@@ -161,6 +172,7 @@ class PurrStartupWizard (QWizard):
       self.wcreate.setEnabled(False);
       # this holds the last validated name
       self._validated_create_path = None;
+      self._validated_result = False;
       # generate default name for a new purrlog
       self.create_path = os.path.join(dirname,"purrlog");
       num = 0;
@@ -170,7 +182,7 @@ class PurrStartupWizard (QWizard):
       # This will be not None as long as a valid name is entered
       self.create_path = Kittens.utils.collapseuser(os.path.normpath(self.create_path));
       if create:
-        self.wcreate.setText(create);
+        self.wcreate.setText(create or Kittens.utils.collapseuser(create));
         # this will emit checkCompleteness(), causing a _validate_create_filename() call, causing the content of the wcreate widget
         # to be validated and copied to create_path if valid, or reset from create_path if invalid
         self.rb_create.setChecked(True);
@@ -192,18 +204,24 @@ class PurrStartupWizard (QWizard):
         QMessageBox.warning(self,"Invalid purrlog","The path you have selected, <tt>%s</tt>, does not refer to a valid purrlog."%Kittens.utils.collapseuser(path));
         return;
       self.load_path = path;
-      self.wother.setText(path);
+      self.wother.setText(Kittens.utils.collapseuser(path));
       self.checkCompleteness();
 
     def _validate_create_filename (self,path=None,check=True):
       if path is None:
         path = str(self.wcreate.text());
+      # if we have already validated this path, then return the last validation result.
+      # This is mostly to keep from bombarding the user with repeated error dialogs.
+      if self._validated_create_path == path:
+        return self._validated_result;
       self._validated_create_path = path;
+      self._validated_result = False; # set to True if all checks pass
+      # now process the path. Normalize it, and expand "~"
       path = os.path.expanduser(os.path.normpath(path));
+      # if not absolute, join to current directory
       if not os.path.isabs(path):
         path = os.path.join(self.dirname,path);
-      if self._validated_create_path == path:
-        return path== self.create_path;
+      # collapse to "~" (for error messages) 
       path0 = Kittens.utils.collapseuser(path);
       if os.path.exists(path):
         QMessageBox.warning(self,"Can't create purrlog","""Unable to create purrlog <tt>%s</tt>: file or directory already exists. Please select another name"""%path0);
@@ -215,6 +233,7 @@ class PurrStartupWizard (QWizard):
         return False;
       self.create_path = path;
       self.wcreate.setText(path0);
+      self._validated_result = True; # set to True if all checks pass
       if check:
         self.checkCompleteness();
       return True;
@@ -225,7 +244,7 @@ class PurrStartupWizard (QWizard):
         self._validate_create_filename(path);
 
     def checkCompleteness (self,toggled=None):
-      if toggled and  hasattr(self,'rb_other') and self.rb_other.isChecked() and not self.load_path:
+      if toggled and hasattr(self,'rb_other') and self.rb_other.isChecked() and not self.load_path:
         self._select_other_dialog();
       else:
         self.emit(SIGNAL("completeChanged()"));
@@ -247,8 +266,8 @@ class PurrStartupWizard (QWizard):
         return self.create_path;
       return None;
 
-  def __init__(self,parent,dirname,purrlogs,create=None,message=None):
-    QWizard.__init__(self,parent);
+  def __init__(self,mainwin,dirname,purrlogs,moredirs=[],create=None,message=None):
+    QWizard.__init__(self,mainwin);
     self.setWindowTitle("Starting PURR");
     self.setPixmap(QWizard.LogoPixmap,pixmaps.purr_logo.pm());
     self.setOption(QWizard.NoBackButtonOnStartPage);
@@ -256,6 +275,26 @@ class PurrStartupWizard (QWizard):
     # create start page
     self._startpage = self.StartPage(dirname,purrlogs,create=create,message=message)
     self.addPage(self._startpage);
+    # internal state
+    self._dirname = dirname;
+    self._mainwin = mainwin;
+    self._moredirs = moredirs;
+
+  def done (self,code):
+    if code == QDialog.Accepted:
+      # check path, set code to rejected if none set
+      path = self._startpage.selectedPath();
+      if not path:
+        print "No path selected in StartupWizard. This is probably a bug, please report it!";
+        code = QDialog.Rejected;
+      else:
+        # show the main window
+        self._mainwin.show();
+        # if attaching to existing purrlog, cancel the moredirs argument
+        # if creating new purrlog, add parent directory to watchlist
+        moredirs = None if os.path.exists(path) else [self._dirname] + list(self._moredirs);
+        self._mainwin.attachPurrlog(path,moredirs);
+    return QDialog.done(self,code);
 
   def selectedPath (self):
     return self._startpage.selectedPath();
