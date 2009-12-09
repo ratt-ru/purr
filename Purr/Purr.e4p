@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
 <!-- eric4 project file for project Purr -->
-<!-- Saved: 2009-11-10, 17:47:11 -->
+<!-- Saved: 2009-12-09, 19:58:59 -->
 <!-- Copyright (C) 2009 Oleg Smirnov, osmirnov@gmail.com -->
 <Project version="4.6">
   <Language></Language>
@@ -24,108 +24,6 @@
     <Source>Purr/Plugins/image.py</Source>
     <Source>Purr/Plugins/fits.py</Source>
     <Source>Purr/Plugins/__init__.py</Source>
-    <Source>Purr/Plugins/pychart/font.py</Source>
-    <Source>Purr/Plugins/pychart/empty_docs.py</Source>
-    <Source>Purr/Plugins/pychart/x11canvas.py</Source>
-    <Source>Purr/Plugins/pychart/linear_coord.py</Source>
-    <Source>Purr/Plugins/pychart/chart_data.py</Source>
-    <Source>Purr/Plugins/pychart/gs_frontend.py</Source>
-    <Source>Purr/Plugins/pychart/svgcanvas.py</Source>
-    <Source>Purr/Plugins/pychart/legend_doc.py</Source>
-    <Source>Purr/Plugins/pychart/text_box.py</Source>
-    <Source>Purr/Plugins/pychart/text_box_doc.py</Source>
-    <Source>Purr/Plugins/pychart/color.py</Source>
-    <Source>Purr/Plugins/pychart/line_style.py</Source>
-    <Source>Purr/Plugins/pychart/line_plot.py</Source>
-    <Source>Purr/Plugins/pychart/axis_x_doc.py</Source>
-    <Source>Purr/Plugins/pychart/error_bar_doc.py</Source>
-    <Source>Purr/Plugins/pychart/axis_y_doc.py</Source>
-    <Source>Purr/Plugins/pychart/object_set.py</Source>
-    <Source>Purr/Plugins/pychart/color_doc.py</Source>
-    <Source>Purr/Plugins/pychart/pychart_types.py</Source>
-    <Source>Purr/Plugins/pychart/axis.py</Source>
-    <Source>Purr/Plugins/pychart/doc_support.py</Source>
-    <Source>Purr/Plugins/pychart/bar_plot.py</Source>
-    <Source>Purr/Plugins/pychart/error_bar.py</Source>
-    <Source>Purr/Plugins/pychart/pscanvas.py</Source>
-    <Source>Purr/Plugins/pychart/arrow.py</Source>
-    <Source>Purr/Plugins/pychart/theme.py</Source>
-    <Source>Purr/Plugins/pychart/line_style_doc.py</Source>
-    <Source>Purr/Plugins/pychart/rose_plot.py</Source>
-    <Source>Purr/Plugins/pychart/chart_object.py</Source>
-    <Source>Purr/Plugins/pychart/tick_mark_doc.py</Source>
-    <Source>Purr/Plugins/pychart/fill_style_doc.py</Source>
-    <Source>Purr/Plugins/pychart/generate_docs.py</Source>
-    <Source>Purr/Plugins/pychart/typechecker.py</Source>
-    <Source>Purr/Plugins/pychart/legend.py</Source>
-    <Source>Purr/Plugins/pychart/canvas.py</Source>
-    <Source>Purr/Plugins/pychart/line_plot_doc.py</Source>
-    <Source>Purr/Plugins/pychart/pie_plot.py</Source>
-    <Source>Purr/Plugins/pychart/fill_style.py</Source>
-    <Source>Purr/Plugins/pychart/arrow_doc.py</Source>
-    <Source>Purr/Plugins/pychart/interval_bar_plot.py</Source>
-    <Source>Purr/Plugins/pychart/basecanvas.py</Source>
-    <Source>Purr/Plugins/pychart/axis_doc.py</Source>
-    <Source>Purr/Plugins/pychart/pdfcanvas.py</Source>
-    <Source>Purr/Plugins/pychart/area_doc.py</Source>
-    <Source>Purr/Plugins/pychart/__init__.py</Source>
-    <Source>Purr/Plugins/pychart/category_coord.py</Source>
-    <Source>Purr/Plugins/pychart/tick_mark.py</Source>
-    <Source>Purr/Plugins/pychart/afm/NewCenturySchlbk_BoldItalic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Times_Roman.py</Source>
-    <Source>Purr/Plugins/pychart/afm/AvantGarde_BookOblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Palatino_BoldItalic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/NewCenturySchlbk_Bold.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Bookman_DemiItalic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/ZapfDingbats.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_Light.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Bookman_LightItalic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_Narrow_BoldOblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_Oblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Utopia_Italic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Utopia_Bold.py</Source>
-    <Source>Purr/Plugins/pychart/afm/dir.py</Source>
-    <Source>Purr/Plugins/pychart/afm/ZapfChancery_MediumItalic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Times_BoldItalic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Times_Bold.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Utopia_Regular.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_Narrow.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_Bold.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Palatino_Roman.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Bookman_Demi.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_Narrow_Bold.py</Source>
-    <Source>Purr/Plugins/pychart/afm/AvantGarde_Book.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Times_Italic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/AvantGarde_DemiOblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Bookman_Light.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_LightOblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Courier_Bold.py</Source>
-    <Source>Purr/Plugins/pychart/afm/__init__.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Courier.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Courier_Oblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Utopia_BoldItalic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Palatino_Bold.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Palatino_Italic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/NewCenturySchlbk_Roman.py</Source>
-    <Source>Purr/Plugins/pychart/afm/AvantGarde_Demi.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_BoldOblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Symbol.py</Source>
-    <Source>Purr/Plugins/pychart/afm/NewCenturySchlbk_Italic.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Courier_BoldOblique.py</Source>
-    <Source>Purr/Plugins/pychart/afm/Helvetica_Narrow_Oblique.py</Source>
-    <Source>Purr/Plugins/pychart/zap.py</Source>
-    <Source>Purr/Plugins/pychart/pychart_util.py</Source>
-    <Source>Purr/Plugins/pychart/bar_plot_doc.py</Source>
-    <Source>Purr/Plugins/pychart/scaling.py</Source>
-    <Source>Purr/Plugins/pychart/log_coord.py</Source>
-    <Source>Purr/Plugins/pychart/area.py</Source>
-    <Source>Purr/Plugins/pychart/pngcanvas.py</Source>
-    <Source>Purr/Plugins/pychart/version.py</Source>
-    <Source>Purr/Plugins/pychart/range_plot.py</Source>
-    <Source>Purr/Plugins/pychart/coord.py</Source>
-    <Source>Purr/Plugins/pychart/pie_plot_doc.py</Source>
-    <Source>Purr/Plugins/pychart/range_plot_doc.py</Source>
     <Source>Purr/Purrer.py</Source>
     <Source>Purr/CachingRenderer.py</Source>
     <Source>Purr/Pipe.py</Source>
