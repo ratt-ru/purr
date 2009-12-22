@@ -415,7 +415,7 @@ class LogEntry (object):
                                                              (self._up_link and "<A HREF=\"%s\">Up</A>"%self._up_link) or "",
                                                              (self._next_link and "<A HREF=\"%s\">Next&gt;&gt;</A>"%self._next_link) or ""
                                                   );
-      html += ("""<H2><A CLASS="TITLE" TIMESTAMP=%(timestamp)d>"""+icon+"""%(title)s</A></H2>""")%attrs;
+      html += ("<H2>"+icon+""" <A CLASS="TITLE" TIMESTAMP=%(timestamp)d>%(title)s</A></H2>""")%attrs;
     else:
       icon = Purr.RenderIndex.renderIcon(24);
       html += """

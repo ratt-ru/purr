@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os.path
 import os
 import traceback
@@ -28,8 +29,9 @@ def renderIcon (size,path=None):
   return """<IMG SRC="%s"></IMG>"""%quote_url(filename);
 
 def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
-  fullindex = os.path.join(logdir, FULLINDEX);
-  tocindex = os.path.join(logdir, INDEX);
+  logdir = os.path.normpath(logdir);
+  fullindex = os.path.join(logdir,FULLINDEX);
+  tocindex = os.path.join(logdir,INDEX);
 
   # if 5 entries or less, do an index only, and remove the fullindex
   if len(entries) <= 5:
@@ -52,12 +54,15 @@ def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
       <H1><A CLASS="TITLE" TIMESTAMP=%d>%s</A></H1>
 
       """%(title,timestamp,title));
-    fobj.write("""<DIV ALIGN=right><P><A HREF=%s>Printable version (single HTML page).</A></P></DIV>"""%FULLINDEX);
+    fobj.write("""<DIV ALIGN=right><P><A HREF=%s>Printable version (single HTML page).</A></P></DIV>\n\n"""%FULLINDEX);
     # write entries
     for i,entry in enumerate(entries):
-      fobj.write("""<P><A HREF="%s">%d. %s</A></P>"""%(quote_url(entry.index_file),i+1, entry.title));
+      path = entry.index_file;
+      if path.startswith(logdir+'/'):
+        path = path[(len(logdir)+1):];
+      fobj.write("""<P><A HREF="%s">%d. %s</A></P>\n\n"""%(quote_url(path),i+1,entry.title));
     # write footer
-    fobj.write("<HR>\n");
+    fobj.write("<HR>\n\n");
     fobj.write("""<DIV ALIGN=right>%s <I><SMALL>This log was generated
                by PURR version %s.</SMALL></I></DIV>\n"""%(renderIcon(16),Purr.Version));
     fobj.write("</BODY></HTML>\n");

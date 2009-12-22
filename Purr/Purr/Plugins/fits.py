@@ -157,13 +157,13 @@ class FITSRenderer (CachingRenderer):
     else:
       shape = fitsshape[:2];
       # figure out number of planes in the cube
-      nplanes = 1;
+      dataplanes = 1;
       for i in range(2,ndim):
-        nplanes *= fitsshape[i];
-      nplanes = min(self.getOption('fits-nimage'),nplanes);
+        dataplanes *= fitsshape[i];
+      nplanes = min(self.getOption('fits-nimage'),dataplanes);
       def fitsdata_to_images (fdata): 
         # reshape to collapse into a 3D cube
-        fdata = fdata.reshape((nplanes,shape[0],shape[1]));
+        fdata = fdata.reshape((dataplanes,shape[0],shape[1]));
         # now extract subplanes
         img = [ fdata[i,:,:] for i in range(nplanes) ];
         return img;
@@ -288,11 +288,14 @@ class FITSRenderer (CachingRenderer):
           dprintf(3,"%s plane %d: clipping to %g,%g\n",self.dp.fullpath,num_image,rec.clipmin,rec.clipmax);
           # render zoomed histogram
           if pychart:
-            try:
-              self._make_histogram(hz_path,"Histogram zoom of %s"%title,edges[ih0:ih1],counts[ih0:ih1]);
-            except:
-              print "Error rendering histogram %s"%hz_path;
-              traceback.print_exc();
+            if ih1 > ih0+1:
+              try:
+                self._make_histogram(hz_path,"Histogram zoom of %s"%title,edges[ih0:ih1],counts[ih0:ih1]);
+              except:
+                print "Error rendering histogram %s"%hz_path;
+                traceback.print_exc();
+                rec.histogram_zoom = None;
+            else: # no meaningful zoomed area to render
               rec.histogram_zoom = None;
             # if histogram was rendered, make a thumbnail
             if rec.histogram_zoom:

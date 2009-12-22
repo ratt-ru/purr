@@ -516,7 +516,7 @@ class MainWindow (QMainWindow):
         # check that we could attach, display message if not
         QMessageBox.warning(self,"Catfight!","""<P><NOBR>It appears that another PURR process (%s)</NOBR>
           is already attached to <tt>%s</tt>, so we're not allowed to touch it. You should exit the other PURR
-          process first.</P>"""%(err.args[0],os.path.abspath(dirname)),QMessageBox.Ok,0);
+          process first.</P>"""%(err.args[0],os.path.abspath(purrlog)),QMessageBox.Ok,0);
         return False;
       except Purr.Purrer.LockFailError,err:
         QMessageBox.warning(self,"Failed to obtain lock","""<P><NOBR>PURR was unable to obtain a lock</NOBR>
@@ -565,10 +565,11 @@ class MainWindow (QMainWindow):
     return True;
 
   def setLogTitle (self,title):
-    if title != self.purrer.logtitle:
-      self.purrer.setLogTitle(title);
-      self._updateViewer();
-    self._updateNames();
+    if self.purrer:
+      if title != self.purrer.logtitle:
+        self.purrer.setLogTitle(title);
+        self._updateViewer();
+      self._updateNames();
 
   def _updateNames (self):
     self.wnewbtn.setEnabled(True);
