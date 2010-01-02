@@ -5,6 +5,13 @@
 #   ksend -add_connection unix 9975 multi_array kvis -load ARRAY:FILE0 img4096.fits
 # ls /tmp/.KARMA-connections for port number
 
+import sys
+
+def trace_lines (frame, event, arg):
+  if event == "line":
+    print "%s:%d"%(frame.f_code.co_filename,frame.f_lineno);
+  return trace_lines;
+
 # runs Purr standalone
 if __name__ == "__main__":
   print "Welcome to PURR!"
@@ -15,7 +22,12 @@ if __name__ == "__main__":
   parser = OptionParser(usage=usage)
   parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
                     help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
+  parser.add_option("--trace",dest="trace",action="store_true",
+                                        help="(for debugging Python code) enables line tracing of Python statements");
   (options, rem_args) = parser.parse_args();
+
+  if options.trace:
+    sys.settrace(trace_lines);
 
   print "Please wait a second while the GUI starts up."
 

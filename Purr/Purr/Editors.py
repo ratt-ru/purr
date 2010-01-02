@@ -425,10 +425,11 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     itemlist = [];
     for dp in dps:
       item = self.dpitems.get(dp.sourcepath);
-      # if item already exists, it needs to be moved to its new position
-      if item:
-        itemlist.append(self.takeTopLevelItem(self.indexOfTopLevelItem(item)));
-      # else make a new item object
+      # If item already exists, it needs to be moved to its new position
+      # If takeTopLevelItem() returns None, then item was already removed (this shouldn't happen,
+      # but let's be defensive), and we make a new one anyway.
+      if item and self.takeTopLevelItem(self.indexOfTopLevelItem(item)):
+        itemlist.append(item);
       else:
         itemlist.append(self._makeDPItem(None,dp));
       wakeup = wakeup or not (dp.ignored or dp.quiet);

@@ -437,7 +437,8 @@ class Purrer (QObject):
           watching = self.dirconfig.getint(dirname,"watching");
         except:
           watching = Purr.WATCHED;
-        self.addWatchedDirectory(os.path.expanduser(dirname),watching,save_config=False);
+        dirname = os.path.expanduser(dirname);
+        self.addWatchedDirectory(dirname,watching,save_config=False);
     # start watching the specified directories
     for name in (watchdirs or []):
       self.addWatchedDirectory(name,watching=None);
@@ -497,6 +498,8 @@ class Purrer (QObject):
               watch_patterns=self._watch_patterns,ignore_patterns=self._ignore_patterns);
       # fileset=None indicates error reading directory, so ignore it
       if wdir.fileset is None:
+        print "There was an error reading the directory %s, will stop watching it."%dirname;
+        self.setWatchingState(dirname,Purr.REMOVED,save_config=True);
         return;
       self.watchers[dirname] = wdir;
       self.watched_dirs.append(dirname);
@@ -642,9 +645,9 @@ class Purrer (QObject):
       # None indicates access error, so drop it from watcher set
       if newfiles is None:
         if watcher.survive_deletion:
-          dprintf(5,"access error on %s, but will still be watched",watcher.path);
+          dprintf(5,"access error on %s, but will still be watched\n",watcher.path);
         else:
-          dprintf(2,"access error on %s, will no longer be watched",watcher.path);
+          dprintf(2,"access error on %s, will no longer be watched\n",watcher.path);
           del self.watchers[path];
         if not watcher.disappeared:
           self.emit(SIGNAL("disappearedFile"),path);
@@ -683,23 +686,27 @@ class Purrer (QObject):
 
   def makeDataProducts (self,files,unbanish=False,unignore=False):
     """makes a list of DPs from a list of (filename,quiet) pairs.
-    If unbanish is False, DPs with a default "banish" policy will be skipped
+    If unbanish is False, DPs with a default "banish" policy will be skipped.
+    Symlinks will be resolved, and non-unique filenames removed from list.
     """;
+    paths = set();
     dps = [];
     for filename,quiet in files:
       filename = filename.rstrip('/');
       sourcepath = Purr.canonizePath(filename);
-      filename = os.path.basename(filename);
-      policy,filename,comment = self._default_dp_props.get(filename,("copy",filename,""));
-      dprintf(4,"%s: default policy is %s,%s,%s\n",sourcepath,policy,filename,comment);
-      if policy == "banish":
-        if unbanish:
+      if sourcepath not in paths:
+        paths.add(sourcepath);
+        filename = os.path.basename(filename);
+        policy,filename,comment = self._default_dp_props.get(filename,("copy",filename,""));
+        dprintf(4,"%s: default policy is %s,%s,%s\n",sourcepath,policy,filename,comment);
+        if policy == "banish":
+          if unbanish:
+            policy = "copy";
+          else:
+            continue;
+        if unignore and policy == "ignore":
           policy = "copy";
-        else:
-          continue;
-      if unignore and policy == "ignore":
-        policy = "copy";
-      dps.append(Purr.DataProduct(filename=filename,sourcepath=sourcepath,
-                                  policy=policy,comment=comment,quiet=quiet));
+        dps.append(Purr.DataProduct(filename=filename,sourcepath=sourcepath,
+                                    policy=policy,comment=comment,quiet=quiet));
     return dps;
 

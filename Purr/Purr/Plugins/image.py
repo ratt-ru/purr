@@ -7,7 +7,7 @@ Purr will work fine without it, but your logs will be a lot less beautifully ren
 PIL is available from http://www.pythonware.com/products/pil/. On Debian-based systems
 (including Ubuntu and such), it can be as simple as installing the python-imaging package.""";
   raise
-  
+
 import os.path
 import traceback
 
@@ -18,7 +18,7 @@ class ImageRenderer (DefaultRenderer):
   _extensions = set([
     "jpg","jpeg","png","gif","xpm","ppm","pbm","pnm","tiff","tif"
   ]);
-  
+
   def canRender (filename):
     """Check extensions.""";
     name,ext = os.path.splitext(filename);
@@ -28,18 +28,18 @@ class ImageRenderer (DefaultRenderer):
     else:
       return False;
   canRender = staticmethod(canRender);
-    
+
   # this gives a short ID for the class (used in GUIs and such)
   renderer_id = "image";
-  
+
   # this gives a documentation string. You can use rich text here
   renderer_doc = """<P>The "image" plugin provides rendering of image-type data products.
       It can render any image that is compatible with the Python Image Library.""";
-      
+
   # define renderer options
   DefaultRenderer.addOption("image-thumbnail-width",512,dtype=int,doc="Maximum width of thumbnails");
   DefaultRenderer.addOption("image-thumbnail-height",256,dtype=int,doc="Maximum height of thumbnails");
-  
+
   def __init__ (self,dp,**kw):
     DefaultRenderer.__init__(self,dp,**kw);
     Purr.progressMessage("rendering %s"%dp.filename,sub=True);
@@ -77,7 +77,7 @@ class ImageRenderer (DefaultRenderer):
         print "Error saving thumbnail %s in PNG format"%path;
         traceback.print_exc();
         self.thumbnail = None;
-  
+
   def renderThumbnail (self,relpath=""):
     """renderThumbnail() is called to render a thumbnail of the DP (e.g. in Data Product tables).""";
     # no thumbnail -- return empty string
