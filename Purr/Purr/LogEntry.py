@@ -245,10 +245,15 @@ class LogEntry (object):
     """Returns relative link to index.html of this entry. Link will be of the form ../entry-xxx/index.html"""
     return os.path.join("..",os.path.basename(self.pathname), "index.html");
 
-  def save (self,dirname=None,refresh=0,next=None,prev=None,up=None):
+  def setLogDirectory (self,dirname):
+    self.pathname = pathname = os.path.join(dirname,
+                        ((self.ignore and "ignore") or "entry")+
+                        time.strftime("-%Y%m%d-%H%M%S",
+                        time.localtime(self.timestamp)));
+
+  def save (self,dirname=None,refresh=0):
     """Saves entry in the given directory. Data products will be copied over if not
     residing in that directory.
-    If 'prev' and/or 'next' is set to another LogEntry object, "Next" and "Prev" links will be inserted.
     'refresh' is a timestamp, passed to renderIndex(), causing all data products OLDER than the specified time to be regenerated.
     """;
     if not refresh and not self.updated:
@@ -340,18 +345,25 @@ class LogEntry (object):
     self.cached_include = os.path.join(pathname,'index.include.html');
     self.cached_include_valid = False;
     self.index_file = os.path.join(pathname,"index.html");
-    self.generateIndex(refresh=refresh, prev=prev, next=next, up=up);
+    self.generateIndex(refresh=refresh);
     self.updated = False;
 
-  def generateIndex (self, refresh=0, prev=None, next=None, up=None):
+  def setPrevUpNextLinks(self,prev=None,up=None,next=None):
+    """Sets Prev link to point to the LogEntry object "prev". Set that object's Next link to point to us. Sets the "up" link to the URL 'up' (if up != None.)
+    Sets the Next link to the entry 'next' (if next != None), or to nothing if next == ''.""";
+    if prev is not None:
+      if prev:
+        self._prev_link = quote_url(prev._relIndexLink());
+        prev._next_link = quote_url(self._relIndexLink());
+      else:
+        self._prev_link = None;
+    if up is not None:
+      self._up_link = up and quote_url(up);
+    if next is not None:
+      self._next_link = next and quote_url(next._relIndexLink());
+
+  def generateIndex (self, refresh=0):
     """Writes the index file"""
-    # make next/prev links
-    if prev:
-      self._prev_link = quote_url(prev._relIndexLink());
-    if next:
-      self._next_link = quote_url(next._relIndexLink());
-    if up:
-      self._up_link = quote_url(up);
     file(self.index_file,"wt").write(self.renderIndex(refresh=refresh));
 
   def remove_directory (self):

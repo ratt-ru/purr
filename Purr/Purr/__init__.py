@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-Version = "1.1.beta";
+Version = "1.1";
 
 # some global constants
 

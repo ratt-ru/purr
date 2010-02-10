@@ -816,7 +816,8 @@ class MainWindow (QMainWindow):
       self.view_entry_dialog.hide();
     # reset entries in purrer and in our log window
     self._setEntries(remaining_entries);
-    self.purrer.setLogEntries(remaining_entries);
+    self.purrer.deleteLogEntries(del_entries);
+#    self.purrer.setLogEntries(remaining_entries);
     # log will have changed, so update the viewer
     self._updateViewer();
     # delete entry files

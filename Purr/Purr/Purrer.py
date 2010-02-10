@@ -444,7 +444,7 @@ class Purrer (QObject):
     for name in (watchdirs or []):
       self.addWatchedDirectory(name,watching=None);
     # Finally, go through list of ignored files and mark their watchers accordingly.
-    # The ignorelist is a list of lines of the form "timestamp filename", giving the timestamp when a 
+    # The ignorelist is a list of lines of the form "timestamp filename", giving the timestamp when a
     # file was last "ignored" by the purrlog user.
     self.ignorelistfile = os.path.join(self.logdir,"ignorelist");
     if os.path.exists(self.ignorelistfile):
@@ -576,30 +576,79 @@ class Purrer (QObject):
     else:
       self.entries.append(entry);
       Purr.progressMessage("Saving new log entry");
-      entry.save(self.logdir, prev=self.entries[-2] if len(self.entries)>1 else None, up=os.path.join("..",Purr.RenderIndex.INDEX));
+      # find previous entry -- skip over "ignore" entries
+      for prev in self.entries[-2::-1]:
+        if not prev.ignore:
+          break;
+      else:
+        prev = None;
+      entry.setLogDirectory(self.logdir);
+      entry.setPrevUpNextLinks(prev=prev,up=os.path.join("..",Purr.RenderIndex.INDEX))
+      entry.save();
       self.timestamp = self.last_scan_timestamp;
       # regenerate links of previous entry
-      if len(self.entries) > 1:
-        self.entries[-2].generateIndex(next=entry);
+      prev and prev.generateIndex();
       # and our log may need to be regenerated
       if save:
         self.save();
-    self.updatePoliciesFromEntry(entry);
+    self.updatePoliciesFromEntry(entry,new=True);
 
   def getLogEntries (self):
     return self.entries;
 
-  def setLogEntries (self,entries,save=True):
-    self.entries = [ entry for entry in entries if not entry.ignore ];
+  def setLogEntries (self,entries,save=True,update_policies=True):
+    """Sets list of log entries. If save=True, saves the log. If update_policies=True, also updates default policies based
+    on these entries""";
+    prev = None; # "previous" valid entry for "Prev" link
+    uplink = os.path.join("..",Purr.RenderIndex.INDEX); # "Up" link
+    self.entries = [];
+    for entry in entries:
+      if not entry.ignore:
+        entry.setPrevUpNextLinks(prev=prev,up=uplink)
+        prev = entry;
+        self.entries.append(entry);
     if save:
       self.save();
-    # populate default policies and renames based on entry list
-    self._default_dp_props = {};
-    for entry in entries:
-      self.updatePoliciesFromEntry(entry);
-    dprint(4,"default policies:",self._default_dp_props);
+    if update_policies:
+      # populate default policies and renames based on entry list
+      self._default_dp_props = {};
+      for entry in entries:
+        self.updatePoliciesFromEntry(entry);
+      dprint(4,"default policies:",self._default_dp_props);
 
-  def updatePoliciesFromEntry (self,entry):
+  def deleteLogEntries (self,del_entries,save=True):
+    """Deletes given list of entries from the log. Some entries' index.html files may be updated to reflect changes in prev/next links. If save=True, re-saves the log itself."""
+    prev_valid = prev_deleted = None;
+    # fix Next/Prev links in remaining entries
+    newents = [];
+    updated = set();
+    for ent in self.entries:
+      if not ent.ignore:
+        if ent in del_entries:
+          prev_deleted = ent;
+        else:
+          if prev_deleted:
+            ent.setPrevUpNextLinks(prev=prev_valid);
+            prev_valid.generateIndex();
+            ent.generateIndex();
+            prev_deleted = None;
+          prev_valid = ent;
+          newents.append(ent);
+      else:
+        newents.append(ent);
+    # fix last "Next" link if we had a deleted entry followed by nothing
+    if prev_deleted and prev_valid:
+      prev_valid.setPrevUpNextLinks(next='');
+      prev_valid.generateIndex();
+    # regenerate indices
+    for ent in newents:
+      if id(ent) in updated:
+        ent.generateIndex();
+    self.entries = newents;
+    if save:
+      self.save();
+
+  def updatePoliciesFromEntry (self,entry,new=True):
     # populate default policies and renames based on entry list
     for dp in entry.dps:
       # add default policy
@@ -610,7 +659,7 @@ class Purrer (QObject):
       if dp.ignored:
         # if ignorelistfile is not set, then we're being called from within
         # _attach(), when older log entries are being loaded. No need to write the file then.
-        if self.ignorelistfile:
+        if new and self.ignorelistfile  and os.path.exists(dp.sourcepath):
           try:
             file(self.ignorelistfile,'a').write("%d %s %s\n"%(os.path.getmtime(dp.sourcepath),dp.policy,dp.sourcepath));
           except:
@@ -655,7 +704,7 @@ class Purrer (QObject):
     if refresh:
       refresh = time.time();
       for i, entry in enumerate(self.entries):
-        entry.save(refresh=refresh, prev=self.entries[i-1] if i else None,next=self.entries[i+1] if i<len(self.entries)-1 else None,up=os.path.join("..",Purr.RenderIndex.INDEX));
+        entry.save(refresh=refresh);
     Purr.RenderIndex.writeLogIndex(self.logdir,self.logtitle,self.timestamp,self.entries,refresh=refresh);
     Purr.progressMessage("Wrote %s"%self.logdir);
 
