@@ -350,6 +350,7 @@ class Purrer (QObject):
     self.timestamp = self.last_scan_timestamp = time.time();
     self._initIndexDir();
     # reset internal state
+    self.ignorelistfile = None;
     self.autopounce = False;
     self.watched_dirs = [];
     self.entries = [];
@@ -442,6 +443,27 @@ class Purrer (QObject):
     # start watching the specified directories
     for name in (watchdirs or []):
       self.addWatchedDirectory(name,watching=None);
+    # Finally, go through list of ignored files and mark their watchers accordingly.
+    # The ignorelist is a list of lines of the form "timestamp filename", giving the timestamp when a 
+    # file was last "ignored" by the purrlog user.
+    self.ignorelistfile = os.path.join(self.logdir,"ignorelist");
+    if os.path.exists(self.ignorelistfile):
+      # read lines from file, ignore exceptions
+      ignores = {};
+      try:
+        for line in file(self.ignorelistfile).readlines():
+          timestamp,policy,filename = line.strip().split(" ",2);
+          # update dictiornary with latest timestamp
+          ignores[filename] = int(timestamp),policy;
+      except:
+        print "Error reading %s"%self.ignorelistfile;
+        traceback.print_exc();
+      # now scan all listed files, and make sure their watchers' mtime is no older than the given
+      # last-ignore-timestamp. This ensures that we don't pounce on these files after restarting purr.
+      for filename,(timestamp,policy) in ignores.iteritems():
+        watcher = self.watchers.get(filename,None);
+        if watcher:
+          watcher.mtime = max(watcher.mtime,timestamp);
     # init complete
     self.attached = True;
     return True;
@@ -585,7 +607,16 @@ class Purrer (QObject):
       self._default_dp_props[basename] = dp.policy,dp.filename,dp.comment;
       dprintf(4,"file %s: default policy is %s\n",basename,dp.policy);
       # make new watchers for non-ignored files
-      if not dp.ignored:
+      if dp.ignored:
+        # if ignorelistfile is not set, then we're being called from within
+        # _attach(), when older log entries are being loaded. No need to write the file then.
+        if self.ignorelistfile:
+          try:
+            file(self.ignorelistfile,'a').write("%d %s %s\n"%(os.path.getmtime(dp.sourcepath),dp.policy,dp.sourcepath));
+          except:
+            print "Error writing %s"%self.ignorelistfile;
+            traceback.print_exc();
+      else:
         watcher = self.watchers.get(dp.sourcepath,None);
         # if watcher already exists, update timestamp
         if watcher:

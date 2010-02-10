@@ -1042,16 +1042,17 @@ class ExistingLogEntryDialog (QDialog):
     lo = QVBoxLayout(self.viewer_panel);
     lo.setMargin(0);
     label = QLabel("""<P>Below is an HTML rendering of your log entry. Note that this window
-      is only a bare-bones viewer, not a real browser. You can't click on links! To get access
-      to this entry's data products, click the Edit button below.
+      is only a bare-bones viewer, not a real browser. You may click on a link associated with a
+      saved data product to get a menu of related actions. To edit this entry, click the Edit button below.
       </P>""",self.viewer_panel);
     label.setWordWrap(True);
     label.setMargin(5);
     lo.addWidget(label);
-    self.viewer = QTextBrowser(self.viewer_panel);
+    self.viewer = self.EntryTextBrowser(self.viewer_panel);
+    self.viewer.setOpenLinks(False);
     self.viewer.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
     self._viewer_source = None;
-    QObject.connect(self.viewer,SIGNAL("anchorClicked(const QUrl &)"),self._resetSource);
+    QObject.connect(self.viewer,SIGNAL("anchorClicked(const QUrl &)"),self._urlClicked);
     lo.addWidget(self.viewer);
     lo.addSpacing(5);
     # create button bar
@@ -1077,6 +1078,17 @@ class ExistingLogEntryDialog (QDialog):
     btn = self.wclose = QPushButton(pixmaps.grey_round_cross.icon(),"Close",btnfr);
     QObject.connect(btn,SIGNAL("clicked()"),self.hide);
     btnfr_lo.addWidget(btn,1);
+    # create popup menu for data products
+    self._dp_menu = menu = QMenu(self);
+    self._dp_menu_title = QLabel();
+    self._dp_menu_title.setMargin(5);
+    self._dp_menu_title_wa = wa=QWidgetAction(self);
+    wa.setDefaultWidget(self._dp_menu_title);
+    menu.addAction(wa);
+    menu.addSeparator();
+    menu.addAction(pixmaps.editcopy.icon(),"Restore file(s) from archived copy",self._restoreDPFromArchive);
+    menu.addAction(pixmaps.editpaste.icon(),"Copy pathname of archived copy to clipboard",self._copyDPToClipboard);
+    self._dp_menu_on = None;
 
     # resize selves
     width = Config.getint('entry-viewer-width',512);
@@ -1085,6 +1097,16 @@ class ExistingLogEntryDialog (QDialog):
     # other init
     self.entry = None;
     self.updated = False;
+
+  class EntryTextBrowser (QTextBrowser):
+    def mouseReleaseEvent (self,ev):
+      self._mouse_release_pos = ev.globalPos();
+      return QTextBrowser.mouseReleaseEvent(self,ev);
+    def getLastMouseRelease (self):
+      try:
+        return self._mouse_release_pos;
+      except AttributeError:
+        return self.mapToGlobal(QPoint(0,0));
 
   def resizeEvent (self,ev):
     QDialog.resizeEvent(self,ev);
@@ -1108,9 +1130,32 @@ class ExistingLogEntryDialog (QDialog):
     self.wnext.setEnabled(has_next);
     self.wstack.setCurrentWidget(self.viewer_panel);
 
-  def _resetSource (self,*dum):
-    if self._viewer_source:
-      self.viewer.setSource(self._viewer_source);
+  def _urlClicked (self,url):
+    #if self._viewer_source:
+    # self.viewer.setSource(self._viewer_source);
+    # see if we clicked on a URL for a data product
+    path = str(url.path());
+    if path:
+      for dp in self.entry.dps:
+        if os.path.samefile(dp.fullpath,path) or os.path.exists(dp.subproduct_dir()) and os.path.samefile(dp.subproduct_dir(),os.path.dirname(path)):
+          self._dp_menu_title.setText(os.path.basename(dp.filename));
+          self._dp_menu_on = dp;
+          self._dp_menu.exec_(self.viewer.getLastMouseRelease());
+          break;
+
+  def _copyDPToClipboard (self):
+    """Callback for item menu.""";
+    dp = self._dp_menu_on;
+    if dp and dp.archived:
+      path = dp.fullpath.replace(" ","\\ ");
+      QApplication.clipboard().setText(path,QClipboard.Clipboard);
+      QApplication.clipboard().setText(path,QClipboard.Selection);
+
+  def _restoreDPFromArchive (self):
+    """Callback for item menu.""";
+    dp = self._dp_menu_on;
+    if dp and dp.archived:
+      dp.restore_from_archive(parent=self);
 
   def setDefaultDirs (self,*dirs):
     self.editor.setDefaultDirs(*dirs);

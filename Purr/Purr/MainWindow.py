@@ -378,13 +378,25 @@ class MainWindow (QMainWindow):
     self.connect(self.etw,SIGNAL("itemContextMenuRequested"),self._showItemContextMenu);
     # create popup menu for data products
     self._archived_dp_menu = menu = QMenu(self);
-    menu.addAction(pixmaps.editcopy.icon(),"Restore file from this entry's archived copy",self._restoreItemFromArchive);
-    menu.addAction(pixmaps.editpaste.icon(),"Copy location of archived copy to clipboard",self._copyItemToClipboard);
+    self._archived_dp_menu_title = QLabel();
+    self._archived_dp_menu_title.setMargin(5);
+    self._archived_dp_menu_title_wa = wa=QWidgetAction(self);
+    wa.setDefaultWidget(self._archived_dp_menu_title);
+    menu.addAction(wa);
+    menu.addSeparator();
+    menu.addAction(pixmaps.editcopy.icon(),"Restore file(s) from archived copy",self._restoreItemFromArchive);
+    menu.addAction(pixmaps.editpaste.icon(),"Copy pathname of archived copy to clipboard",self._copyItemToClipboard);
     self._current_item = None;
     # create popup menu for entries
     self._entry_menu = menu = QMenu(self);
-    menu.addAction(pixmaps.filefind.icon(),"View",self._viewEntryItem);
-    menu.addAction(pixmaps.editdelete.icon(),"Delete",self._deleteSelectedEntries);
+    self._entry_menu_title = QLabel();
+    self._entry_menu_title.setMargin(5);
+    self._entry_menu_title_wa = wa=QWidgetAction(self);
+    wa.setDefaultWidget(self._entry_menu_title);
+    menu.addAction(wa);
+    menu.addSeparator();
+    menu.addAction(pixmaps.filefind.icon(),"View this log entry",self._viewEntryItem);
+    menu.addAction(pixmaps.editdelete.icon(),"Delete this log entry",self._deleteSelectedEntries);
     # buttons at bottom
     log_lo.addSpacing(5);
     btnlo = QHBoxLayout();
@@ -745,6 +757,9 @@ class MainWindow (QMainWindow):
     """Callback for contextMenuRequested() signal. Pops up item menu, if defined""";
     menu = getattr(item,'_menu',None);
     if menu:
+      settitle = getattr(item,'_set_menu_title',None);
+      if settitle:
+        settitle();
       # self._current_item tells callbacks what item the menu was referring to
       point = self.etw.mapToGlobal(point);
       self._current_item = item;
@@ -810,7 +825,8 @@ class MainWindow (QMainWindow):
 
   def _addEntryItem (self,entry,number,after):
     item = entry.tw_item = QTreeWidgetItem(self.etw,after);
-    item.setText(0,self._make_time_label(entry.timestamp));
+    timelabel = self._make_time_label(entry.timestamp);
+    item.setText(0,timelabel);
     item.setText(1," "+(entry.title or ""));
     item.setToolTip(1,entry.title);
     if entry.comment:
@@ -820,12 +836,14 @@ class MainWindow (QMainWindow):
     item._ientry = number;
     item._dp = None;
     item._menu = self._entry_menu;
+    item._set_menu_title = lambda:self._entry_menu_title.setText('"%s"'%entry.title);
     # now make subitems for DPs
     subitem = None;
     for dp in entry.dps:
       if not dp.ignored:
         subitem = self._addDPSubItem(dp,item,subitem);
     self.etw.collapseItem(item);
+    self.etw.header().headerDataChanged(Qt.Horizontal,0,2);
     return item;
 
   def _addDPSubItem (self,dp,parent,after):
@@ -837,6 +855,8 @@ class MainWindow (QMainWindow):
     item._ientry = None;
     item._dp = dp;
     item._menu = self._archived_dp_menu;
+    item._set_menu_title = lambda:self._archived_dp_menu_title.setText(os.path.basename(dp.filename));
+    return item;
 
   def _make_time_label (self,timestamp):
     return time.strftime("%b %d %H:%M",time.localtime(timestamp));
