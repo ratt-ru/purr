@@ -241,7 +241,7 @@ class FITSRenderer (CachingRenderer):
       if nbins and (pychart or hclip):
         dprintf(3,"%s plane %d: computing histogram\n",self.dp.fullpath,num_image);
         try:
-          counts,edges = numpy.histogram(data,nbins,new=True); # needed for 1.3+ to avoid warnings
+          counts,edges = numpy.histogram(data,nbins); # needed for 1.3+ to avoid warnings
           edges = edges[:-1];
         except TypeError:
           counts,edges = numpy.histogram(data,nbins);
@@ -316,7 +316,7 @@ class FITSRenderer (CachingRenderer):
       # generate PNG image
       img = None;
       try:
-        img = PIL.Image.new('L',data.shape);
+        img = PIL.Image.new('L',data.shape).transpose(PIL.Image.FLIP_TOP_BOTTOM);
         img.putdata(data.reshape((data.size,)));
         img.save(img_path,'PNG');
       except:
