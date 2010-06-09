@@ -316,8 +316,9 @@ class FITSRenderer (CachingRenderer):
       # generate PNG image
       img = None;
       try:
-        img = PIL.Image.new('L',data.shape).transpose(PIL.Image.FLIP_TOP_BOTTOM);
+        img = PIL.Image.new('L',data.shape);
         img.putdata(data.reshape((data.size,)));
+        img = img.transpose(PIL.Image.FLIP_TOP_BOTTOM);
         img.save(img_path,'PNG');
       except:
         print "Error rendering image %s"%path;
