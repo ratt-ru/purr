@@ -794,5 +794,5 @@ class Purrer (QObject):
           policy = "copy";
         dps.append(Purr.DataProduct(filename=filename,sourcepath=sourcepath,
                                     policy=policy,comment=comment,quiet=quiet));
-    return dps;
+    return sorted(dps,lambda a,b:cmp(a.filename,b.filename));
 
