@@ -113,7 +113,13 @@ class Purrer (QObject):
         return None;
       # clear disappeared flag
       self.disappeared = False;
-      updated = (mtime or 0) > (self.mtime or 0);
+      # compare m,times -- add .1 sec margin since float numbers may get clobbered during
+      # conversion
+      updated = (mtime or 0) > (self.mtime or 0) + .1;
+      if updated:
+        dprintf(4,"WatchedFile %s is updated: mtime %f %s, old mtime %f %s\n",self.path,
+            mtime,time.strftime("%x %X",time.localtime(mtime)),
+            self.mtime,time.strftime("%x %X",time.localtime(self.mtime)));
       self.mtime = mtime;
       return updated;
 
@@ -289,7 +295,7 @@ class Purrer (QObject):
       self._quiet_patterns.update(patts);
     dprint(1,"quietly watching patterns",self._quiet_patterns);
     # ignored files
-    ignore = Config.get("ignore-patterns","Hidden files=.*;Purr logs=purrlog;MeqTree logs=meqtree.log;Python files=*.py*;Backup files=*~,*.bck;Measurement sets=*.MS,*.ms;CASA tables=table.f*,table.dat,table.info,table.lock");
+    ignore = Config.get("ignore-patterns","Hidden files=.*;Purr logs=*purrlog;MeqTree logs=meqtree.log;Python files=*.py*;Backup files=*~,*.bck;Measurement sets=*.MS,*.ms;CASA tables=table.f*,table.dat,table.info,table.lock");
     self._ignore = parse_pattern_list(ignore);
     self._ignore_patterns = set();
     for desc,patts in self._ignore:

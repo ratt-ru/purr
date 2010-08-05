@@ -51,7 +51,7 @@ def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
     fobj.write("""<HTML><BODY>\n
       <TITLE>%s</TITLE>
 
-      <H1><A CLASS="TITLE" TIMESTAMP=%d>%s</A></H1>
+      <H1><A CLASS="TITLE" TIMESTAMP=%.6f>%s</A></H1>
 
       """%(title,timestamp,title));
     fobj.write("""<DIV ALIGN=right><P><A HREF=%s>Printable version (single HTML page).</A></P></DIV>\n\n"""%FULLINDEX);
@@ -75,7 +75,7 @@ def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
     fobj.write("""<HTML><BODY>\n
       <TITLE>%s</TITLE>
 
-      <H1><A CLASS="TITLE" TIMESTAMP=%d>%s</A></H1>
+      <H1><A CLASS="TITLE" TIMESTAMP=%.6f>%s</A></H1>
 
       """%(title,timestamp,title));
     # write entries

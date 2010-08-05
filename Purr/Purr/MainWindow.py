@@ -738,6 +738,7 @@ class MainWindow (QMainWindow):
     # pass entry to viewer dialog
     self._viewing_ientry = ientry;
     entry = self.purrer.entries[ientry];
+    busy = BusyIndicator();
     self.view_entry_dialog.viewEntry(entry,has_prev=(ientry>0),has_next=(ientry<len(self.purrer.entries)-1));
     self.view_entry_dialog.show();
     # select entry in listview

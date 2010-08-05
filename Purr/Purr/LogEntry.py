@@ -464,7 +464,7 @@ class LogEntry (object):
             dpattrs['relpath'] = relpath;
             dpattrs['basename'] = os.path.basename(dp.filename);
             html += """
-            <A CLASS="DP" FILENAME="%(filename)s" SRC="%(sourcepath)s" POLICY="%(policy)s" QUIET=%(quiet)d TIMESTAMP=%(timestamp)d RENDER="%(render)s" COMMENT="%(comment)s"></A>\n"""%dpattrs;
+            <A CLASS="DP" FILENAME="%(filename)s" SRC="%(sourcepath)s" POLICY="%(policy)s" QUIET=%(quiet)d TIMESTAMP=%(timestamp).6f RENDER="%(render)s" COMMENT="%(comment)s"></A>\n"""%dpattrs;
         # render a table row
         if not dp.ignored:
           renderer = Purr.Render.makeRenderer(dp.render,dp,refresh=refresh);

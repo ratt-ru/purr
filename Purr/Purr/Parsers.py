@@ -114,9 +114,9 @@ class LogEntryIndexParser (LogIndexParser):
     # setup data for this tag
     comment = comment or "";
     try:
-      timestamp = int(float(timestamp));
+      timestamp = float(timestamp);
     except:
-      timestamp = int(time.time());
+      timestamp = time.time();
     if not isinstance(quiet,bool):
       try:
         quiet = bool(int(quiet));

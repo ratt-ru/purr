@@ -698,7 +698,7 @@ class LogEntryEditor (QWidget):
           self.setSidebarUrls([QUrl.fromLocalFile(path) for path in dirlist]);
 
     def _filesSelected (self,filelist):
-      self.emit(SIGNAL("filesSelected"),*map(str,filelist));
+      self.emit(SIGNAL("filesSelected"),*sorted(map(str,filelist)));
 
     def _fileSelected (self,file):
       self.emit(SIGNAL("filesSelected"),str(file));
