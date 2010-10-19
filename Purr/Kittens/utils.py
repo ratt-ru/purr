@@ -33,6 +33,9 @@ import string
 import types
 import traceback
 import os.path
+import time
+
+_time0 = time.time();
 
 class recdict (dict):
   """A recdict is basically a dict whose contents may also be
@@ -108,16 +111,29 @@ class verbosity:
   _levels = {};
   _parse_argv = True;
 
+  _timestamps = False;
+  
+  @staticmethod
+  def enable_timestamps (enable=True):
+    verbosity._timestamps = enable;
+
+  @staticmethod
+  def timestamp ():
+    if verbosity._timestamps:
+      return "%5.2f "%((time.time()-_time0)%60);
+    else:
+      return "";
+
+  @staticmethod
   def set_verbosity_level (context,level):
     verbosity._levels[context] = level;
     vv = verbosity._verbosities.get(context,None);
     if vv:
       vv.set_verbose(level);
-  set_verbosity_level = staticmethod(set_verbosity_level);
 
+  @staticmethod
   def disable_argv ():
     verbosity._parse_argv = False;
-  disable_argv = staticmethod(disable_argv);
 
   def __init__(self,verbose=0,stream=None,name=None,tb=2):
     if not __debug__:
@@ -161,14 +177,14 @@ class verbosity:
       try:
         (filename,line,funcname,text) = tb[tblevel];
       except:
-        return self.get_verbosity_name()+' (no traceback): ';
+        return "%s%s (no traceback): "%(self.timestamp(),self.get_verbosity_name());
       filename = filename.split('/')[-1];
       if self._tb > 1:
-        return "%s(%s:%d:%s): "%(self.get_verbosity_name(),filename,line,funcname);
+        return "%s%s(%s:%d:%s): "%(self.timestamp(),self.get_verbosity_name(),filename,line,funcname);
       else:
-        return "%s(%s): "%(self.get_verbosity_name(),funcname);
+        return "%s%s(%s): "%(self.timestamp(),self.get_verbosity_name(),funcname);
     else:
-      return self.get_verbosity_name()+': ';
+      return "%s%s: "%(self.timestamp(),self.get_verbosity_name());
   def dprint(self,level,*args):
     if level <= self.verbose:
       stream = self.stream or sys.stderr;
