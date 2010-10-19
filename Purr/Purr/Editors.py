@@ -96,12 +96,12 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     # key is (path,archived) tuple, value is item
     self.dpitems = {};
 
-    self._policy_list_default 	= ( ("copy",pixmaps.copy.icon()),
-				    ("move",pixmaps.move.icon()),
-				    ("ignore",pixmaps.grey_round_cross.icon()),
-				    ("banish",pixmaps.red_round_cross.icon()) );
-    self._policy_list_archived 	= ( ("keep",pixmaps.checkmark.icon()),
-				    ("remove",pixmaps.grey_round_cross.icon()) );
+    self._policy_list_default         = ( ("copy",pixmaps.copy.icon()),
+                                    ("move",pixmaps.move.icon()),
+                                    ("ignore",pixmaps.grey_round_cross.icon()),
+                                    ("banish",pixmaps.red_round_cross.icon()) );
+    self._policy_list_archived         = ( ("keep",pixmaps.checkmark.icon()),
+                                    ("remove",pixmaps.grey_round_cross.icon()) );
 
   def _checkDragDropEvent (self,ev):
     """Checks if event contains a file URL, accepts if it does, ignores if it doesn't""";
@@ -200,11 +200,11 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       self.setItemWidget(item,column,combobox);
       width = 0;
       for num,(name,icon) in enumerate(item._combobox_option_list[column]):
-	if icon:
-	  combobox.addItem(icon,name);
-	else:
-	  combobox.addItem(name);
-	width = max(width,self._fontmetrics.width(name) + (icon and 16 or 0));
+        if icon:
+          combobox.addItem(icon,name);
+        else:
+          combobox.addItem(name);
+        width = max(width,self._fontmetrics.width(name) + (icon and 16 or 0));
       combobox.setCurrentIndex(item._combobox_current_index[column]);
       item._combobox_changed[column] = Kittens.utils.curry(self._updateItemComboBoxIndex,item,column);
       QObject.connect(combobox,SIGNAL("currentIndexChanged(int)"),item._combobox_changed[column]);
@@ -212,7 +212,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
       # resize section if needed
       width += 32;
       if width > self.header().sectionSize(column):
-	self.header().resizeSection(column,width);
+        self.header().resizeSection(column,width);
     return combobox;
 
   def _emitUpdatedSignal (self,*dum):
@@ -410,9 +410,9 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     for dp in dps:
       if not dp.ignored:
         item = self._makeDPItem(self,dp,item);
-	# ensure combobox widgets are made
-	self._itemComboBox(item,self.ColAction);
-	self._itemComboBox(item,self.ColRender);
+        # ensure combobox widgets are made
+        self._itemComboBox(item,self.ColAction);
+        self._itemComboBox(item,self.ColRender);
 
   def addDataProducts(self,dps):
     """Adds new data products to listview. dps is a list of DP objects.
@@ -656,7 +656,7 @@ class LogEntryEditor (QWidget):
       #  self.setFilters(["Any files (*)",self._dirfilter]);
       # connect signals (translates into a SIGNAL with string arguments)
       self.connect(self,SIGNAL("filesSelected(const QStringList&)"),self._filesSelected);
-      self.connect(self,SIGNAL("fileSelected(const QString&)"),self._fileSelected);
+#      self.connect(self,SIGNAL("fileSelected(const QString&)"),self._fileSelected);
       self.connect(self,SIGNAL("currentChanged(const QString&)"),self._fileHighlighted);
       # self.connect(self,SIGNAL("filterSelected(const QString&)"),self._filterSelected);
       # resize selves
@@ -1088,6 +1088,7 @@ class ExistingLogEntryDialog (QDialog):
     menu.addSeparator();
     menu.addAction(pixmaps.editcopy.icon(),"Restore file(s) from archived copy",self._restoreDPFromArchive);
     menu.addAction(pixmaps.editpaste.icon(),"Copy pathname of archived copy to clipboard",self._copyDPToClipboard);
+    menu.addAction("Drag-and-drop archived copy",self._startDPDrag);
     self._dp_menu_on = None;
 
     # resize selves
@@ -1156,6 +1157,16 @@ class ExistingLogEntryDialog (QDialog):
     dp = self._dp_menu_on;
     if dp and dp.archived:
       dp.restore_from_archive(parent=self);
+
+  def _startDPDrag (self):
+    """Callback for item menu.""";
+    dp = self._dp_menu_on;
+    if dp and dp.archived:
+      drag = QDrag(self);
+      mimedata = QMimeData();
+      mimedata.setUrls([QUrl.fromLocalFile(dp.fullpath)]);
+      drag.setMimeData(mimedata);
+      drag.exec_(Qt.CopyAction|Qt.LinkAction);
 
   def setDefaultDirs (self,*dirs):
     self.editor.setDefaultDirs(*dirs);

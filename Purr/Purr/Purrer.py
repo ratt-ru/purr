@@ -90,11 +90,11 @@ class Purrer (QObject):
       self.path = path;
       self.enabled = True;
       self.quiet = quiet;
+      dprintf(3,"creating WatchedFile %s, mtime %s (%f)\n",self.path,time.strftime("%x %X",time.localtime(mtime or self.getmtime())),mtime or 0);
       self.mtime = mtime or self.getmtime();
       self.survive_deletion = survive_deletion;
       self.disappeared = False;
-      dprintf(3,"creating WatchedFile %s, mtime %s\n",self.path,time.strftime("%x %X",time.localtime(self.mtime)));
-
+      
     def getmtime (self):
       """Returns the file's modification time.
       Returns None on access error (i.e. file doesn't exist)"""
@@ -157,7 +157,7 @@ class Purrer (QObject):
         return;
       # check for files created after the supplied timestamp
       if self.getmtime() > self.mtime:
-        dprintf(2,"%s modified since last run, checking for new files\n",self.path);
+        dprintf(2,"%s modified since last run (%f vs %f), checking for new files\n",self.path,self.getmtime(),self.mtime);
         for fname in self.fileset:
           # ignore files from ignore list
           if matches_patterns(fname,ignore_patterns) and not matches_patterns(fname,watch_patterns):
@@ -740,6 +740,10 @@ class Purrer (QObject):
           watcher.disappeared = True;
         continue;
       dprintf(5,"%s: %d new file(s)\n",watcher.path,len(newfiles));
+      # if a file has its own watcher, and is independently reported by a directory watcher, skip the directory's
+      # version and let the file's watcher report it. Reason for this is that the file watcher may have a more
+      # up-to-date timestamp, so we trust it over the dir watcher.
+      newfiles = [ p for p in newfiles if p is path or p not in self.watchers ];
       # skip files in self._unwatched_paths
       newfiles = [ filename for filename in newfiles if self._watching_state.get(os.path.dirname(filename)) > Purr.UNWATCHED ];
       # Now go through files and add them to the newstuff dict

@@ -213,6 +213,23 @@ class DirectoryListWidget (Kittens.widgets.ClickableListWidget):
           return self._removeItem(sel[0]);
     return None;
 
+class LogEntryTree (Kittens.widgets.ClickableTreeWidget):
+  def __init__ (self,*args):
+    Kittens.widgets.ClickableTreeWidget.__init__(self,*args);
+    self.setDragEnabled(True);
+
+  def mimeTypes (self):
+    return ["text/x-url"];
+
+  def mimeData (self,itemlist):
+    mimedata = QMimeData();
+    urls = [];
+    for item in itemlist:
+      dp = getattr(item,"_dp",None);
+      dp and urls.append(QUrl.fromLocalFile(dp.fullpath or dp.sourcepath));
+    mimedata.setUrls(urls);
+    return mimedata;
+
 
 class MainWindow (QMainWindow):
 
@@ -353,7 +370,7 @@ class MainWindow (QMainWindow):
     wlogframe.setLineWidth(1);
 
 # listview of log entries
-    self.etw = Kittens.widgets.ClickableTreeWidget(cw);
+    self.etw = LogEntryTree(cw);
     log_lo.addWidget(self.etw,1);
     self.etw.header().setDefaultSectionSize(128);
     self.etw.header().setMovable(False);
