@@ -62,12 +62,12 @@ class DualConfigParser (object):
     # try user defaults
     try:
       return getattr(self.usercp,method)(section,option);
-    except (NoSectionError,NoOptionError):
+    except (NoSectionError,NoOptionError,ValueError):
       error = sys.exc_info()[1]; 
     # try systemwide
     try:
       return getattr(self.syscp,method)(section,option);
-    except (NoSectionError,NoOptionError):
+    except (NoSectionError,NoOptionError,ValueError):
       if default is not None:
         self.syscp.set(section,option,str(default));
         return default;

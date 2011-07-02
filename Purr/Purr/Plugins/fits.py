@@ -19,6 +19,7 @@ or as Debian package python-pyfits.
 
 try:
   import numpy
+  import numpy.ma
 except:
   print """numpy package not found, rendering of FITS files will not be available.
 numpy is available from http://numpy.scipy.org/, or as Debian package python-numpy.
@@ -151,21 +152,36 @@ class FITSRenderer (CachingRenderer):
     if ndim < 2:
       raise TypeError,"can't render one-dimensional FITS files""";
     elif ndim == 2:
-      fitsdata_to_images = lambda fdata:[fdata];
       shape = fitsshape;
+      fitsdata_to_images = lambda fdata,sh=shape:[fdata.reshape(sh)];
       nplanes = 1;
     else:
-      shape = fitsshape[:2];
+      ax1 = ax2 = None;
+      # figure out image shape, by looking at CTYPEx
+      for i in range(ndim):
+        ctype = header['CTYPE%d'%(i+1)];
+        if [ prefix for prefix in "RA","GLON","ELON","HLON","SLON" if ctype.startswith(prefix) ]:
+          ax1 = i;
+        elif [ prefix for prefix in "DEC","GLAT","ELAT","HLAT","SLAT" if ctype.startswith(prefix) ]:
+          ax2 = i;
+      if ax1 is None or ax2 is None:
+        ax1,ax2 = 0,1;
+      # now set the shape
+      shape = fitsshape[ax1],fitsshape[ax2];
       # figure out number of planes in the cube
+      permute = [ ax2,ax1 ];  # to make reshape (below) work properly
       dataplanes = 1;
-      for i in range(2,ndim):
-        dataplanes *= fitsshape[i];
+      for i in range(ndim):
+        if i not in (ax1,ax2):
+          permute.append(i);
+          dataplanes *= fitsshape[i];
       nplanes = min(self.getOption('fits-nimage'),dataplanes);
-      def fitsdata_to_images (fdata): 
+      def fitsdata_to_images (fdata,perm=permute): 
         # reshape to collapse into a 3D cube
-        fdata = fdata.reshape((dataplanes,shape[0],shape[1]));
+        print "shape:",fdata.shape,shape,permute;
+        fdata = fdata.transpose().transpose(perm).reshape((shape[0],shape[1],dataplanes));
         # now extract subplanes
-        img = [ fdata[i,:,:] for i in range(nplanes) ];
+        img = [ fdata[:,:,i] for i in range(nplanes) ];
         return img;
       
     # OK, now cycle over all images
@@ -215,6 +231,7 @@ class FITSRenderer (CachingRenderer):
       # need to read in data at last
       if not images:
         fitsdata = fitsfile[0].data;
+        fitsdata = numpy.ma.masked_array(fitsdata,~numpy.isfinite(fitsdata));
         fitsfile = None;
         images = fitsdata_to_images(fitsdata);
         fitsdata = None;
@@ -241,10 +258,10 @@ class FITSRenderer (CachingRenderer):
       if nbins and (pychart or hclip):
         dprintf(3,"%s plane %d: computing histogram\n",self.dp.fullpath,num_image);
         try:
-          counts,edges = numpy.histogram(data,nbins); # needed for 1.3+ to avoid warnings
+          counts,edges = numpy.histogram(data.compressed(),nbins); # needed for 1.3+ to avoid warnings
           edges = edges[:-1];
         except TypeError:
-          counts,edges = numpy.histogram(data,nbins);
+          counts,edges = numpy.histogram(data.compressed(),nbins);
         # render histogram
         if pychart:
           try:

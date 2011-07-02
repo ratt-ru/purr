@@ -635,7 +635,7 @@ class Purrer (QObject):
         else:
           if prev_deleted:
             ent.setPrevUpNextLinks(prev=prev_valid);
-            prev_valid.generateIndex();
+            prev_valid and prev_valid.generateIndex();
             ent.generateIndex();
             prev_deleted = None;
           prev_valid = ent;
