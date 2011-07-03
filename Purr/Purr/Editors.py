@@ -482,6 +482,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
 
   def buildDPList (self):
     """Builds list of data products."""
+    updated = False;
     dps = [];
     itemlist = self.getItemDPList();
     # first remove all items marked for removal, in case their names clash with new or renamed items
@@ -494,17 +495,23 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     for item,dp in itemlist:
       if item._policy == "remove":
         continue;
-      # update rendered and comment
-      dp.render  = item._combobox_current_value[self.ColRender];
-      dp.comment = str(item.text(self.ColComment));
+      # update renderer and comment
+      render  = item._combobox_current_value[self.ColRender];
+      comment = str(item.text(self.ColComment));
+      if render != dp.render:
+        dp.render = render;
+        updated = True;
+      if comment != dp.comment:
+        dp.comment = comment;
+        updated = True;
       # archived DPs may need to be renamed, for new ones simply set the name
       if dp.archived:
-        dp.rename(str(item.text(self.ColRename)));
+        updated = updated or dp.rename(str(item.text(self.ColRename)));
       else:
         dp.set_policy(item._policy);
         dp.filename = str(item.text(self.ColRename));
       dps.append(dp);
-    return dps;
+    return dps,updated;
 
 class LogEntryEditor (QWidget):
   """This class provides a widget for editing log entries.
@@ -798,7 +805,7 @@ class LogEntryEditor (QWidget):
     # go through data products and decide what to do with each one
     busy = Purr.BusyIndicator();
     # get list of DPs
-    dps = self.wdplv.buildDPList();
+    dps,updated = self.wdplv.buildDPList();
     # emit signal for all newly-created DPs
     for dp in dps:
       if not dp.archived:
@@ -806,7 +813,7 @@ class LogEntryEditor (QWidget):
     # update or return new entry
     if self.entry:
       self.entry.update(title=title,comment=comment,dps=dps);
-      self.entry.save();
+      self.entry.save(refresh_index=updated);
       return self.entry;
     else:
       return Purr.LogEntry(time.time(),title,comment,dps);

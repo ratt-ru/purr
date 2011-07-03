@@ -80,7 +80,7 @@ class DataProduct (object):
   def rename (self,newname):
     # rename file if needed
     if newname == self.filename:
-      return;
+      return None;
     if not self.fullpath or not self.archived:
       raise RuntimeError,"""Can't rename a non-archived data product""";
     dirname = os.path.dirname(self.fullpath);
@@ -90,12 +90,13 @@ class DataProduct (object):
       os.rename(self.fullpath,newpath);
     except:
       print "Error renaming %s to %s: %s"%(self.fullpath,newpath,sys.exc_info()[1]);
-      return;
+      return None;
     # remove subproducts, if they exist -- need to re-render with new name anyway
     self.remove_subproducts();
     # set new paths and names
     self.fullpath = newpath;
     self.filename = newname;
+    return newname;
 
   def restore_from_archive (self,parent=None):
     """Function to restore a DP from archived copy
@@ -251,10 +252,11 @@ class LogEntry (object):
                         time.strftime("-%Y%m%d-%H%M%S",
                         time.localtime(self.timestamp)));
 
-  def save (self,dirname=None,refresh=0):
+  def save (self,dirname=None,refresh=0,refresh_index=True):
     """Saves entry in the given directory. Data products will be copied over if not
     residing in that directory.
     'refresh' is a timestamp, passed to renderIndex(), causing all data products OLDER than the specified time to be regenerated.
+    'refresh_index', if true, causes index files to be re-rendered unconditionally
     """;
     if not refresh and not self.updated:
       return;
@@ -345,7 +347,7 @@ class LogEntry (object):
     self.cached_include = os.path.join(pathname,'index.include.html');
     self.cached_include_valid = False;
     self.index_file = os.path.join(pathname,"index.html");
-    self.generateIndex(refresh=refresh);
+    self.generateIndex(refresh=time.time() if refresh_index else refresh);
     self.updated = False;
 
   def setPrevUpNextLinks(self,prev=None,up=None,next=None):
