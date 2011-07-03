@@ -160,9 +160,11 @@ class FITSRenderer (CachingRenderer):
       # figure out image shape, by looking at CTYPEx
       for i in range(ndim):
         ctype = header['CTYPE%d'%(i+1)];
-        if [ prefix for prefix in "RA","GLON","ELON","HLON","SLON" if ctype.startswith(prefix) ]:
+        if [ prefix for prefix in "RA","GLON","ELON","HLON","SLON" if ctype.startswith(prefix) ] \
+            or ctype in ("L","X"):
           ax1 = i;
-        elif [ prefix for prefix in "DEC","GLAT","ELAT","HLAT","SLAT" if ctype.startswith(prefix) ]:
+        elif [ prefix for prefix in "DEC","GLAT","ELAT","HLAT","SLAT" if ctype.startswith(prefix) ] \
+            or ctype in ("M","Y"):
           ax2 = i;
       if ax1 is None or ax2 is None:
         ax1,ax2 = 0,1;
@@ -178,7 +180,6 @@ class FITSRenderer (CachingRenderer):
       nplanes = min(self.getOption('fits-nimage'),dataplanes);
       def fitsdata_to_images (fdata,perm=permute): 
         # reshape to collapse into a 3D cube
-        print "shape:",fdata.shape,shape,permute;
         fdata = fdata.transpose().transpose(perm).reshape((shape[0],shape[1],dataplanes));
         # now extract subplanes
         img = [ fdata[:,:,i] for i in range(nplanes) ];
@@ -343,7 +344,13 @@ class FITSRenderer (CachingRenderer):
         rec.fullimage = img = None;
       # if image was rendered, make a thumbnail
       if rec.fullimage:
-        self.makeThumb(img_path,img_thumb,tsize_img,img=img);
+        thumb = self.makeThumb(img_path,img_thumb,tsize_img,img=img);
+        # None means thumbnail failed
+        if thumb is None:
+          rec.thumbnail = None;
+        # else perhaps image is its own thumbnail
+        elif thumb is img_path:
+          rec.thumbnail = rec.fullimage;
       else:
         rec.thumbnail = None;
       # write stats
@@ -368,23 +375,23 @@ class FITSRenderer (CachingRenderer):
       width,height = img.size;
       factor = max(width/float(tsize[0]),height/float(tsize[1]));
       if factor <= 1:
-        return "";
+        return imagepath;
       # generate the thumbnail
       img = img.resize((int(width/factor),int(height/factor)),PIL.Image.ANTIALIAS);
       img.save(thumbpath,"PNG");
-      return os.path.basename(thumbpath);
+      return thumbpath;
     except:
       print "Error rendering thumbnail %s"%thumbpath;
       traceback.print_exc();
       return None;
   
   def _renderSingleImage (self,image,thumb,relpath):
-    if image is None or thumb is None:
+    if image is None:
       return "";
-    # else thumbnail is same as full image (because image was small enough), insert directly
-    elif not thumb:
+    # else no thumbnail: make "image" link
+    elif thumb is None:
       fname = relpath+image;
-      return """<IMG SRC="%s" ALT="%s"></IMG>"""%(quote_url(fname),quote_url(os.path.basename(image)));
+      return """<A HREF="%s">image</A>"""%quote_url(fname);
     # else return thumbnail linking to full image
     else:
       tname = relpath+thumb;

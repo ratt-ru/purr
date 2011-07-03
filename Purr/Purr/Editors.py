@@ -1041,9 +1041,9 @@ class ExistingLogEntryDialog (QDialog):
     self.wstack.addWidget(self.viewer_panel);
     lo = QVBoxLayout(self.viewer_panel);
     lo.setMargin(0);
-    label = QLabel("""<P>Below is an HTML rendering of your log entry. Note that this window
-      is only a bare-bones viewer, not a real browser. You may click on a link associated with a
-      saved data product to get a menu of related actions. To edit this entry, click the Edit button below.
+    label = QLabel("""<P>Below is an HTML rendering of your log entry. Note that this is
+      only a bare-bones viewer, so only some links will work. In particular, 
+      you may click on a link associated with a saved data product to get a menu of related actions. To edit this entry, click the Edit button below.
       </P>""",self.viewer_panel);
     label.setWordWrap(True);
     label.setMargin(5);
@@ -1115,7 +1115,7 @@ class ExistingLogEntryDialog (QDialog):
     Config.set('entry-viewer-width',sz.width());
     Config.set('entry-viewer-height',sz.height());
 
-  def viewEntry (self,entry,has_prev=True,has_next=True):
+  def viewEntry (self,entry,prev=None,next=None):
     # if editing previous entry, ask for confirmation
     if self.updated:
       self.show();
@@ -1127,22 +1127,28 @@ class ExistingLogEntryDialog (QDialog):
     self._viewer_source = QUrl.fromLocalFile(self.entry.index_file);
     self.viewer.setSource(self._viewer_source);
     self.viewer.reload();
-    self.wprev.setEnabled(has_prev);
-    self.wnext.setEnabled(has_next);
+    #self._prev_path = prev and prev.index_file;
+    #self._next_path = next and next.index_file;
+    self.wprev.setEnabled(bool(prev));
+    self.wnext.setEnabled(bool(next));
     self.wstack.setCurrentWidget(self.viewer_panel);
 
   def _urlClicked (self,url):
     #if self._viewer_source:
     # self.viewer.setSource(self._viewer_source);
-    # see if we clicked on a URL for a data product
+    # see if we clicked on a URL for a data product, display URL for it if so
     path = str(url.path());
     if path:
+      # see if we clicked on a URL for a data product, display URL for it if so
       for dp in self.entry.dps:
         if os.path.samefile(dp.fullpath,path) or os.path.exists(dp.subproduct_dir()) and os.path.samefile(dp.subproduct_dir(),os.path.dirname(path)):
           self._dp_menu_title.setText(os.path.basename(dp.filename));
           self._dp_menu_on = dp;
           self._dp_menu.exec_(self.viewer.getLastMouseRelease());
-          break;
+          return;
+      # else emit signal
+      self.emit(SIGNAL("viewPath"),path);
+      
 
   def _copyDPToClipboard (self):
     """Callback for item menu.""";

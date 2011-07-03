@@ -44,7 +44,7 @@ class HTMLViewerDialog (QDialog):
     lo.addWidget(self.viewer);
     # self.viewer.setReadOnly(True);
     self.viewer.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding);
-    QObject.connect(self.viewer,SIGNAL("anchorClicked(const QUrl &)"),self._resetSource);
+    QObject.connect(self.viewer,SIGNAL("anchorClicked(const QUrl &)"),self._urlClicked);
     self._source = None;
     lo.addSpacing(5);
     # create button bar
@@ -90,12 +90,19 @@ class HTMLViewerDialog (QDialog):
     Config.set('%s-width'%self.config_name,sz.width());
     Config.set('%s-height'%self.config_name,sz.height());
 
-  def setDocument (self,filename):
+  def setDocument (self,filename,empty=""):
     """Sets the HTML text to be displayed. """;
     self._source = QUrl.fromLocalFile(filename);
-    self.viewer.setSource(self._source);
+    if os.path.exists(filename):
+      self.viewer.setSource(self._source);
+    else:
+      self.viewer.setText(empty);
 
-  def _resetSource (self,*dum):
+  def _urlClicked (self,url):
+    path = str(url.path());
+    if path:
+      self.emit(SIGNAL("viewPath"),path);
+    # to make sure it keeps displaying the same thing
     self.viewer.setSource(self._source);
 
   def reload (self):
@@ -284,6 +291,7 @@ class MainWindow (QMainWindow):
                    """)]);
     self._viewer_timestamp = None;
     self.connect(self.viewer_dialog,SIGNAL("Regenerate"),self._regenerateLog);
+    self.connect(self.viewer_dialog,SIGNAL("viewPath"),self._viewPath);
 
     # Log title toolbar
     title_tb = QToolBar(cw);
@@ -451,6 +459,7 @@ class MainWindow (QMainWindow):
     self.view_entry_dialog = Purr.Editors.ExistingLogEntryDialog(self);
     self.connect(self.view_entry_dialog,SIGNAL("previous()"),self._viewPrevEntry);
     self.connect(self.view_entry_dialog,SIGNAL("next()"),self._viewNextEntry);
+    self.connect(self.view_entry_dialog,SIGNAL("viewPath"),self._viewPath);
     self.connect(self.view_entry_dialog,SIGNAL("filesSelected"),self._addDPFilesToOldEntry);
     self.connect(self.view_entry_dialog,SIGNAL("entryChanged"),self._entryChanged);
     # saving a data product to an older entry will automatically drop it from the
@@ -464,6 +473,9 @@ class MainWindow (QMainWindow):
     # create timer for pouncing
     self._timer = QTimer(self);
     self.connect(self._timer,SIGNAL("timeout()"),self._rescan);
+    # create dict mapping index.html paths to entry numbers
+    self._index_paths = {};
+
 
   def resizeEvent (self,ev):
     QMainWindow.resizeEvent(self,ev);
@@ -581,6 +593,7 @@ class MainWindow (QMainWindow):
       self.viewer_dialog.hide();
       self._viewing_ientry = None;
       self._setEntries(self.purrer.getLogEntries());
+#      print self._index_paths;
       self._viewer_timestamp = None;
       self._updateViewer();
       self._updateNames();
@@ -636,22 +649,18 @@ class MainWindow (QMainWindow):
     if not force and not self.viewer_dialog.isVisible():
       return;
     # default text if nothing is found
-    text = "<P>Nothing in the log yet. Try adding some entries first.</P>";
-    for filename in Purr.RenderIndex.FULLINDEX, Purr.RenderIndex.INDEX:
-      path = os.path.join(self.purrer.logdir, filename);
-      mtime = self.fileModTime(path);
-      if mtime:
-        break;
+    path = self.purrer.indexfile;
+    mtime = self.fileModTime(path);
     # return if file is older than our content
     if mtime and mtime <= (self._viewer_timestamp or 0):
       return;
     busy = BusyIndicator();
-    self.viewer_dialog.setDocument(path);
+    self.viewer_dialog.setDocument(path,empty=
+      "<P>Nothing in the log yet. Try adding some log entries.</P>");
     self.viewer_dialog.reload();
-    self.viewer_dialog.setLabel("""<P>Below is your full HTML-rendered log. Note that this window
-      is only a bare-bones viewer, not a real browser. You can't
-      click on links, or do anything else besides simply look. For a fully-functional view, use your
-      browser to look at the index file residing here:<BR>
+    self.viewer_dialog.setLabel("""<P>Below is your full HTML-rendered log. Note that this is 
+      only a bare-bones viewer, so only a limited set of links will work. 
+      For a fully-functional view, use a proper HTML browser to look at the index file residing here:<BR>
       <tt>%s</tt></P>
       """%self.purrer.indexfile);
     self._viewer_timestamp = mtime;
@@ -659,8 +668,11 @@ class MainWindow (QMainWindow):
   def _setEntries (self,entries):
     self.etw.clear();
     item = None;
+    self._index_paths = {};
+    self._index_paths[os.path.abspath(self.purrer.indexfile)] = -1;
     for i,entry in enumerate(entries):
       item = self._addEntryItem(entry,i,item);
+      self._index_paths[os.path.abspath(entry.index_file)] = i;
     self.etw.resizeColumnToContents(0);
 
   def _titleChanged (self):
@@ -756,7 +768,9 @@ class MainWindow (QMainWindow):
     self._viewing_ientry = ientry;
     entry = self.purrer.entries[ientry];
     busy = BusyIndicator();
-    self.view_entry_dialog.viewEntry(entry,has_prev=(ientry>0),has_next=(ientry<len(self.purrer.entries)-1));
+    self.view_entry_dialog.viewEntry(entry,
+        prev=ientry>0 and self.purrer.entries[ientry-1],
+        next=ientry<len(self.purrer.entries)-1 and self.purrer.entries[ientry+1]);
     self.view_entry_dialog.show();
     # select entry in listview
     if select:
@@ -770,6 +784,16 @@ class MainWindow (QMainWindow):
   def _viewNextEntry (self):
     if self._viewing_ientry is not None and self._viewing_ientry < len(self.purrer.entries)-1:
       self._viewEntryNumber(self._viewing_ientry+1);
+      
+  def _viewPath (self,path):
+    num = self._index_paths.get(os.path.abspath(path),None)
+    if num is None:
+      return;
+    elif num == -1:
+      self.view_entry_dialog.hide();
+      self._showViewerDialog();
+    else:
+      self._viewEntryNumber(num);
 
   def _showItemContextMenu (self,item,point,col):
     """Callback for contextMenuRequested() signal. Pops up item menu, if defined""";
@@ -892,6 +916,7 @@ class MainWindow (QMainWindow):
       else:
         lastitem = None;
       self._addEntryItem(entry,len(self.purrer.entries)-1,lastitem);
+      self._index_paths[os.path.abspath(entry.index_file)] = len(self.purrer.entries)-1;
     # log will have changed, so update the viewer
     if not entry.ignore:
       self._updateViewer();
