@@ -33,6 +33,7 @@ if __name__ == "__main__":
 
   import sys
   import signal
+  import os
   import os.path
 
   from PyQt4.Qt import *
@@ -69,3 +70,5 @@ if __name__ == "__main__":
   signal.signal(signal.SIGINT,sigint_handler);
 
   app.exec_();
+  
+  os._exit(0);
