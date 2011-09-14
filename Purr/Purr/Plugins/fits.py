@@ -9,7 +9,9 @@ except:
   raise;
 
 try:
-  import pyfits
+  ## ugly hack to get around UGLY FSCKING ARROGNAT (misspelling fully intentional) pyfits-2.3 bug
+  import Kittens.utils
+  pyfits = Kittens.utils.import_pyfits();
 except:
   print """PyFITS package not found, rendering of FITS files will not be available.
 PyFITS is available from http://www.stsci.edu/resources/software_hardware/pyfits,
