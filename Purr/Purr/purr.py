@@ -57,10 +57,10 @@ if __name__ == "__main__":
   try:
     if not Purr.Startup.startWizard(rem_args,purrwin):
       print "Cancelled by user";
-      sys.exit(1);
+      os._exit(1);
   except Purr.Startup.Error,err:
     print err.error_message;
-    sys.exit(1);
+    os._exit(1);
 
   # handle SIGINT
   def sigint_handler (sig,stackframe):

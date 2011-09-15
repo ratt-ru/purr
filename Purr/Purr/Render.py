@@ -53,8 +53,7 @@ class DefaultRenderer (object):
     """A renderer is initialized with a LogEntry.DataProduct object.
     If a renderer has been initialized, it is guaranteed to be used, so any "heavy" activity
     such as making of thumbnails, etc. can already be undertaken here.
-    If refresh is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than
-    the timestamp will need to be regenerated.
+    If refresh is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than the timestamp will need to be regenerated.
     """
     self.dp = dp;
     # setup some convenient attributes
@@ -67,7 +66,13 @@ class DefaultRenderer (object):
     # base path to DP, without extension
     self.basepath  = os.path.splitext(dp.fullpath)[0];
     # modification time of DP
-    self.file_mtime = max(os.path.getmtime(dp.fullpath),refresh);
+    file_mtime = os.path.getmtime(dp.fullpath);
+    self.file_mtime = max(file_mtime,refresh);
+    dprintf(3,"created renderer for %s. File timestamp is %s, refresh cutoff is %s\n",
+        dp.fullpath,
+        time.strftime("%x %X",time.localtime(file_mtime)),
+        time.strftime("%x %X",time.localtime(refresh)));
+
     
   def subproductPath (self,ext):
     """Makes a subproduct filename by appending 'ext' to the subproduct directory.
@@ -88,14 +93,16 @@ class DefaultRenderer (object):
 ## Need to add a control for re-rendering.
 ##    if os.path.exists(fpath) and os.path.getmtime(fpath) >= max(self.file_mtime,self.module_mtime):
     if os.path.exists(fpath) and os.path.getmtime(fpath) >= self.file_mtime:
-      dprintf(3,"subproduct %s is up-to-date, no need to remake\n",fpath);
+      dprintf(3,"subproduct %s is up-to-date, no need to regenerate\n",fpath);
       return True;
     else:
-      dprintf(3,"subproduct %s is out of date, need to remake\n",fpath);
-      dprintf(4,"subproduct timestamp %s, file %s, module %s\n",
-        time.strftime("%x %X",time.localtime((os.path.exists(fpath) or 0) and os.path.getmtime(fpath))),
-        time.strftime("%x %X",time.localtime(self.file_mtime)),
-        time.strftime("%x %X",time.localtime(self.module_mtime)));
+      if not os.path.exists(fpath):
+        dprintf(3,"subproduct %s does not yet exist, will generate\n",fpath);
+      else:
+        dprintf(4,"subproduct %s is out of date (timestamp %s, file %s, module %s), will regenerate\n",fpath,
+          time.strftime("%x %X",time.localtime(os.path.getmtime(fpath))),
+          time.strftime("%x %X",time.localtime(self.file_mtime)),
+          time.strftime("%x %X",time.localtime(self.module_mtime)));
       return False;
   
   def subproduct (self,ext):

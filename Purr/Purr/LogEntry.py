@@ -252,7 +252,7 @@ class LogEntry (object):
                         time.strftime("-%Y%m%d-%H%M%S",
                         time.localtime(self.timestamp)));
 
-  def save (self,dirname=None,refresh=0,refresh_index=True):
+  def save (self,dirname=None,refresh=0,refresh_index=True,emit_message=True):
     """Saves entry in the given directory. Data products will be copied over if not
     residing in that directory.
     'refresh' is a timestamp, passed to renderIndex(), causing all data products OLDER than the specified time to be regenerated.
@@ -260,11 +260,11 @@ class LogEntry (object):
     """;
     if not refresh and not self.updated:
       return;
+    timestr = time.strftime("%Y%m%d-%H%M%S",time.localtime(self.timestamp));
+    Purr.progressMessage("Rendering entry for %s"%timestr);
     if dirname:
-      self.pathname = pathname = os.path.join(dirname,
-                        ((self.ignore and "ignore") or "entry")+
-                        time.strftime("-%Y%m%d-%H%M%S",
-                                      time.localtime(self.timestamp)));
+      self.pathname = pathname = os.path.join(dirname,"%s-%s"%
+                        (("ignore" if self.ignore else "entry"),timestr));
     elif not self.pathname:
       raise ValueError,"Cannot save entry: pathname not specified";
     else:
@@ -347,7 +347,7 @@ class LogEntry (object):
     self.cached_include = os.path.join(pathname,'index.include.html');
     self.cached_include_valid = False;
     self.index_file = os.path.join(pathname,"index.html");
-    self.generateIndex(refresh=time.time() if refresh_index else refresh);
+    self.generateIndex(refresh=refresh,refresh_index=refresh_index and time.time());
     self.updated = False;
 
   def setPrevUpNextLinks(self,prev=None,up=None,next=None):
@@ -364,9 +364,9 @@ class LogEntry (object):
     if next is not None:
       self._next_link = next and quote_url(next._relIndexLink());
 
-  def generateIndex (self, refresh=0):
+  def generateIndex (self,refresh=0,refresh_index=0):
     """Writes the index file"""
-    file(self.index_file,"wt").write(self.renderIndex(refresh=refresh));
+    file(self.index_file,"wt").write(self.renderIndex(refresh=refresh,refresh_index=refresh_index));
 
   def remove_directory (self):
     """Removes this entry's directory from disk""";
@@ -378,21 +378,24 @@ class LogEntry (object):
   def timeLabel (self):
     return time.strftime("%x %X",time.localtime(self.timestamp));
 
-  def renderIndex (self,relpath="",refresh=0):
+  def renderIndex (self,relpath="",refresh=0,refresh_index=0):
     """Returns HTML index code for this entry.
     If 'relpath' is empty, renders complete index.html file.
     If 'relpath' is not empty, then index is being included into a top-level log, and
     relpath should be passed to all sub-renderers.
     In this case the entry may make use of its cached_include file, if that is valid.
-    If 'refresh' is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than
-    the timestamp will need to be regenerated.
+    If 'refresh' is set to a timestamp, then any subproducts (thumbnails, HTML caches, etc.) older than the timestamp will need to be regenerated.
+    If 'refresh_index' is set to a timestamp, then any index files older than the timestamp will need to be regenerated.
     If 'relpath' is empty and 'prev', 'next' and/or 'up' is set, then Prev/Next/Up links will be inserted
     """;
     # check if cache can be used
-    dprintf(2,"%s: rendering HTML index with relpath='%s', refresh=%s\n",self.pathname,relpath,refresh);
+    refresh_index = max(refresh,refresh_index);
+    dprintf(2,"%s: rendering HTML index with relpath='%s', refresh=%s refresh_index=%s\n",self.pathname,relpath,
+      time.strftime("%x %X",time.localtime(refresh)),
+      time.strftime("%x %X",time.localtime(refresh_index)));
     if relpath and self.cached_include_valid:
       try:
-        if os.path.getmtime(self.cached_include) >= refresh:
+        if os.path.getmtime(self.cached_include) >= refresh_index:
           dprintf(2,"using include cache %s\n",self.cached_include);
           return file(self.cached_include).read();
         else:
