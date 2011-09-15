@@ -719,13 +719,14 @@ class LogEntryEditor (QWidget):
     if not dialog:
       self._add_dp_dialog = dialog = self.AddDataProductDialog(self);
       self.connect(dialog,SIGNAL("filesSelected"),self,SIGNAL("filesSelected"));
+      dialog.setDirectory(self._default_dirs[0] if self._default_dirs else ".");
     # set mode
     if add_dir:
       dialog.setFileMode(QFileDialog.Directory);
     else:
       dialog.setFileMode(QFileDialog.ExistingFiles);
     # add quick-jump combobox
-    dialog.setDirList(self._default_dirs);
+    dialog.setDirList(list(self._default_dirs)+[os.path.expanduser("~")]);
     dialog.setDirectory(dialog.directory()); # hope this is the same as rereadDir() in qt3
     dialog.show();
     dialog.raise_();
