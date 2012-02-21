@@ -39,8 +39,8 @@ _time0 = time.time();
 
 def import_pyfits ():
   """Helper function to import pyfits and return it. Provides a workaround for
-  pyfits-2.3, which is actually arrogant enough to replace the standard 
-  warnings.formatwarning function with its own BROKEN version, thus breaking 
+  pyfits-2.3, which is actually arrogant enough to replace the standard
+  warnings.formatwarning function with its own BROKEN version, thus breaking
   all other code that uses the warnings module.""";
   import pyfits
   import warnings
@@ -129,15 +129,17 @@ class verbosity:
   _parse_argv = True;
 
   _timestamps = False;
-  
+  _timestamps_modulo = 0;
+
   @staticmethod
-  def enable_timestamps (enable=True):
+  def enable_timestamps (enable=True,modulo=60):
     verbosity._timestamps = enable;
+    verbosity._timestamps_modulo = modulo;
 
   @staticmethod
   def timestamp ():
     if verbosity._timestamps:
-      return "%5.2f "%((time.time()-_time0)%60);
+      return "%5.2f "%((time.time()-_time0)%verbosity._timestamps_modulo);
     else:
       return "";
 
