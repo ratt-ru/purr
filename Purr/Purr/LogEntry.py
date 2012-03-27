@@ -444,8 +444,9 @@ class LogEntry (object):
 
         <A CLASS="COMMENTS">\n"""%attrs;
     # add comments
+    logmode = False;
     for cmt in self.comment.split("\n"):
-      cmt = cmt.replace("<","&lt;").replace(">","&gt;");
+      cmt = cmt.replace("<","&lt;").replace(">","&gt;").replace("&lt;BR&gt;","<BR>");
       html += """      <P>%s</P>\n"""%cmt;
     html += """    </A>\n""";
     # add data products

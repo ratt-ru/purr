@@ -47,6 +47,9 @@ class LogIndexParser (HTMLParser):
     elif tag == "p":
       if self.curclass and self.curdata:
         self.curdata += "\n";
+    elif tag == "br":
+      if self.curclass and self.curdata:
+        self.curdata += "<BR>";
 
   def _handle_start_TITLE (self,timestamp=0,**kw):
     if self.title is None:

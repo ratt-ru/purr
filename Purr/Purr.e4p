@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE Project SYSTEM "Project-4.6.dtd">
 <!-- eric4 project file for project Purr -->
-<!-- Saved: 2010-06-25, 17:43:30 -->
-<!-- Copyright (C) 2010 ,  -->
+<!-- Saved: 2012-03-27, 23:34:00 -->
+<!-- Copyright (C) 2012 ,  -->
 <Project version="4.6">
   <Language></Language>
   <ProgLanguage mixed="0">Python</ProgLanguage>
@@ -146,6 +146,7 @@
   </Interfaces>
   <Others>
   </Others>
+  <MainScript>Purr/purr.py</MainScript>
   <Vcs>
     <VcsType>Subversion</VcsType>
     <VcsOptions>

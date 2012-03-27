@@ -801,8 +801,16 @@ class LogEntryEditor (QWidget):
     # form up new entry
     title = str(self.wtitle.text());
     comment = str(self.comment_doc.toPlainText());
-    # process comment string -- eliminate single newlines, make double-newlines separate paragraphs
-    comment = "\n".join([ pars.replace("\n"," ") for pars in comment.split("\n\n") ]);
+    # process comment string -- eliminate single newlines, make double-newlines into separate paragraphs
+    # exception are paragraphs that start with "#LOG:", these get special treatment and the single newlines are
+    # left intact
+    pars = [];
+    for paragraph in comment.split("\n\n"):
+      if paragraph.startswith("LOG:"):
+        pars.append(paragraph.replace("\n","<BR>"));
+      else:
+        pars.append(paragraph.replace("\n"," "));
+    comment = "\n".join(pars);
     # go through data products and decide what to do with each one
     busy = Purr.BusyIndicator();
     # get list of DPs
@@ -839,7 +847,7 @@ class LogEntryEditor (QWidget):
     busy = Purr.BusyIndicator();
     self.entry = entry;
     self.setEntryTitle(entry.title);
-    self.setEntryComment(entry.comment.replace("\n","\n\n"));
+    self.setEntryComment(entry.comment.replace("\n","\n\n").replace("<BR>","\n"));
     self.wdplv.clear();
     self.wdplv.fillDataProducts(entry.dps);
     self.setTimestamp(entry.timestamp);
@@ -1050,7 +1058,7 @@ class ExistingLogEntryDialog (QDialog):
     lo = QVBoxLayout(self.viewer_panel);
     lo.setMargin(0);
     label = QLabel("""<P>Below is an HTML rendering of your log entry. Note that this is
-      only a bare-bones viewer, so only some links will work. In particular, 
+      only a bare-bones viewer, so only some links will work. In particular,
       you may click on a link associated with a saved data product to get a menu of related actions. To edit this entry, click the Edit button below.
       </P>""",self.viewer_panel);
     label.setWordWrap(True);
@@ -1156,7 +1164,7 @@ class ExistingLogEntryDialog (QDialog):
           return;
       # else emit signal
       self.emit(SIGNAL("viewPath"),path);
-      
+
 
   def _copyDPToClipboard (self):
     """Callback for item menu.""";
