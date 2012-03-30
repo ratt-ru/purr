@@ -29,7 +29,7 @@ def renderIcon (size,path=None):
   return """<IMG SRC="%s"></IMG>"""%quote_url(filename);
 
 def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
-  logdir = os.path.normpath(logdir);
+  logdir = os.path.normpath(os.path.abspath(logdir));
   fullindex = os.path.join(logdir,FULLINDEX);
   tocindex = os.path.join(logdir,INDEX);
 
@@ -57,7 +57,7 @@ def writeLogIndex (logdir,title,timestamp,entries,refresh=0):
     fobj.write("""<DIV ALIGN=right><P><A HREF=%s>Printable version (single HTML page).</A></P></DIV>\n\n"""%FULLINDEX);
     # write entries
     for i,entry in enumerate(entries):
-      path = entry.index_file;
+      path = os.path.normpath(os.path.abspath(entry.index_file));
       if path.startswith(logdir+'/'):
         path = path[(len(logdir)+1):];
       fobj.write("""<P><A HREF="%s">%d. %s</A></P>\n\n"""%(quote_url(path),i+1,entry.title));

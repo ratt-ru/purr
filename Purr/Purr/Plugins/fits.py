@@ -4,7 +4,9 @@ try:
   import PIL.Image
 except:
 # image.py will complain about this one too, more verbosely
-  print """PIL package not found, rendering of FITS files will not be available.
+  print """Python Imaging Library (PIL) not found, rendering of FITS files will not be available.
+PIL can be installed from the Debian/Ubuntu package python-imaging, or can be downloaded from
+http://www.pythonware.com/index.htm.
 """;
   raise;
 
@@ -14,21 +16,21 @@ try:
   pyfits = Kittens.utils.import_pyfits();
 except:
   print """PyFITS package not found, rendering of FITS files will not be available.
-PyFITS is available from http://www.stsci.edu/resources/software_hardware/pyfits,
-or as Debian package python-pyfits.
+PyFITS can be installed from the Debian/Ubuntu package python-pyfits, or can be downloaded
+from http://www.stsci.edu/resources/software_hardware/pyfits.
 """;
   raise
 
 try:
   import numpy
-  import numpy.ma
+  import scipy.ndimage.measurements
 except:
-  print """numpy package not found, rendering of FITS files will not be available.
-numpy is available from http://numpy.scipy.org/, or as Debian package python-numpy.
+  print """numpy and/or scipy packages not found, rendering of FITS files will not be available.
+Numpy and scipy can be installed from Debian/Ubuntu packages python-numpy and python-scipy, or can
+be downloaded from http://numpy.scipy.org.
 """;
   raise
 
-  
 # pychart needed for rendering histograms, but we can get on without it
 from local_pychart import *
 pychart = True;
@@ -38,11 +40,12 @@ pychart = True;
 #  print """PyChart package not found, rendering of FITS histograms will not be available.
 #PyChart is available from http://home.gna.org/pychart/, or as Debian package python-pychart.
 #""";
-  
+
 import os.path
 import traceback
 import math
 import cPickle
+import time
 
 import Purr
 from Purr.Render import quote_url,dprint,dprintf
@@ -57,13 +60,13 @@ class FITSRenderer (CachingRenderer):
       return 10;
     return False;
   canRender = staticmethod(canRender);
-    
+
   # this gives a short ID for the class (used in GUIs and such)
   renderer_id = "fits";
-  
+
   # this gives a documentation string. You can use rich text here
   renderer_doc = """<P>The "fits" plugin provides rendering of FITS images.""";
-      
+
   # maximum thumbnail width & height
   # define renderer options
   CachingRenderer.addOption("image-thumbnail-width",512,dtype=int,doc="Maximum width of thumbnails");
@@ -75,10 +78,10 @@ class FITSRenderer (CachingRenderer):
   CachingRenderer.addOption("fits-nimage",4,dtype=int,doc="Maximum number of planes to include, when dealing with cubes");
   CachingRenderer.addOption("fits-hist-nbin",512,dtype=int,doc="Number of bins to use when making histograms""");
   CachingRenderer.addOption("fits-hist-clip",.95,dtype=float,doc="Apply histogram clipping");
-  
+
   def _renderCacheFile (self,cachetype,relpath):
     return ("-cache-%s-rel-%s.html"%(cachetype,bool(relpath))).lower();
-    
+
   @staticmethod
   def compute_tics (x0,x1):
     # work out tic interval
@@ -127,7 +130,8 @@ class FITSRenderer (CachingRenderer):
     # init fitsfile to None, so that _read() above is forced to re-read it
     fitsfile = pyfits.open(self.dp.fullpath);
     header = fitsfile[0].header;
-    
+
+    dprintf(3,"beginning render of",self.dp.fullpath); t0 = time.time();
     # write out FITS header
     self.headerfile,path,uptodate = self.subproduct("-fitsheader.html");
     if not uptodate:
@@ -146,7 +150,7 @@ class FITSRenderer (CachingRenderer):
         print "Error writing file %s"%path;
         traceback.print_exc();
         self.headerfile = None;
-	
+
     # figure out number of images to include
     ndim = header['NAXIS'];
     fitsshape = [ header['NAXIS%d'%i] for i in range(1,ndim+1) ];
@@ -154,42 +158,53 @@ class FITSRenderer (CachingRenderer):
     if ndim < 2:
       raise TypeError,"can't render one-dimensional FITS files""";
     elif ndim == 2:
-      shape = fitsshape;
-      fitsdata_to_images = lambda fdata,sh=shape:[fdata.reshape(sh)];
+      fitsdata_to_images = lambda fdata:fdata;
       nplanes = 1;
     else:
       ax1 = ax2 = None;
-      # figure out image shape, by looking at CTYPEx
-      for i in range(ndim):
-        ctype = header['CTYPE%d'%(i+1)];
+      # find the X/Y axes, by looking at CTYPEx
+      # note that the array axes are in reverse order. I.e. if X is FITS axis 1 and Y is axis 2,
+      # the array will be of e.g. shape 1,1,NY,NX, while fitsshape is [NX,NY,1,1]
+      for i in range(1,ndim+1):
+        ctype = header['CTYPE%d'%i];
         if [ prefix for prefix in "RA","GLON","ELON","HLON","SLON" if ctype.startswith(prefix) ] \
             or ctype in ("L","X"):
-          ax1 = i;
+          ax1 = ndim-i;
         elif [ prefix for prefix in "DEC","GLAT","ELAT","HLAT","SLAT" if ctype.startswith(prefix) ] \
             or ctype in ("M","Y"):
-          ax2 = i;
+          ax2 = ndim-i;
       if ax1 is None or ax2 is None:
-        ax1,ax2 = 0,1;
-      # now set the shape
-      shape = fitsshape[ax1],fitsshape[ax2];
-      # figure out number of planes in the cube
-      permute = [ ax2,ax1 ];  # to make reshape (below) work properly
-      dataplanes = 1;
-      for i in range(ndim):
-        if i not in (ax1,ax2):
-          permute.append(i);
-          dataplanes *= fitsshape[i];
-      nplanes = min(self.getOption('fits-nimage'),dataplanes);
-      def fitsdata_to_images (fdata,perm=permute): 
+        ax1,ax2 = 1,0;
+      arrshape = fitsshape[-1::-1];
+      # this is how many planes we render, at most
+      nplanes = max(self.getOption('fits-nimage'),1);
+      slices = [];
+      baseslice = [0]*ndim;
+      baseslice[ax1] = baseslice[ax2] = None;
+      imgshape = (arrshape[min(ax1,ax2)],arrshape[max(ax1,ax2)]);
+      while len(slices) < nplanes:
+        slices.append(tuple(baseslice));
+        for idim in range(ndim):
+          if baseslice[idim] != None:
+            baseslice[idim] += 1;
+            if baseslice[idim] < arrshape[idim]:
+              break;
+            else:
+              baseslice[idim] = 0;
+        else:
+          break;
+      nplanes = len(slices);
+      # OK, slices contains how many slices to return
+      def fitsdata_to_images (fdata,slices=slices,imgshape=imgshape):
+        dprint(3,"fitsdata_to_images",slices,fdata.shape); t0 = time.time();
         # reshape to collapse into a 3D cube
-        fdata = fdata.transpose().transpose(perm).reshape((shape[0],shape[1],dataplanes));
-        # now extract subplanes
-        img = [ fdata[:,:,i] for i in range(nplanes) ];
+        img = [ fdata[i].reshape(imgshape) for i in slices ];
+        dprint(3,"collecting images took",time.time()-t0,"secs"); t0 = time.time();
         return img;
-      
+
     # OK, now cycle over all images
-    dprintf(3,"%s: rendering %d planes\n",self.dp.fullpath,nplanes);
-    
+    dprintf(3,"%s: rendering %d planes\n",self.dp.fullpath,nplanes); t0 = time.time();
+
     self.imgrec = [None]*nplanes;
     # get number of bins (0 or None means no histogram)
     nbins = self.getOption("fits-hist-nbin");
@@ -197,14 +212,14 @@ class FITSRenderer (CachingRenderer):
     self.hclip = hclip = self.getOption("fits-hist-clip");
     if hclip == 1 or not nbins:
       hclip = None;
-      
+
     tsize_img  = self.getOption("image-thumbnail-width"),self.getOption("image-thumbnail-height");
     tsize_hist = self.getOption("hist-thumbnail-width"),self.getOption("hist-thumbnail-height");
     self.hist_size = self.getOption("hist-width"),self.getOption("hist-height");
-    
+
     # filled once we read the data
     images = None;
-    
+
     for num_image in range(nplanes):
       # do we have a cached status record for this image?
       recfile,recpath,uptodate = self.subproduct("-%d-stats"%num_image);
@@ -219,7 +234,7 @@ class FITSRenderer (CachingRenderer):
       # out of date, so we regenerate everything
       # build up record of stuff associated with this image
       rec = self.imgrec[num_image] = Kittens.utils.recdict();
-      
+
       # generate paths for images
       rec.fullimage,img_path  = self.subproductPath("-%d-full.png"%num_image);
       rec.thumbnail,img_thumb = self.subproductPath("-%d-thumb.png"%num_image);
@@ -228,47 +243,53 @@ class FITSRenderer (CachingRenderer):
         rec.histogram_zoom,hz_path = self.subproductPath("-%d-hist-zoom.png"%num_image);
         rec.histogram_full_thumb,hf_thumb = self.subproductPath("-%d-hist-full-thumb.png"%num_image);
         rec.histogram_zoom_thumb,hz_thumb = self.subproductPath("-%d-hist-zoom-thumb.png"%num_image);
-      else:
-        rec.histogram_full = rec.histogram_zoom = rec.histogram_full_thumb = rec.histogram_zoom_thumb = None;
 
       # need to read in data at last
       if not images:
+        dprint(3,"reading data"); t0 = time.time();
         fitsdata = fitsfile[0].data;
-        fitsdata = numpy.ma.masked_array(fitsdata,~numpy.isfinite(fitsdata));
+        dprint(3,"reading data took",time.time()-t0,"secs"); t0 = time.time();
         fitsfile = None;
         images = fitsdata_to_images(fitsdata);
+        dprint(3,"converting to images took",time.time()-t0,"secs"); t0 = time.time();
         fitsdata = None;
-      
+
+      # note that image needs to be transposed
       data = images[num_image];
-      
+
       title = self.dp.filename;
       if nplanes > 1:
         title += ", plane #%d"%num_image;
       Purr.progressMessage("rendering %s"%title,sub=True);
-        
+
       # min/max data values
-      datamin,datamax = float(data.min()),float(data.max());
+      dprint(3,"rendering plane",num_image); t0 = time.time();
+      datamask = ~numpy.isfinite(data);
+      dprint(3,"making mask took",time.time()-t0,"secs"); t0 = time.time();
+      datamin,datamax = scipy.ndimage.measurements.extrema(data,datamask,False)[:2];
+      dprint(3,"computing min/max took",time.time()-t0,"secs"); t0 = time.time();
       rec.datamin,rec.datamax = datamin,datamax;
       # mean and sigma
-      rec.datamean = float(data.mean());
-      rec.datastd = float((data-rec.datamean).std());
+      rec.datamean = scipy.ndimage.measurements.mean(data,datamask,False);
+      dprint(3,"computing mean took",time.time()-t0,"secs"); t0 = time.time();
+      rec.datastd = scipy.ndimage.measurements.standard_deviation(data,datamask,False);
+      dprint(3,"computing std took",time.time()-t0,"secs"); t0 = time.time();
       # thumbnail files will be "" if images are small enough to be inlined.
       # these will be None if no histogram clipping is applied
       rec.clipmin,rec.clipmax = None,None;
       dprintf(3,"%s plane %d: datamin %g, datamax %g\n",self.dp.fullpath,num_image,rec.datamin,rec.datamax);
       # compute histogram of data only if this is enabled,
       # and either pychart is available (so we can produce plots), or histogram clipping is in effect
-      if nbins and (pychart or hclip):
+      if datamin != datamax and nbins and (pychart or hclip):
         dprintf(3,"%s plane %d: computing histogram\n",self.dp.fullpath,num_image);
-        try:
-          counts,edges = numpy.histogram(data.compressed(),nbins); # needed for 1.3+ to avoid warnings
-          edges = edges[:-1];
-        except TypeError:
-          counts,edges = numpy.histogram(data.compressed(),nbins);
+        counts = scipy.ndimage.measurements.histogram(data,datamin,datamax,nbins,labels=datamask,index=False); # needed for 1.3+ to avoid warnings
+        edges = datamin + (datamax-datamin)*(numpy.arange(nbins,dtype=float)+.5)/nbins;
+        dprint(3,"computing histogram took",time.time()-t0,"secs"); t0 = time.time();
         # render histogram
         if pychart:
           try:
             self._make_histogram(hf_path,"Histogram of %s"%title,edges,counts);
+            dprint(3,"rendering histogram took",time.time()-t0,"secs"); t0 = time.time();
           except:
             print "Error rendering histogram %s"%hf_path;
             traceback.print_exc();
@@ -309,8 +330,11 @@ class FITSRenderer (CachingRenderer):
           # render zoomed histogram
           if pychart:
             if ih1 > ih0+1:
+              zcounts = scipy.ndimage.measurements.histogram(data,rec.clipmin,rec.clipmax,nbins,labels=datamask,index=False); # needed for 1.3+ to avoid warnings
+              zedges = rec.clipmin + (rec.clipmax-rec.clipmin)*(numpy.arange(nbins,dtype=float)+.5)/nbins;
               try:
-                self._make_histogram(hz_path,"Histogram zoom of %s"%title,edges[ih0:ih1],counts[ih0:ih1]);
+                self._make_histogram(hz_path,"Histogram zoom of %s"%title,zedges,zcounts);
+                dprint(3,"rendering zoomed histogram took",time.time()-t0,"secs"); t0 = time.time();
               except:
                 print "Error rendering histogram %s"%hz_path;
                 traceback.print_exc();
@@ -325,21 +349,35 @@ class FITSRenderer (CachingRenderer):
           # clip data
           data = numpy.clip(data,datamin,datamax);
         # end of clipping
+      # else no histogram for whatever reason
+      else:
+        rec.histogram_full = rec.histogram_zoom = rec.histogram_full_thumb = rec.histogram_zoom_thumb = None;
       # ok, data has been clipped if need be. Rescale it to 8-bit integers
+      t0 = time.time();
       datarng = datamax - datamin;
       if datarng:
         data = (data - datamin)*(255/datarng)
-        data = data.round().astype('int16');
+        data = data.round().astype('uint8');
+        data[datamask] = 255;
       else:
-        data = zeros(data.shape,dtype='int16');
-      dprintf(3,"%s plane %d: rescaled to %d:%d\n",self.dp.fullpath,num_image,data.min(),data.max());
+        data = zeros(data.shape,dtype='uint8');
+      dprintf(3,"%s plane %d: rescaled to %d:%d in %f seconds\n",self.dp.fullpath,num_image,data.min(),data.max(),time.time()-t0); t0 = time.time();
       # generate PNG image
       img = None;
       try:
-        img = PIL.Image.new('L',data.shape);
-        img.putdata(data.reshape((data.size,)));
-        img = img.transpose(PIL.Image.FLIP_TOP_BOTTOM);
+        print data.shape;
+        img = PIL.Image.frombuffer('L',data.shape[-1::-1],numpy.getbuffer(data),"raw",'L',0,-1);
+        dprint(3,"image frombuffer took",time.time()-t0,"secs"); t0 = time.time();
+        #img = PIL.Image.new('L',data.shape);
+        #dprint(3,"new image took",time.time()-t0,"secs"); t0 = time.time();
+        #imgdata = data.reshape((data.size,));
+        #dprint(3,"data.reshape took",time.time()-t0,"secs"); t0 = time.time();
+        #img.putdata(imgdata);
+        #dprint(3,"putdata took",time.time()-t0,"secs"); t0 = time.time();
+        # img = img.transpose(PIL.Image.FLIP_TOP_BOTTOM);
+        # dprint(3,"transpose took",time.time()-t0,"secs"); t0 = time.time();
         img.save(img_path,'PNG');
+        dprint(3,"saving took",time.time()-t0,"secs"); t0 = time.time();
       except:
         print "Error rendering image %s"%path;
         traceback.print_exc();
@@ -347,6 +385,7 @@ class FITSRenderer (CachingRenderer):
       # if image was rendered, make a thumbnail
       if rec.fullimage:
         thumb = self.makeThumb(img_path,img_thumb,tsize_img,img=img);
+        dprint(3,"rendering thumbnail took",time.time()-t0,"secs"); t0 = time.time();
         # None means thumbnail failed
         if thumb is None:
           rec.thumbnail = None;
@@ -361,13 +400,13 @@ class FITSRenderer (CachingRenderer):
       except:
         print "Error writing stats file  %s"%recpath;
         traceback.print_exc();
-        
+
   def makeThumb (self,imagepath,thumbpath,tsize,img=None):
     """makes a thumbnail for the given image.
     imagepath refers to an image file
     img can be an open PIL.Image -- if None, then imagepath is opened
     tsize is a width,height tuple giving the max thumbnail size
-    extension is the extension of the thumbnail file 
+    extension is the extension of the thumbnail file
     """
     try:
       # open image if needed
@@ -386,7 +425,7 @@ class FITSRenderer (CachingRenderer):
       print "Error rendering thumbnail %s"%thumbpath;
       traceback.print_exc();
       return None;
-  
+
   def _renderSingleImage (self,image,thumb,relpath):
     if image is None:
       return "";
@@ -400,7 +439,7 @@ class FITSRenderer (CachingRenderer):
       fname = relpath+image;
       return """<A HREF="%s"><IMG SRC="%s" ALT="%s"></A>"""%(quote_url(fname),quote_url(tname),
                                                              quote_url(os.path.basename(image)));
-  
+
   def _renderImageRec (self,rec,relpath,include_size=False):
     # get HTML code for image and histograms
     html_image = self._renderSingleImage(rec.fullimage,rec.thumbnail,relpath);
@@ -430,7 +469,7 @@ class FITSRenderer (CachingRenderer):
     html_cmt += """\n
        </TABLE>""";
     return html_img,html_cmt;
-  
+
   def renderLink (self,relpath=""):
     """renderLink() is called to render a link to the DP
     """;
@@ -444,8 +483,8 @@ class FITSRenderer (CachingRenderer):
       html += """ (<A HREF="%s">header</A>)"""%quote_url(relpath+self.headerfile);
     # save to cache
     return self.writeCache(cachekey,html);
-  
-  
+
+
   def renderInTable (self,relpath=""):
     """renderInTable() is called to render FITS images in a table""";
     # return from cache if available
@@ -480,10 +519,10 @@ class FITSRenderer (CachingRenderer):
         html += "\n".join([
             "    <TR>" ,
             "      <TD>%s</TD>"%html_img,
-            "      <TD>%s</TD>"%comment, 
+            "      <TD>%s</TD>"%comment,
             "    </TR>\n" ]);
     return self.writeCache(cachekey,html);
-  
+
   def renderThumbnail (self,relpath=""):
     """renderThumbnail() is called to render a thumbnail of the DP.
     We only render the first image (in case of multiple images)
