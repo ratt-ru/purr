@@ -365,7 +365,6 @@ class FITSRenderer (CachingRenderer):
       # generate PNG image
       img = None;
       try:
-        print data.shape;
         img = PIL.Image.frombuffer('L',data.shape[-1::-1],numpy.getbuffer(data),"raw",'L',0,-1);
         dprint(3,"image frombuffer took",time.time()-t0,"secs"); t0 = time.time();
         #img = PIL.Image.new('L',data.shape);
