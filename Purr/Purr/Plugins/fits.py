@@ -158,7 +158,7 @@ class FITSRenderer (CachingRenderer):
     if ndim < 2:
       raise TypeError,"can't render one-dimensional FITS files""";
     elif ndim == 2:
-      fitsdata_to_images = lambda fdata:fdata;
+      fitsdata_to_images = lambda fdata:[fdata];
       nplanes = 1;
     else:
       ax1 = ax2 = None;
@@ -254,7 +254,6 @@ class FITSRenderer (CachingRenderer):
         dprint(3,"converting to images took",time.time()-t0,"secs"); t0 = time.time();
         fitsdata = None;
 
-      # note that image needs to be transposed
       data = images[num_image];
 
       title = self.dp.filename;
@@ -329,7 +328,7 @@ class FITSRenderer (CachingRenderer):
           dprintf(3,"%s plane %d: clipping to %g,%g\n",self.dp.fullpath,num_image,rec.clipmin,rec.clipmax);
           # render zoomed histogram
           if pychart:
-            if ih1 > ih0+1:
+            if rec.clipmax != rec.clipmin:
               zcounts = scipy.ndimage.measurements.histogram(data,rec.clipmin,rec.clipmax,nbins,labels=datamask,index=False); # needed for 1.3+ to avoid warnings
               zedges = rec.clipmin + (rec.clipmax-rec.clipmin)*(numpy.arange(nbins,dtype=float)+.5)/nbins;
               try:
@@ -360,7 +359,7 @@ class FITSRenderer (CachingRenderer):
         data = data.round().astype('uint8');
         data[datamask] = 255;
       else:
-        data = zeros(data.shape,dtype='uint8');
+        data = numpy.zeros(data.shape,dtype='uint8');
       dprintf(3,"%s plane %d: rescaled to %d:%d in %f seconds\n",self.dp.fullpath,num_image,data.min(),data.max(),time.time()-t0); t0 = time.time();
       # generate PNG image
       img = None;
