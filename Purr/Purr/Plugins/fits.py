@@ -107,6 +107,8 @@ class FITSRenderer (CachingRenderer):
     xy = [];
     for a,b in zip(x,y):
       xy += [(a,b),(a+width,b)];
+    # Make sure all spaces in path are escaped as pychart cannot handle them
+    path = path.replace('\ ', ' ').replace(' ', '\ ');
     canv = canvas.init(path);
     ar = area.T(
       x_axis=axis.X(label="/20{}"+title,format="/20{}%g",tic_interval=self.compute_tics),
