@@ -3020,7 +3020,8 @@ def load_icons (appname):
   global __icons_loaded;
   if __icons_loaded:
     return;
-  for path in sys.path:
+  icon_paths = ['/usr/local/share/meqtrees'] + sys.path
+  for path in icon_paths:
     path = path or '.';
     # for each entry, try <entry>/icons/<appname>'
     trydir = os.path.join(path,'icons',appname);
@@ -3087,7 +3088,8 @@ class PixmapCache (object):
     # loop over system path
     if self._loaded:
       return;
-    for path in sys.path:
+    icon_paths = ['/usr/local/share/meqtrees'] + sys.path
+    for path in icon_paths:
       path = path or '.';
       # for each entry, try <entry>/icons/<appname>'
       trydir = os.path.join(path,'icons',self._appname);
