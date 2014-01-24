@@ -18,7 +18,7 @@ dprint = verbosity.dprint;
 dprintf = verbosity.dprintf;
 
 import Kittens.pixmaps
-pixmaps = Kittens.pixmaps.PixmapCache("purr");
+pixmaps = Kittens.pixmaps.PixmapCache("Purr");
 
 import Kittens.config
 ConfigFile = Kittens.config.DualConfigParser("purr.conf");
