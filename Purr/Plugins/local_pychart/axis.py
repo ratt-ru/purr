@@ -19,6 +19,7 @@ import font
 import line_style
 import theme
 from pychart_types import *
+import pychart_util
 
 
 class T(chart_object.T):

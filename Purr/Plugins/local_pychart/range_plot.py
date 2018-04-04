@@ -20,6 +20,7 @@ import line_style
 import range_plot_doc
 from pychart_types import *
 from scaling import *
+import pychart_util
 
 
 class T(chart_object.T):

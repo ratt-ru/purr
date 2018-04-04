@@ -17,12 +17,13 @@ import fill_style_doc
 import line_style
 import object_set
 from pychart_types import *
+from .pychart_util import line_desc
 from scaling import *
 
 _keys = {
     "bgcolor": (color.T, color.white, "The background color."),
     "line_style": (line_style.T, line_style.default,
-                   pychart_util.line_desc),
+                   line_desc),
     "line_interval": (NumberType, 3,
                       "The interval between successive stitch lines.")
 }

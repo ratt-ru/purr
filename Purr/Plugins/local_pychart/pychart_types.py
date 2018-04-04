@@ -12,6 +12,7 @@
 # for more details.
 #
 import types
+import pychart_util
 
 AnyType = 9998
 

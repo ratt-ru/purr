@@ -17,6 +17,7 @@ import line_style
 import object_set
 import tick_mark_doc
 from pychart_types import *
+from pychart_util import union_dict
 
 _keys = {
     "line_style": (line_style.T, line_style.default, "The line style of the tick mark."),
@@ -75,7 +76,7 @@ class DownTriangle(T):
 
 class X(T):
     """Draw a "X"-shaped tick mark. Attribute "fill-style" is ignored."""
-    keys = pychart_util.union_dict(T.keys,
+    keys = union_dict(T.keys,
                                    {"line_style": (line_style.T,
                                                    line_style.T(width=0.7),
                                                    "The line style of the tick mark")})
@@ -90,7 +91,7 @@ class X(T):
 
 class Plus(T):
     """Draw a "+"-shaped tick mark. Attribute "fill-style" is ignored."""
-    keys = pychart_util.union_dict(T.keys,
+    keys = union_dict(T.keys,
                                    {"line_style": (line_style.T,
                                                    line_style.T(width=1),
                                                    "The line style of the tick mark.")})
@@ -113,7 +114,7 @@ class Diamond(T):
 
 class Star(T):
     """Draw a "*". Attribute "fill-style" is ignored."""
-    keys = pychart_util.union_dict(T.keys,
+    keys = union_dict(T.keys,
                                    {"line_style": (line_style.T,
                                                    line_style.T(width=1),
                                                    "The line style of the tick mark.")})

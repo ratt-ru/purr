@@ -13,10 +13,10 @@
 #
 import re
 from types import *
-
+import sys
 import os.path
-from pychart import *
-from pychart.pychart_types import *
+import chart_object
+from pychart_types import *
 
 oldstdout = sys.stdout
 if os.path.exists("/dev/null"):

@@ -22,6 +22,7 @@ import object_set
 import theme
 import tick_mark
 from pychart_types import *
+import pychart_util
 
 default_width = 1.2
 line_style_itr = None

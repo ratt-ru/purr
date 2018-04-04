@@ -1,25 +1,33 @@
 #!/usr/bin/env python
 
-import os
-from distutils.core import setup
-from distutils.command.install import INSTALL_SCHEMES
+from setuptools import setup, find_packages
 
-data_files = []
-root_dir = os.path.dirname(__file__)
-if root_dir != '':
-    os.chdir(root_dir)
 
-# collect a list of all non python files
-for dirpath, dirnames, filenames in os.walk('Purr'):
-    dirnames[:] = [d for d in dirnames if not d.startswith('.') and d != '__pycache__']
-    if filenames and '__init__.py' not in filenames:
-        data_files.append([dirpath, [os.path.join(dirpath, f) for f in filenames]])
-
-# Tell distutils not to put the data_files in platform-specific installation
-# locations. See here for an explanation:
-# http://groups.google.com/group/comp.lang.python/browse_thread/thread/35ec7b2fed36eaec/2105ee4d9e8042cb
-for scheme in INSTALL_SCHEMES.values():
-        scheme['data'] = scheme['purelib']
+data_files = [
+    ('share/purr/icons', [
+        'Purr/icons/blue_round_reload.png',
+        'Purr/icons/filesave.png',
+        'Purr/icons/editdelete.png',
+        'Purr/icons/move.png',
+        'Purr/icons/filefind.png',
+        'Purr/icons/editclear.png',
+        'Purr/icons/checkmark.png',
+        'Purr/icons/list_remove.png',
+        'Purr/icons/magnifying_glass.png',
+        'Purr/icons/filenew.png',
+        'Purr/icons/folder_open.png',
+        'Purr/icons/list_add.png',
+        'Purr/icons/grey_round_cross.png',
+        'Purr/icons/edit.png',
+        'Purr/icons/next.png',
+        'Purr/icons/editcopy.png',
+        'Purr/icons/openbook.png',
+        'Purr/icons/editpaste.png',
+        'Purr/icons/previous.png',
+        'Purr/icons/purr_logo.xpm',
+        'Purr/icons/red_round_cross.png',
+        'Purr/icons/copy.png',
+    ])]
 
 setup(name='purr',
       version='1.3.0',
@@ -27,8 +35,25 @@ setup(name='purr',
       author='Oleg Smirnov',
       author_email='Oleg Smirnov <osmirnov@gmail.com>',
       url='https://github.com/ska-sa/purr',
-      packages=['Purr', 'Purr/Plugins', 'Purr/Plugins/local_pychart', 'Purr/Plugins/local_pychart/afm'],
-      requires=['kittens', 'PyQt4', 'PIL', 'scipy', 'pyfits'],
+      packages=find_packages(),
+      requires=['kittens', 'PyQt4', 'pillow', 'scipy'],
       scripts=['Purr/purr.py', 'Purr/purr'],
       data_files=data_files,
+      setup_requires=['pytest-runner'],
+      tests_require=['pytest'],
+      test_suite="tests",
+      license="GPL2",
+      classifiers=[
+          "Development Status :: 5 - Production/Stable",
+          "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+          "Programming Language :: Python",
+          "Programming Language :: Python :: 2",
+          "Programming Language :: Python :: 2.7",
+          "Programming Language :: Python :: 3",
+          "Programming Language :: Python :: 3.4",
+          "Programming Language :: Python :: 3.5",
+          "Programming Language :: Python :: 3.6",
+          "Programming Language :: Python :: 3.7",
+          "Environment :: X11 Applications",
+      ]
      )

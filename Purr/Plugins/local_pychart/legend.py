@@ -21,7 +21,7 @@ import line_style
 import theme
 import tick_mark
 from pychart_types import *
-
+import pychart_util
 
 class Entry(chart_object.T):
     keys = {"line_len": (UnitType, None,
