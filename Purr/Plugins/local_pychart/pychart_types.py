@@ -11,15 +11,17 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import pychart_util
 import types
+
 AnyType = 9998
+
 
 def IntervalType(val):
     if type(val) in (types.IntType, types.LongType,
                      types.FloatType, types.FunctionType):
-	return None
+        return None
     return "Expecting a number or a function"
+
 
 def CoordType(val):
     if type(val) not in (types.TupleType, types.ListType):
@@ -29,28 +31,32 @@ def CoordType(val):
     for v in val:
         if v != None and NumberType(v):
             return "Expecting a pair of numbers (got %s)" % str(v)
-    return None 
-    
+    return None
+
+
 def NumberType(val):
     if type(val) in (types.IntType, types.LongType, types.FloatType):
         return None
     else:
         return "Expecting a number"
 
+
 def UnitType(val):
     if type(val) in (types.IntType, types.LongType, types.FloatType):
         return
     else:
         return "Expecting a unit"
+
+
 def ShadowType(val):
     if type(val) not in (types.TupleType, types.ListType):
-	return "Expecting tuple or list."
+        return "Expecting tuple or list."
     if len(val) != 3:
-	return "Expecting (xoff, yoff, fill)."
+        return "Expecting (xoff, yoff, fill)."
     return None
+
 
 def FormatType(val):
     if type(val) in (types.StringType, types.FunctionType):
         return None
     return "Format must be a string or a function"
-

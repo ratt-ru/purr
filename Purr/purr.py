@@ -7,68 +7,72 @@
 
 import sys
 
-def trace_lines (frame, event, arg):
-  if event == "line":
-    print "%s:%d"%(frame.f_code.co_filename,frame.f_lineno);
-  return trace_lines;
+
+def trace_lines(frame, event, arg):
+    if event == "line":
+        print "%s:%d" % (frame.f_code.co_filename, frame.f_lineno)
+    return trace_lines
+
 
 # runs Purr standalone
 if __name__ == "__main__":
-  print "Welcome to PURR!"
+    print "Welcome to PURR!"
 
-  # parse options is the first thing we should do
-  from optparse import OptionParser
-  usage = "usage: %prog [options] <directories to watch>"
-  parser = OptionParser(usage=usage)
-  parser.add_option("-d", "--debug",dest="verbose",type="string",action="append",metavar="Context=Level",
-                    help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.");
-  parser.add_option("--trace",dest="trace",action="store_true",
-                                        help="(for debugging Python code) enables line tracing of Python statements");
-  (options, rem_args) = parser.parse_args();
+    # parse options is the first thing we should do
+    from optparse import OptionParser
 
-  if options.trace:
-    sys.settrace(trace_lines);
+    usage = "usage: %prog [options] <directories to watch>"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-d", "--debug", dest="verbose", type="string", action="append", metavar="Context=Level",
+                      help="(for debugging Python code) sets verbosity level of the named Python context. May be used multiple times.")
+    parser.add_option("--trace", dest="trace", action="store_true",
+                      help="(for debugging Python code) enables line tracing of Python statements")
+    (options, rem_args) = parser.parse_args()
 
-  print "Please wait a second while the GUI starts up."
+    if options.trace:
+        sys.settrace(trace_lines)
 
-  import sys
-  import signal
-  import os
-  import os.path
+    print "Please wait a second while the GUI starts up."
 
-  from PyQt4.Qt import *
+    import sys
+    import signal
+    import os
+    import os.path
 
-  import Purr
-  import Purr.MainWindow
-  import Purr.Render
-  import Purr.Startup
+    from PyQt4.Qt import *
 
-  import Kittens.pixmaps
+    import Purr
+    import Purr.MainWindow
+    import Purr.Render
+    import Purr.Startup
 
-  app = QApplication(sys.argv);
-  app.setDesktopSettingsAware(True);
+    app = QApplication(sys.argv)
+    app.setDesktopSettingsAware(True)
 
-#  splash = QSplashScreen(Purr.pixmaps.purr_logo.pm());
-#  splash.showMessage("PURR!");
-#  splash.show();
+    #  splash = QSplashScreen(Purr.pixmaps.purr_logo.pm())
+    #  splash.showMessage("PURR!")
+    #  splash.show()
 
-  purrwin = Purr.MainWindow.MainWindow(None);
+    purrwin = Purr.MainWindow.MainWindow(None)
 
-  try:
-    if not Purr.Startup.startWizard(rem_args,purrwin):
-      print "Cancelled by user";
-      os._exit(1);
-  except Purr.Startup.Error,err:
-    print err.error_message;
-    os._exit(1);
+    try:
+        if not Purr.Startup.startWizard(rem_args, purrwin):
+            print "Cancelled by user"
+            os._exit(1)
+    except Purr.Startup.Error, err:
+        print err.error_message
+        os._exit(1)
 
-  # handle SIGINT
-  def sigint_handler (sig,stackframe):
-    print "Caught Ctrl+C, PURR exiting..."
-    purrwin.detachPurrlog();
-    app.quit();
-  signal.signal(signal.SIGINT,sigint_handler);
 
-  app.exec_();
-  
-  os._exit(0);
+    # handle SIGINT
+    def sigint_handler(sig, stackframe):
+        print "Caught Ctrl+C, PURR exiting..."
+        purrwin.detachPurrlog()
+        app.quit()
+
+
+    signal.signal(signal.SIGINT, sigint_handler)
+
+    app.exec_()
+
+    os._exit(0)

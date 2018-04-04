@@ -11,10 +11,6 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import sys
-import re
-import theme
-import version
 import basecanvas
 from scaling import *
 
@@ -124,6 +120,7 @@ _unicode_latin1_conversion_table = {
     0x00FF: 'ydieresis',
 }
 
+
 class T(basecanvas.T):
     def __init__(self, fname):
         basecanvas.T.__init__(self)
@@ -133,7 +130,7 @@ class T(basecanvas.T):
         self.__nr_gsave = 0
         self.__font_ids = {}
         self.__nr_fonts = 0
-        
+
     def __reset_context(self):
         self.__font_name = None
         self.__font_size = -1
@@ -149,16 +146,19 @@ class T(basecanvas.T):
         self.__nr_fonts += 1
         self.__font_ids[name] = id
         return id
-    
+
     def newpath(self):
         self.__write("N\n")
+
     def stroke(self):
         self.__write("ST\n")
+
     def closepath(self):
         self.__write("CP\n")
+
     def moveto(self, x, y):
         self.__write('%g %g M\n' % (x, y))
-    
+
     def set_fill_color(self, color):
         if self.__color == color:
             pass
@@ -167,27 +167,29 @@ class T(basecanvas.T):
                 self.__write("%g SG\n" % color.r)
             else:
                 self.__write("%g %g %g SC\n" % (color.r, color.g, color.b))
-	    self.__color = color
+            self.__color = color
+
     def set_stroke_color(self, color):
         self.set_fill_color(color)
-        
+
     def set_line_style(self, style):
         self.set_stroke_color(style.color)
         if (self.__line_style == style):
             pass
         else:
-            self.__write("%g %d %d " % (nscale(style.width), 
-				      style.cap_style, style.join_style))
+            self.__write("%g %d %d " % (nscale(style.width),
+                                        style.cap_style, style.join_style))
             if style.dash != None:
-                self.__write("[%s] 0 SLD " % 
-                           " ".join(map(str, nscale_seq(style.dash))))
+                self.__write("[%s] 0 SLD " %
+                             " ".join(map(str, nscale_seq(style.dash))))
             else:
                 self.__write("SL ")
         self.__line_style = style
-            
+
     def gsave(self):
         self.__nr_gsave += 1
         self.__write("GS\n")
+
     def grestore(self):
         self.__write("GR\n")
         self.__nr_gsave -= 1
@@ -195,14 +197,14 @@ class T(basecanvas.T):
 
     def clip_sub(self):
         self.__write("clip\n")
-        
+
     def path_arc(self, x, y, radius, ratio, start_angle, end_angle):
         self.push_transformation((x, y), (1, ratio), None)
         self.__write("0 0 %g %g %g arc\n" % (radius, start_angle, end_angle))
         self.pop_transformation()
 
-    def curveto(self, a,b,c,d,e,f):    
-        self.__write("%g %g %g %g %g %g curveto\n" % (a,b,c,d,e,f))
+    def curveto(self, a, b, c, d, e, f):
+        self.__write("%g %g %g %g %g %g curveto\n" % (a, b, c, d, e, f))
 
     def push_transformation(self, baseloc, scale, angle, in_text=0):
         self.__mtx_pushed += 1
@@ -213,23 +215,27 @@ class T(basecanvas.T):
             self.__write("%g R\n" % (angle))
         if scale != None:
             self.__write("%g %g scale\n" % (scale[0], scale[1]))
+
     def pop_transformation(self, in_text=0):
         if self.__mtx_pushed == 0:
             raise ValueError, "mtx not pushed"
         self.__mtx_pushed -= 1
         self.__write("GE\n")
+
     def text_begin(self):
         self.__txtmtx_pushed += 1
         self.__write("TB\n")
+
     def text_end(self):
         self.__txtmtx_pushed -= 1
-	self.__write("TE\n")
+        self.__write("TE\n")
+
     def text_moveto(self, x, y, angle):
-	self.__write("%g %g T " % (x,y))
-	if angle != None and angle != 0:
-	    self.__write("%g R " % angle)
-	self.moveto(0, 0)
-        
+        self.__write("%g %g T " % (x, y))
+        if angle != None and angle != 0:
+            self.__write("%g R " % angle)
+        self.moveto(0, 0)
+
     def text_show(self, font_name, size, color, str):
         self.set_fill_color(color)
         if (self.__font_name == font_name and self.__font_size == size):
@@ -258,11 +264,11 @@ class T(basecanvas.T):
         self.__write(") show\n")
 
     def _path_polygon(self, points):
-        if (len(points) == 4 
-            and points[0][0] == points[1][0] 
-            and points[2][0] == points[3][0] 
-            and points[0][1] == points[3][1] 
-            and points[1][1] == points[2][1]):
+        if (len(points) == 4
+                and points[0][0] == points[1][0]
+                and points[2][0] == points[3][0]
+                and points[0][1] == points[3][1]
+                and points[1][1] == points[2][1]):
             # a rectangle.
             (xmin, ymin, xmax, ymax) = basecanvas._compute_bounding_box(points)
             if basecanvas.invisible_p(xmax, ymax):
@@ -270,47 +276,50 @@ class T(basecanvas.T):
             self.setbb(xmin, ymin)
             self.setbb(xmax, ymax)
             self.__write("%g %g %g %g RECT\n" % \
-                       (xscale(points[0][0]), yscale(points[0][1]),
-                        xscale(points[2][0]), yscale(points[2][1])))
+                         (xscale(points[0][0]), yscale(points[0][1]),
+                          xscale(points[2][0]), yscale(points[2][1])))
         else:
             basecanvas.T._path_polygon(self, points)
-            
+
     def lineto(self, x, y):
         self.__write("%g %g L\n" % (x, y))
+
     def fill(self):
         self.__write("fill\n")
+
     def comment(self, str):
         if comment_p:
             self.verbatim("%" + str)
+
     def verbatim(self, str):
         self.__write(str)
-        
+
     def close(self):
         basecanvas.T.close(self)
-	if self.__output_lines == []:
-	    return
+        if self.__output_lines == []:
+            return
 
         fp, need_close = self.open_output(self.__out_fname)
-            
+
         if self.__nr_gsave != 0:
             raise Exception, "gsave misnest (%d)" % (self.__nr_gsave)
         self.write_preamble(fp)
-        
+
         fp.writelines(self.__output_lines)
         fp.writelines(["showpage end\n",
                        "%%Trailer\n",
                        "%%EOF\n"])
         if need_close:
             fp.close()
-            
+
     def __write(self, str):
         self.__output_lines.append(str)
-    
+
     def writelines(self, l):
         self.__output_lines.extend(l)
 
     def write_preamble(self, fp):
-        bbox = [self.__xmin-1, self.__ymin-1, self.__xmax+1, self.__ymax+1]
+        bbox = [self.__xmin - 1, self.__ymin - 1, self.__xmax + 1, self.__ymax + 1]
         fp.write("%!PS-Adobe-2.0 EPSF-1.2\n")
         fp.write("%%Title: " + self.title + "\n")
         fp.write("%%Creator: " + self.creator + "\n")
@@ -338,7 +347,7 @@ class T(basecanvas.T):
         fp.write("%%EndProlog\n%%Page: 1 1\n")
 
 
-preamble_text="""
+preamble_text = """
 40 dict begin
 /RECT {4 dict begin
   /y2 exch def
@@ -373,5 +382,4 @@ preamble_text="""
 # width [dash] x linecap linejoin SL -> 
 
 # SF: set font.
-# name size SF -> 
-
+# name size SF ->

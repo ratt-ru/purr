@@ -11,28 +11,28 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import color
-import pychart_util
-import chart_object
-import object_set
-import theme
-import line_style_doc
-from pychart_types import *
 from types import *
 
-_keys = {
-    "width" : (UnitType, theme.default_line_width, "Width of the line, in points."),
-    "color": (color.T, color.default, "The color of the line."),
-    "dash" : (TupleType, None,
-              """The value
-              of None will draw a solid line. Otherwise, this
-              attribute specifies the style of dashed lines. 
-              The 2N'th value specifies the length of the line (in points), 
-              and 2N+1'th value specifies the length of the blank.
+import chart_object
+import color
+import line_style_doc
+import object_set
+import theme
+from pychart_types import *
 
-              For example, the dash style of (3,2,4,1) draws a dashed line that
-              looks like @samp{---__----_---__----_...}.
-              """),
+_keys = {
+    "width": (UnitType, theme.default_line_width, "Width of the line, in points."),
+    "color": (color.T, color.default, "The color of the line."),
+    "dash": (TupleType, None,
+             """The value
+             of None will draw a solid line. Otherwise, this
+             attribute specifies the style of dashed lines. 
+             The 2N'th value specifies the length of the line (in points), 
+             and 2N+1'th value specifies the length of the blank.
+
+             For example, the dash style of (3,2,4,1) draws a dashed line that
+             looks like @samp{---__----_---__----_...}.
+             """),
     "cap_style": (IntType, 0,
                   """Defines the style of the tip of the line segment.
                   0: butt cap (square cutoff, with no projection beyond),
@@ -44,26 +44,29 @@ _keys = {
                    1: round join (rounded corners),
                    2: bevel join (flattened corners).
                    See also Postscript/PDF reference manual.""")
-    }
+}
+
 
 class T(chart_object.T):
     __doc__ = line_style_doc.doc
     keys = _keys
-##AUTOMATICALLY GENERATED
 
-##END AUTOMATICALLY GENERATED
+    ##AUTOMATICALLY GENERATED
+
+    ##END AUTOMATICALLY GENERATED
     def __str__(self):
         s = name_table().lookup(self)
         if s:
             return s
         return "<linestyle: width=%s, color=%s, dash=%s, cap=%d, join=%d>" \
                % (self.width, self.color, self.dash, self.cap_style, self.join_style)
-    
+
+
 default = T(color=color.default)
 
-dash1 = 1.5,1.5  # - - - -
-dash2 = 5,2,5,2  # -- -- -- --
-dash3 = 1,1
+dash1 = 1.5, 1.5  # - - - -
+dash2 = 5, 2, 5, 2  # -- -- -- --
+dash3 = 1, 1
 
 black = T(color=color.black)
 black_dash1 = T(color=color.black, dash=dash1)
@@ -106,7 +109,7 @@ default = black
 red = T(color=color.red)
 darkblue = T(color=color.darkblue)
 darkseagreen = T(color=color.darkseagreen)
-darkkhaki = T(color = color.darkkhaki)
+darkkhaki = T(color=color.darkkhaki)
 
 blue = T(color=color.blue)
 green = T(color=color.green)
@@ -115,7 +118,7 @@ red_dash1 = T(color=color.red, dash=dash1)
 darkblue_dash1 = T(color=color.darkblue, dash=dash1)
 darkseagreen_dash1 = T(color=color.darkseagreen, dash=dash1)
 darkkhaki_dash1 = T(color=color.darkkhaki, dash=dash1)
-    
+
 red_dash2 = T(color=color.red, dash=dash2)
 darkblue_dash2 = T(color=color.darkblue, dash=dash2)
 darkseagreen_dash2 = T(color=color.darkseagreen, dash=dash2)
@@ -124,10 +127,11 @@ darkkhaki_dash2 = T(color=color.darkkhaki, dash=dash2)
 standards = None
 _name_table = None
 
+
 def init():
     global standards, _name_table
     standards = object_set.T()
-    
+
     if theme.use_color:
         standards.add(black, red, darkblue, gray70, darkseagreen,
                       darkkhaki, gray30,
@@ -147,12 +151,14 @@ def init():
     for style in standards.list():
         style.width = theme.default_line_width
     _name_table = None
-    
+
+
 def name_table():
     global _name_table
     if not _name_table:
         _name_table = pychart_util.symbol_lookup_table(globals(), standards)
     return _name_table
+
 
 init()
 theme.add_reinitialization_hook(init)

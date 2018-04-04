@@ -11,42 +11,43 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import tick_mark
-import font
-import line_style
-import color
-import fill_style
-import chart_object
-import pychart_util
-import types
-import legend_doc
-import theme
-
-from pychart_types import *
 from types import *
 
+import chart_object
+import fill_style
+import font
+import legend_doc
+import line_style
+import theme
+import tick_mark
+from pychart_types import *
+
+
 class Entry(chart_object.T):
-    keys = {"line_len" : (UnitType, None,
-                          "Length of the sample line for line plots. If omitted, it is set to be theme.default_font_size"),
-            "rect_size" : (UnitType, None,
-                           "Size of the sample 'blob' for bar range charts. If omitted, it is set to be 70% of theme.default_size"),
+    keys = {"line_len": (UnitType, None,
+                         "Length of the sample line for line plots. If omitted, it is set to be theme.default_font_size"),
+            "rect_size": (UnitType, None,
+                          "Size of the sample 'blob' for bar range charts. If omitted, it is set to be 70% of theme.default_size"),
             "tick_mark": (tick_mark.T, None, ""),
             "line_style": (line_style.T, None, ""),
             "fill_style": (fill_style.T, None, ""),
             "label": (StringType, "???", ""),
             }
     __doc__ = legend_doc.doc_entry
-##AUTOMATICALLY GENERATED
 
-##END AUTOMATICALLY GENERATED
-    
+    ##AUTOMATICALLY GENERATED
+
+    ##END AUTOMATICALLY GENERATED
+
     def label_width(self):
         return font.text_width(" " + self.label)
+
     def get_line_len(self):
         return self.line_len or theme.default_font_size
+
     def get_rect_size(self):
         return self.rect_size or theme.default_font_size * 7 / 10.0
-        
+
     def sample_width(self):
         w = 0
         if self.fill_style != None:
@@ -56,36 +57,38 @@ class Entry(chart_object.T):
         elif self.tick_mark != None:
             w += self.tick_mark.size
         return w
+
     def height(self):
         h = font.text_height(self.label)[0]
         return h
-    
+
     def draw(self, ar, can, x_tick, x_label, y):
         """Draw a legend entry. X_TICK and X_LABEL are the X location \
         (in points) of where the sample and label are drawn."""
 
         rect_size = self.get_rect_size()
         line_len = self.get_line_len()
-        
+
         nr_lines = len(self.label.split("\n"))
         text_height = font.text_height(self.label)[0]
         line_height = text_height / float(nr_lines)
-        y_center = y + text_height - line_height/1.5
-            
+        y_center = y + text_height - line_height / 1.5
+
         if self.fill_style != None:
             can.rectangle(self.line_style, self.fill_style,
-                             x_tick, y_center - rect_size/2.0,
-                             x_tick + rect_size,
-                             y_center + rect_size/2.0)
+                          x_tick, y_center - rect_size / 2.0,
+                          x_tick + rect_size,
+                          y_center + rect_size / 2.0)
         elif self.line_style != None:
             can.line(self.line_style, x_tick, y_center,
                      x_tick + line_len, y_center)
             if self.tick_mark != None:
-                self.tick_mark.draw(can, x_tick + line_len/2.0, y_center)
+                self.tick_mark.draw(can, x_tick + line_len / 2.0, y_center)
         elif self.tick_mark != None:
             self.tick_mark.draw(can, x_tick, y_center)
-            
+
         can.show(x_label, y, self.label)
+
 
 __doc__ = """Legend is a rectangular box drawn in a chart to describe
 the meanings of plots. The contents of a legend box is extracted from
@@ -94,6 +97,7 @@ plots' "label", "line-style", and "tick-mark" attributes.
 This module exports a single class, legend.T.  Legend.T is a part of
 an area.T object, and is drawn automatically when area.draw() method
 is called. """
+
 
 class T(chart_object.T):
     __doc__ = legend_doc.doc
@@ -115,13 +119,15 @@ class T(chart_object.T):
         "loc": (CoordType, None,
                 """Bottom-left corner of the legend.
                 The default location of a legend is the bottom-right end of the chart."""),
-	"shadow": (ShadowType, None, pychart_util.shadow_desc),
-        "nr_rows": (IntType, 9999, "Number of rows in the legend. If the number of plots in a chart is larger than nr_rows, multiple columns are created in the legend."),
+        "shadow": (ShadowType, None, pychart_util.shadow_desc),
+        "nr_rows": (IntType, 9999,
+                    "Number of rows in the legend. If the number of plots in a chart is larger than nr_rows, multiple columns are created in the legend."),
 
-        }
-##AUTOMATICALLY GENERATED
+    }
 
-##END AUTOMATICALLY GENERATED
+    ##AUTOMATICALLY GENERATED
+
+    ##END AUTOMATICALLY GENERATED
     def draw(self, ar, entries, can):
         if not self.loc:
             x = ar.loc[0] + ar.size[0] * 1.1
@@ -131,13 +137,13 @@ class T(chart_object.T):
             y = self.loc[1]
 
         nr_rows = min(self.nr_rows, len(entries))
-        nr_cols = (len(entries)-1) / nr_rows + 1
-        
+        nr_cols = (len(entries) - 1) / nr_rows + 1
+
         ymin = y
-	max_label_width = [0] * nr_cols
+        max_label_width = [0] * nr_cols
         max_sample_width = [0] * nr_cols
         heights = [0] * nr_rows
-        
+
         for i in range(len(entries)):
             l = entries[i]
             (col, row) = divmod(i, nr_rows)
@@ -150,15 +156,15 @@ class T(chart_object.T):
         y += self.inter_row_sep * (nr_rows - 1)
         ymax = y
 
-        tot_width = self.inter_col_sep * (nr_cols -1)
+        tot_width = self.inter_col_sep * (nr_cols - 1)
         for w in max_label_width:
             tot_width += w
         for w in max_sample_width:
             tot_width += w
-            
-	can.rectangle(self.frame_line_style, self.frame_fill_style,
-                      x - self.left_fudge,	
-                      ymin - self.bottom_fudge,	
+
+        can.rectangle(self.frame_line_style, self.frame_fill_style,
+                      x - self.left_fudge,
+                      ymin - self.bottom_fudge,
                       x + tot_width + self.right_fudge,
                       ymax + self.top_fudge,
                       self.shadow)
@@ -174,8 +180,6 @@ class T(chart_object.T):
                 l = entries[idx]
                 if row != 0:
                     this_y -= self.inter_row_sep
-                    
+
                 l.draw(ar, can, this_x, this_x + max_sample_width[col], this_y)
             x += max_label_width[col] + max_sample_width[col] + self.inter_col_sep
-
-

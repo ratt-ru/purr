@@ -11,15 +11,17 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import pychart_util
 import copy
 import math
+
+import pychart_util
+
 
 def _convert_item(v, typ, line):
     if typ == "a":
         try:
             i = float(v)
-        except ValueError: # non-number
+        except ValueError:  # non-number
             i = v
         return i
     elif typ == "d":
@@ -35,21 +37,22 @@ def _convert_item(v, typ, line):
     elif typ == "s":
         return v
     else:
-        raise ValueError, "Unknown conversion type, type=%s; line=%s" % (typ,line)
-        
+        raise ValueError, "Unknown conversion type, type=%s; line=%s" % (typ, line)
+
+
 def parse_line(line, delim):
     if delim.find("%") < 0:
-        return [ _convert_item(item, "a", None) for item in line.split(delim) ]
-    
+        return [_convert_item(item, "a", None) for item in line.split(delim)]
+
     data = []
-    idx = 0 # indexes delim
+    idx = 0  # indexes delim
     ch = 'f'
     sep = ','
 
     while idx < len(delim):
         if delim[idx] != '%':
             raise ValueError, 'Bad delimitor: "%s"' % delim
-        ch = delim[idx+1]
+        ch = delim[idx + 1]
         idx += 2
         sep = ""
         while idx < len(delim) and delim[idx] != '%':
@@ -60,8 +63,8 @@ def parse_line(line, delim):
             xx = line.split(sep, 1)
         else:
             # reached the end of the delimiter string.
-            xx = (line, )
-            
+            xx = (line,)
+
         data.append(_convert_item(xx[0], ch, line))
         if len(xx) >= 2:
             line = xx[1]
@@ -74,8 +77,10 @@ def parse_line(line, delim):
             data.append(_convert_item(item, ch, line))
     return data
 
+
 def escape_string(str):
     return str.replace("/", "//")
+
 
 def extract_rows(data, *rows):
     """Extract rows specified in the argument list.
@@ -94,6 +99,7 @@ def extract_rows(data, *rows):
         raise IndexError, "data=%s rows=%s" % (data, rows)
     return out
 
+
 def extract_columns(data, *cols):
     """Extract columns specified in the argument list.
 
@@ -110,11 +116,9 @@ def extract_columns(data, *cols):
                 col.append(r[c])
             out.append(col)
     except IndexError:
-        raise IndexError, "data=%s col=%s" % (data, col)        
+        raise IndexError, "data=%s col=%s" % (data, col)
     return out
 
-            
-            
 
 def moving_average(data, xcol, ycol, width):
     """Compute the moving average of  YCOL'th column of each sample point
@@ -136,22 +140,22 @@ consisting of  XCOL'th element and the mean.
 
 """
 
-    
     out = []
     try:
         for i in range(len(data)):
             n = 0
             total = 0
-            for j in range(i-width, i+width+1):
+            for j in range(i - width, i + width + 1):
                 if j >= 0 and j < len(data):
                     total += data[j][ycol]
                     n += 1
             out.append((data[i][xcol], float(total) / n))
     except IndexError:
-        raise IndexError, "bad data: %s,xcol=%d,ycol=%d,width=%d" % (data,xcol,ycol,width)
-    
+        raise IndexError, "bad data: %s,xcol=%d,ycol=%d,width=%d" % (data, xcol, ycol, width)
+
     return out
-    
+
+
 def filter(func, data):
     """Parameter <func> must be a single-argument
     function that takes a sequence (i.e.,
@@ -163,12 +167,13 @@ which <func> returns True.
 ... chart_data.filter(lambda x: x[1] % 2 == 0, data)
 [[2,10], [4,16]].
 """
-    
+
     out = []
     for r in data:
-	if func(r):
-	    out.append(r)
+        if func(r):
+            out.append(r)
     return out
+
 
 def transform(func, data):
     """Apply <func> on each element in <data> and return the list
@@ -184,6 +189,7 @@ consisting of the return values from <func>.
         out.append(func(r))
     return out
 
+
 def aggregate_rows(data, col):
     out = copy.deepcopy(data)
     total = 0
@@ -192,8 +198,10 @@ def aggregate_rows(data, col):
         r[col] = total
     return out
 
+
 def empty_line_p(s):
     return s.strip() == ""
+
 
 def _try_open_file(path, mode, error_message):
     try:
@@ -204,12 +212,13 @@ def _try_open_file(path, mode, error_message):
             raise TypeError, error_message + "(got %s)" % str(fd)
     return fd
 
+
 def _try_close_file(fd, path):
     if fd != path:
         fd.close()
-        
-def read_csv(path, delim = ','):
 
+
+def read_csv(path, delim=','):
     """This function reads comma-separated values from a
     file. Parameter <path> is either a pathname or a file-like object
     that supports the |readline()| method.
@@ -226,7 +235,7 @@ chart_data.read_csv('file', '%d,%s:%d')
     only three conversion format specifiers:
     "d"(int), "f"(double), and "s"(string)."""
 
-    fd = _try_open_file(path, 'r', 
+    fd = _try_open_file(path, 'r',
                         'The first argument must be a pathname or an object that supports readline() method')
 
     data = []
@@ -239,14 +248,14 @@ chart_data.read_csv('file', '%d,%s:%d')
     _try_close_file(fd, path)
     return data
 
-def fread_csv(fd, delim = ','):
+
+def fread_csv(fd, delim=','):
     """This function is deprecated. Use read_csv instead."""
     pychart_util.warn("chart_data.fread_csv is deprecated. Use read_csv instead.")
     return read_csv(fd, delim)
 
 
 def write_csv(path, data):
-
     """This function writes comma-separated <data> to
     <path>. Parameter <path> is either a pathname or a file-like
     object that supports the |write()| method."""
@@ -258,12 +267,14 @@ def write_csv(path, data):
         fd.write("\n")
     _try_close_file(fd, path)
 
-def fwrite_csv(fd, delim = ','):
+
+def fwrite_csv(fd, delim=','):
     """This function is deprecated. Use write_csv instead."""
     pychart_util.warn("chart_data.fwrite_csv is deprecated. Use write_csv instead.")
     return write_csv(fd, delim)
 
-def read_str(delim = ',', *lines):
+
+def read_str(delim=',', *lines):
     """This function is similar to read_csv, but it reads data from the
     list of <lines>.
 
@@ -275,8 +286,9 @@ data = chart_data.read_str(",", fd.readlines())"""
         com = parse_line(line, delim)
         data.append(com)
     return data
-    
-def func(f, xmin, xmax, step = None):
+
+
+def func(f, xmin, xmax, step=None):
     """Create sample points from function <f>, which must be a
     single-parameter function that returns a number (e.g., math.sin).
     Parameters <xmin> and <xmax> specify the first and last X values, and
@@ -286,7 +298,7 @@ def func(f, xmin, xmax, step = None):
 [(0, 0.0), (1.5707963267948966, 1.0), (3.1415926535897931, 1.2246063538223773e-16), (4.7123889803846897, -1.0), (6.2831853071795862, -2.4492127076447545e-16), (7.8539816339744828, 1.0), (9.4247779607693793, 3.6738190614671318e-16), (10.995574287564276, -1.0)]
 
 """
-    
+
     data = []
     x = xmin
     if not step:
@@ -296,12 +308,14 @@ def func(f, xmin, xmax, step = None):
         x += step
     return data
 
+
 def _nr_data(data, col):
     nr_data = 0
     for d in data:
         nr_data += d[col]
     return nr_data
-    
+
+
 def median(data, freq_col=1):
     """Compute the median of the <freq_col>'th column of the values is <data>.
 
@@ -310,7 +324,7 @@ def median(data, freq_col=1):
 >>> chart_data.median([(10,20), (20,4), (30,5)], 1)
 5.
     """
-    
+
     nr_data = _nr_data(data, freq_col)
     median_idx = nr_data / 2
     i = 0
@@ -320,12 +334,13 @@ def median(data, freq_col=1):
             return d
     raise Exception, "??? median ???"
 
+
 def cut_extremes(data, cutoff_percentage, freq_col=1):
     nr_data = _nr_data(data, freq_col)
     min_idx = nr_data * cutoff_percentage / 100.0
     max_idx = nr_data * (100 - cutoff_percentage) / 100.0
     r = []
-    
+
     i = 0
     for d in data:
         if i < min_idx:
@@ -335,7 +350,7 @@ def cut_extremes(data, cutoff_percentage, freq_col=1):
                 r.append(x)
             i += d[freq_col]
             continue
-	elif i + d[freq_col] >= max_idx:
+        elif i + d[freq_col] >= max_idx:
             if i < max_idx and i + d[freq_col] >= max_idx:
                 x = copy.deepcopy(d)
                 x[freq_col] = x[freq_col] - (max_idx - i)
@@ -345,6 +360,7 @@ def cut_extremes(data, cutoff_percentage, freq_col=1):
         r.append(d)
     return r
 
+
 def mean(data, val_col, freq_col):
     nr_data = 0
     sum = 0
@@ -352,9 +368,10 @@ def mean(data, val_col, freq_col):
         sum += d[val_col] * d[freq_col]
         nr_data += d[freq_col]
     if nr_data == 0:
-	raise IndexError, "data is empty"
+        raise IndexError, "data is empty"
 
     return sum / float(nr_data)
+
 
 def mean_samples(data, xcol, ycollist):
     """Create a sample list that contains
@@ -370,13 +387,14 @@ def mean_samples(data, xcol, ycollist):
             v = 0
             for col in ycollist:
                 v += elem[col]
-            out.append( (elem[xcol], float(v) / numcol) )
+            out.append((elem[xcol], float(v) / numcol))
     except IndexError:
-        raise IndexError, "bad data: %s,xcol=%d,ycollist=%s" % (data,xcol,ycollist)
-    
+        raise IndexError, "bad data: %s,xcol=%d,ycollist=%s" % (data, xcol, ycollist)
+
     return out
 
-def stddev_samples(data, xcol, ycollist, delta = 1.0):
+
+def stddev_samples(data, xcol, ycollist, delta=1.0):
     """Create a sample list that contains the mean and standard deviation of the original list. Each element in the returned list contains following values: [MEAN, STDDEV, MEAN - STDDEV*delta, MEAN + STDDEV*delta].
 
 >>> chart_data.stddev_samples([ [1, 10, 15, 12, 15], [2, 5, 10, 5, 10], [3, 32, 33, 35, 36], [4,16,66, 67, 68] ], 0, range(1,5))
@@ -394,18 +412,19 @@ def stddev_samples(data, xcol, ycollist, delta = 1.0):
             for col in ycollist:
                 variance += (mean - elem[col]) ** 2
             stddev = math.sqrt(variance / numcol) * delta
-            out.append( (elem[xcol], mean, stddev, mean-stddev, mean+stddev) )
-            
-            
-            
+            out.append((elem[xcol], mean, stddev, mean - stddev, mean + stddev))
+
+
+
     except IndexError:
-        raise IndexError, "bad data: %s,xcol=%d,ycollist=%s" % (data,xcol,ycollist)
+        raise IndexError, "bad data: %s,xcol=%d,ycollist=%s" % (data, xcol, ycollist)
     return out
+
 
 def nearest_match(data, col, val):
     min_delta = None
     match = None
-    
+
     for d in data:
         if min_delta == None or abs(d[col] - val) < min_delta:
             min_delta = abs(d[col] - val)
