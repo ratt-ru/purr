@@ -11,21 +11,22 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import pychart_util
-import theme
-import sys
 import os
-import os.path
-import pscanvas
+import sys
 import tempfile
+
+import os.path
+
 import basecanvas
+import pscanvas
 from scaling import *
+
 
 def _get_gs_path():
     """Guess where the Ghostscript executable is
     and return its absolute path name."""
     path = os.environ.get("PATH", os.defpath)
-    
+
     for dir in path.split(os.pathsep):
         for name in ("gs", "gs.exe", "gswin32c.exe"):
             g = os.path.join(dir, name)
@@ -33,11 +34,12 @@ def _get_gs_path():
                 return g
     raise Exception, "Ghostscript not found. path=%s" % str(path)
 
+
 class T(pscanvas.T):
     """This class is a special kind of canvas that runs ghostscript
     on the generated postscript contents. It is not used stand-alone, but as
     a component of PNG and X11 display functionality."""
-    
+
     def __write_contents(self, fp):
         fp.write(pscanvas.preamble_text)
         for name, id in self.__font_ids.items():
@@ -51,24 +53,24 @@ class T(pscanvas.T):
         # Don't call pscanvas.T.close, as it creates a
         # ps file. 
         basecanvas.T.close(self)
-        
+
     def start_gs(self, arg):
         self.bbox = theme.adjust_bounding_box([xscale(self.__xmin),
                                                yscale(self.__ymin),
                                                xscale(self.__xmax),
                                                yscale(self.__ymax)])
-        
+
         gs_path = _get_gs_path()
         self.pipe_fp = None
-	if self.__output_lines == []:
-	    return
+        if self.__output_lines == []:
+            return
 
         if sys.platform != "win32" and hasattr(os, "popen"):
             # UNIX-like systems
             cmdline = "\"%s\" -q %s -g%dx%d -q >/dev/null 2>&1" % \
-            (gs_path, arg,
-             self.bbox[2] - self.bbox[0],
-             self.bbox[3] - self.bbox[1])
+                      (gs_path, arg,
+                       self.bbox[2] - self.bbox[0],
+                       self.bbox[3] - self.bbox[1])
             self.pipe_fp = os.popen(cmdline, "w")
             self.__write_contents(self.pipe_fp)
         else:
@@ -78,11 +80,12 @@ class T(pscanvas.T):
             self.__write_contents(fp)
             fp.close()
             cmdline = "\"%s\" -q %s -g%dx%d -q <%s >NUL" % \
-            (gs_path, arg,
-             self.bbox[2] - self.bbox[0],
-             self.bbox[3] - self.bbox[1], fname)
+                      (gs_path, arg,
+                       self.bbox[2] - self.bbox[0],
+                       self.bbox[3] - self.bbox[1], fname)
             os.system(cmdline)
             os.unlink(fname)
+
     def close_gs(self):
         if self.pipe_fp:
             self.pipe_fp.close()

@@ -1,2 +1,7 @@
 build
-
+.eggs/
+.git
+.idea/
+.venv*/
+.virtualenv*/
+*.egg-info/

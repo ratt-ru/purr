@@ -12,25 +12,25 @@
 # for more details.
 #
 import sys
-import os
+
 import gs_frontend
 import theme
+
 
 class T(gs_frontend.T):
     def close(self):
         gs_frontend.T.close(self)
-	if self.__output_lines == []:
-	    return
+        if self.__output_lines == []:
+            return
 
         if theme.use_color:
-            gs_args = "-sDEVICE=png256 -dTextAlphaBits=4 -q -dNOPAUSE" #PDS
+            gs_args = "-sDEVICE=png256 -dTextAlphaBits=4 -q -dNOPAUSE"  # PDS
         else:
-            gs_args = "-sDEVICE=pnggray -dTextAlphaBits=4 -q -dNOPAUSE" #PDS
+            gs_args = "-sDEVICE=pnggray -dTextAlphaBits=4 -q -dNOPAUSE"  # PDS
 
-            
-        temp_fname = None # the temporary file desc.
+        temp_fname = None  # the temporary file desc.
         out_fd = None  # the final destination. 
-        
+
         if self.__out_fname and isinstance(self.__out_fname, str):
             gs_args += " -sOutputFile=%s" % self.__out_fname
         else:
@@ -50,6 +50,3 @@ class T(gs_frontend.T):
             temp_fd = file(temp_fname, 'rb')
             out_fd.write(temp_fd.read())
             temp_fd.close()
-            
-
-

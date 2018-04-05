@@ -11,7 +11,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-doc="""Attributes supported by this class are:
+doc = """Attributes supported by this class are:
 tic_label_offset(type:(x,y)):
     The location where the tick labels is drawn. Relative to the 
     tip of the tick mark. 
