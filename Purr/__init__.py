@@ -24,9 +24,9 @@ import Kittens.config
 ConfigFile = Kittens.config.DualConfigParser("purr.conf");
 Config = Kittens.config.SectionParser(ConfigFile,"Purr");
 
-from LogEntry import DataProduct,LogEntry
-from Purrer import Purrer
-import Parsers
+from .LogEntry import DataProduct,LogEntry
+from .Purrer import Purrer
+from . import Parsers
 
 # if GUI is enabled, this will be overwritten by an object that
 # sets a busy cursor on instantiation, and restores the cursor when killed

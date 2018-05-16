@@ -16,11 +16,11 @@ import sys
 import time
 import re
 
-import font
-import pychart_util
-import theme
-import version
-from scaling import *
+from . import font
+from . import pychart_util
+from . import theme
+from . import version
+from .scaling import *
 
 def _compute_bounding_box(points):
     """Given the list of coordinates (x,y), this procedure computes
@@ -124,7 +124,7 @@ class T(object):
             return (file(fname, "wb"), True)
         else:
             if not hasattr(fname, "write"):
-                raise Exception, "Expecting either a filename or a file-like object, but got %s" % fname
+                raise Exception("Expecting either a filename or a file-like object, but got %s" % fname)
             return (fname, False)
 
     def setbb(self, x, y):
@@ -175,7 +175,7 @@ class T(object):
             if shadow:
                 xoff, yoff, shadow_pat = shadow
                 self.gsave()
-                self._path_polygon(map(lambda p, xoff=xoff, yoff=yoff: (p[0]+xoff, p[1]+yoff), points))
+                self._path_polygon(list(map(lambda p, xoff=xoff, yoff=yoff: (p[0]+xoff, p[1]+yoff), points)))
                 self.clip_sub()
                 self.fill_with_pattern(shadow_pat, xmin+xoff, ymin+yoff,
                                        xmax+xoff, ymax+yoff)
@@ -466,7 +466,7 @@ canvas.endclip()
             strs = []
 
             while 1:
-                elem = itr.next()
+                elem = next(itr)
                 if not elem:
                     break
 

@@ -11,18 +11,18 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import tick_mark
-import font
-import line_style
-import color
-import fill_style
-import chart_object
-import pychart_util
+from . import tick_mark
+from . import font
+from . import line_style
+from . import color
+from . import fill_style
+from . import chart_object
+from . import pychart_util
 import types
-import legend_doc
-import theme
+from . import legend_doc
+from . import theme
 
-from pychart_types import *
+from .pychart_types import *
 from types import *
 
 class Entry(chart_object.T):

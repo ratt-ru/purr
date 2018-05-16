@@ -63,7 +63,7 @@ mainwin to the specified purrlog when the dialog is closed.
     parent = os.path.dirname(os.path.normpath(create)) or os.getcwd();
     # if parent is valid dir, find purrlogs in parent (to offer as an option)
     if os.path.isdir(parent):
-      purrlogs = filter(Purr.Purrer.is_purrlog,glob.glob(os.path.join(parent,"*")));
+      purrlogs = list(filter(Purr.Purrer.is_purrlog,glob.glob(os.path.join(parent,"*"))));
     # else use "." as dirname, and do not offer any purrlogs
     else:
       purrlogs = [];
@@ -76,7 +76,7 @@ mainwin to the specified purrlog when the dialog is closed.
       mainwin.show();
       return True;
     # case 2c-2e. Look for purrlogs in dirname
-    purrlogs = filter(Purr.Purrer.is_purrlog,glob.glob(os.path.join(dirname,"*")));
+    purrlogs = list(filter(Purr.Purrer.is_purrlog,glob.glob(os.path.join(dirname,"*"))));
     # case 2c: exactly one purrlog. Attach without asking.
     if len(purrlogs) == 1:
       mainwin.show();
@@ -285,7 +285,7 @@ class PurrStartupWizard (QWizard):
       # check path, set code to rejected if none set
       path = self._startpage.selectedPath();
       if not path:
-        print "No path selected in StartupWizard. This is probably a bug, please report it!";
+        print("No path selected in StartupWizard. This is probably a bug, please report it!");
         code = QDialog.Rejected;
       else:
         # show the main window

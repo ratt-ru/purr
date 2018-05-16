@@ -11,8 +11,8 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import coord
-import canvas
+from . import coord
+from . import canvas
 
 class T(coord.T):
     def __init__(self, data, col):

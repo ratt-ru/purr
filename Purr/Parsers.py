@@ -3,7 +3,7 @@ _tdl_no_reimport = True;
 
 import time
 import os.path
-from HTMLParser import HTMLParser
+from html.parser import HTMLParser
 
 import Kittens.utils
 
@@ -40,7 +40,7 @@ class LogIndexParser (HTMLParser):
         # inside the tag (in self.curdata) for handling in the end handler
         if hasattr(self,"_handle_end_%s"%tagclass):
           if self.curclass:
-            raise ValueError,"nested class %s inside tag of class %s"%(tagclass,self.curclass);
+            raise ValueError("nested class %s inside tag of class %s"%(tagclass,self.curclass));
           self.curclass = tagclass;
           self.curdata = "";
     # paragraph tag: add newline to curdata, if accumulating

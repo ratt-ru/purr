@@ -11,15 +11,15 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import pychart_util
-import theme
+from . import pychart_util
+from . import theme
 import sys
 import os
 import os.path
-import pscanvas
+from . import pscanvas
 import tempfile
-import basecanvas
-from scaling import *
+from . import basecanvas
+from .scaling import *
 
 def _get_gs_path():
     """Guess where the Ghostscript executable is
@@ -31,7 +31,7 @@ def _get_gs_path():
             g = os.path.join(dir, name)
             if os.path.exists(g):
                 return g
-    raise Exception, "Ghostscript not found. path=%s" % str(path)
+    raise Exception("Ghostscript not found. path=%s" % str(path))
 
 class T(pscanvas.T):
     """This class is a special kind of canvas that runs ghostscript
@@ -40,7 +40,7 @@ class T(pscanvas.T):
     
     def __write_contents(self, fp):
         fp.write(pscanvas.preamble_text)
-        for name, id in self.__font_ids.items():
+        for name, id in list(self.__font_ids.items()):
             fp.write("/%s {/%s findfont SF} def\n" % (id, name))
         fp.write("%d %d translate\n" % (-self.bbox[0], -self.bbox[1]))
         fp.writelines(self.__output_lines)

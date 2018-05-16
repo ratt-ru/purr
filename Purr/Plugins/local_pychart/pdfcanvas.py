@@ -12,13 +12,13 @@
 # for more details.
 #
 import sys
-import pychart_util
+from . import pychart_util
 import re
 import math
-import theme
+from . import theme
 import os
-import basecanvas
-from scaling import *
+from . import basecanvas
+from .scaling import *
 
 try:
     import zlib
@@ -61,7 +61,7 @@ class T(basecanvas.T):
 
     def __register_font(self, name):
         "Assign an ID to the font NAME. Return its ID."
-        if not self.__registered_fonts.has_key(name):
+        if name not in self.__registered_fonts:
             self.__registered_fonts[name] = self.__next_font_id
             self.__next_font_id += 1
         return self.__registered_fonts[name]
@@ -250,7 +250,7 @@ class T(basecanvas.T):
         stream_obj_id = self.__define_stream_obj(fp, " ".join(self.__lines))
 
         fontstr = ""
-        for font_name, font_id in self.__registered_fonts.items():
+        for font_name, font_id in list(self.__registered_fonts.items()):
             obj_id = self.__define_font_obj(fp, font_name, font_id)
             fontstr += "/F%d %d 0 R " % (font_id, obj_id)
 

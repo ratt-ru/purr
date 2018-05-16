@@ -11,13 +11,13 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import color
-import pychart_util
-import chart_object
-import object_set
-import theme
-import line_style_doc
-from pychart_types import *
+from . import color
+from . import pychart_util
+from . import chart_object
+from . import object_set
+from . import theme
+from . import line_style_doc
+from .pychart_types import *
 from types import *
 
 _keys = {

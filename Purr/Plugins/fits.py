@@ -4,10 +4,10 @@ try:
   import PIL.Image
 except:
 # image.py will complain about this one too, more verbosely
-  print """Python Imaging Library (PIL) not found, rendering of FITS files will not be available.
+  print("""Python Imaging Library (PIL) not found, rendering of FITS files will not be available.
 PIL can be installed from the Debian/Ubuntu package python-imaging, or can be downloaded from
 http://www.pythonware.com/index.htm.
-""";
+""");
   raise;
 
 try:
@@ -15,24 +15,24 @@ try:
   import Kittens.utils
   pyfits = Kittens.utils.import_pyfits();
 except:
-  print """PyFITS package not found, rendering of FITS files will not be available.
+  print("""PyFITS package not found, rendering of FITS files will not be available.
 PyFITS can be installed from the Debian/Ubuntu package python-pyfits, or can be downloaded
 from http://www.stsci.edu/resources/software_hardware/pyfits.
-""";
+""");
   raise
 
 try:
   import numpy
   import scipy.ndimage.measurements
 except:
-  print """numpy and/or scipy packages not found, rendering of FITS files will not be available.
+  print("""numpy and/or scipy packages not found, rendering of FITS files will not be available.
 Numpy and scipy can be installed from Debian/Ubuntu packages python-numpy and python-scipy, or can
 be downloaded from http://numpy.scipy.org.
-""";
+""");
   raise
 
 # pychart needed for rendering histograms, but we can get on without it
-from local_pychart import *
+from .local_pychart import *
 pychart = True;
 
 #except:
@@ -44,7 +44,7 @@ pychart = True;
 import os.path
 import traceback
 import math
-import cPickle
+import pickle
 import time
 
 import Purr
@@ -101,8 +101,8 @@ class FITSRenderer (CachingRenderer):
 
   def _make_histogram (self,path,title,x,y):
     # make histogram by doubling up each x point to make "horizontals"
-    x = map(float,x);
-    y = map(int,y);
+    x = list(map(float,x));
+    y = list(map(int,y));
     width = x[1]-x[0];
     xy = [];
     for a,b in zip(x,y):
@@ -149,7 +149,7 @@ class FITSRenderer (CachingRenderer):
       try:
         file(path,"w").write(html);
       except:
-        print "Error writing file %s"%path;
+        print("Error writing file %s"%path);
         traceback.print_exc();
         self.headerfile = None;
 
@@ -158,7 +158,7 @@ class FITSRenderer (CachingRenderer):
     fitsshape = [ header['NAXIS%d'%i] for i in range(1,ndim+1) ];
     self.cubesize = 'x'.join(map(str,fitsshape));
     if ndim < 2:
-      raise TypeError,"can't render one-dimensional FITS files""";
+      raise TypeError("can't render one-dimensional FITS files""");
     elif ndim == 2:
       fitsdata_to_images = lambda fdata:[fdata];
       nplanes = 1;
@@ -169,10 +169,10 @@ class FITSRenderer (CachingRenderer):
       # the array will be of e.g. shape 1,1,NY,NX, while fitsshape is [NX,NY,1,1]
       for i in range(1,ndim+1):
         ctype = header['CTYPE%d'%i];
-        if [ prefix for prefix in "RA","GLON","ELON","HLON","SLON" if ctype.startswith(prefix) ] \
+        if [ prefix for prefix in ("RA","GLON","ELON","HLON","SLON") if ctype.startswith(prefix) ] \
             or ctype in ("L","X"):
           ax1 = ndim-i;
-        elif [ prefix for prefix in "DEC","GLAT","ELAT","HLAT","SLAT" if ctype.startswith(prefix) ] \
+        elif [ prefix for prefix in ("DEC","GLAT","ELAT","HLAT","SLAT") if ctype.startswith(prefix) ] \
             or ctype in ("M","Y"):
           ax2 = ndim-i;
       if ax1 is None or ax2 is None:
@@ -228,10 +228,10 @@ class FITSRenderer (CachingRenderer):
       if uptodate:
         dprintf(3,"%s(%d): stats file %s up-to-date, reading in\n",self.dp.fullpath,num_image,recfile);
         try:
-          self.imgrec[num_image] = cPickle.load(file(recpath));
+          self.imgrec[num_image] = pickle.load(file(recpath));
           continue;
         except:
-          print "Error reading stats file %s, regenerating everything"%recpath;
+          print("Error reading stats file %s, regenerating everything"%recpath);
           traceback.print_exc();
       # out of date, so we regenerate everything
       # build up record of stuff associated with this image
@@ -292,7 +292,7 @@ class FITSRenderer (CachingRenderer):
             self._make_histogram(hf_path,"Histogram of %s"%title,edges,counts);
             dprint(3,"rendering histogram took",time.time()-t0,"secs"); t0 = time.time();
           except:
-            print "Error rendering histogram %s"%hf_path;
+            print("Error rendering histogram %s"%hf_path);
             traceback.print_exc();
             rec.histogram_full = None;
           # if histogram was rendered, make a thumbnail
@@ -337,7 +337,7 @@ class FITSRenderer (CachingRenderer):
                 self._make_histogram(hz_path,"Histogram zoom of %s"%title,zedges,zcounts);
                 dprint(3,"rendering zoomed histogram took",time.time()-t0,"secs"); t0 = time.time();
               except:
-                print "Error rendering histogram %s"%hz_path;
+                print("Error rendering histogram %s"%hz_path);
                 traceback.print_exc();
                 rec.histogram_zoom = None;
             else: # no meaningful zoomed area to render
@@ -379,7 +379,7 @@ class FITSRenderer (CachingRenderer):
         img.save(img_path,'PNG');
         dprint(3,"saving took",time.time()-t0,"secs"); t0 = time.time();
       except:
-        print "Error rendering image %s"%path;
+        print("Error rendering image %s"%path);
         traceback.print_exc();
         rec.fullimage = img = None;
       # if image was rendered, make a thumbnail
@@ -396,9 +396,9 @@ class FITSRenderer (CachingRenderer):
         rec.thumbnail = None;
       # write stats
       try:
-        cPickle.dump(rec,file(recpath,'w'));
+        pickle.dump(rec,file(recpath,'w'));
       except:
-        print "Error writing stats file  %s"%recpath;
+        print("Error writing stats file  %s"%recpath);
         traceback.print_exc();
 
   def makeThumb (self,imagepath,thumbpath,tsize,img=None):
@@ -422,7 +422,7 @@ class FITSRenderer (CachingRenderer):
       img.save(thumbpath,"PNG");
       return thumbpath;
     except:
-      print "Error rendering thumbnail %s"%thumbpath;
+      print("Error rendering thumbnail %s"%thumbpath);
       traceback.print_exc();
       return None;
 

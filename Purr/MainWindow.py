@@ -147,7 +147,7 @@ class DirectoryListWidget (Kittens.widgets.ClickableListWidget):
   class DirItem (QListWidgetItem):
       # these represent the watch-states
       ToCheckState =  { Purr.UNWATCHED:Qt.Unchecked,Purr.WATCHED:Qt.PartiallyChecked,Purr.POUNCE:Qt.Checked };
-      FromCheckState = dict([(state,watch) for watch,state in ToCheckState.iteritems()]);
+      FromCheckState = dict([(state,watch) for watch,state in ToCheckState.items()]);
 
       def __init__ (self,pathname,parent=None,watching=Purr.WATCHED):
         self._pathname = pathname;
@@ -553,13 +553,13 @@ class MainWindow (QMainWindow):
       dprint(1,"creating new Purrer object");
       try:
         purrer = Purr.Purrer(purrlog,watchdirs);
-      except Purr.Purrer.LockedError,err:
+      except Purr.Purrer.LockedError as err:
         # check that we could attach, display message if not
         QMessageBox.warning(self,"Catfight!","""<P><NOBR>It appears that another PURR process (%s)</NOBR>
           is already attached to <tt>%s</tt>, so we're not allowed to touch it. You should exit the other PURR
           process first.</P>"""%(err.args[0],os.path.abspath(purrlog)),QMessageBox.Ok,0);
         return False;
-      except Purr.Purrer.LockFailError,err:
+      except Purr.Purrer.LockFailError as err:
         QMessageBox.warning(self,"Failed to obtain lock","""<P><NOBR>PURR was unable to obtain a lock</NOBR>
           on directory <tt>%s</tt> (error was "%s"). The most likely cause is insufficient permissions.</P>"""%(os.path.abspath(purrlog),err.args[0]),QMessageBox.Ok,0);
         return False;
@@ -707,7 +707,7 @@ class MainWindow (QMainWindow):
           dprint(2,"showing dialog");
           self.new_entry_dialog.show();
     # else read stuff from pipe
-    for pipe in self.purrpipes.itervalues():
+    for pipe in self.purrpipes.values():
       do_show = False;
       for command,show,content in pipe.read():
         if command == "title":
@@ -718,7 +718,7 @@ class MainWindow (QMainWindow):
           self.new_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
                                                 [(content,not show)],unbanish=True));
         else:
-          print "Unknown command received from Purr pipe: ",command;
+          print("Unknown command received from Purr pipe: ",command);
           continue;
         do_show = do_show or show;
       if do_show:
@@ -848,7 +848,7 @@ class MainWindow (QMainWindow):
       msg = """<P>Permanently delete the %d selected log entries?</P>"""%len(del_entries);
       ndp = 0;
       for entry in del_entries:
-        ndp += len(filter(lambda dp:not dp.ignored,entry.dps));
+        ndp += len([dp for dp in entry.dps if not dp.ignored]);
       if ndp:
         msg += """<P>%d data product(s) saved with these entries will be deleted as well.</P>"""%ndp;
     if QMessageBox.warning(self,"Deleting log entries",msg,

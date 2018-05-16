@@ -13,10 +13,10 @@
 #
 import sys,string,re,math
 from xml.dom.minidom import Document,Comment
-import theme
-import basecanvas
-import version
-from scaling import *
+from . import theme
+from . import basecanvas
+from . import version
+from .scaling import *
 
 # Note we flip all y-coords and negate all angles because SVG's coord
 # system is inverted wrt postscript/PDF - note it's not enough to
@@ -29,8 +29,7 @@ def _svgcolor(color):
     Convert a PyChart color object to an SVG rgb() value.
     See color.py.
     """
-    return 'rgb(%d,%d,%d)' % tuple(map(lambda x:int(255*x),
-                                       [color.r,color.g,color.b]))
+    return 'rgb(%d,%d,%d)' % tuple([int(255*x) for x in [color.r,color.g,color.b]])
 
 def _parse_style_str(s):
     """
@@ -50,7 +49,7 @@ def _make_style_str(styledict):
     Make an SVG style string from the dictionary. See also _parse_style_str also.
     """
     s = ''
-    for key in styledict.keys():
+    for key in list(styledict.keys()):
         s += "%s:%s;"%(key, styledict[key])
     return s
 
@@ -116,14 +115,14 @@ class T(basecanvas.T):
         # Convert '_' to '-' so caller can specify style tags as python
         # variable names, eg. stroke_width => stroke-width.
         # Also convert all RHS values to strs
-        for key in addstyledict.keys():
+        for key in list(addstyledict.keys()):
             k = re.sub('_','-',key)
             addstyledict[k] = str(addstyledict[key]) # all vals => strs
             if (k != key) : del addstyledict[key]
 
-        for k in addstyledict.keys() :
-            if (my_style_dict.has_key(k) or # need to overwrite it
-                (not default_style_dict.has_key(k)) or # need to set it
+        for k in list(addstyledict.keys()) :
+            if (k in my_style_dict or # need to overwrite it
+                (k not in default_style_dict) or # need to set it
                 default_style_dict[k] != addstyledict[k]) : # need to override it
                 my_style_dict[k] = addstyledict[k]
 
@@ -139,7 +138,7 @@ class T(basecanvas.T):
 
     def newpath(self):                  # Start a new path
         if (self.__cur_element.nodeName != 'g') :
-            raise OverflowError, "No containing group for newpath"
+            raise OverflowError("No containing group for newpath")
         # Just insert a new 'path' element into the document
         p = self.__doc.createElement('path')
         self.__cur_element.appendChild(p)
@@ -150,13 +149,13 @@ class T(basecanvas.T):
 
     def moveto(self, x, y):             #
         if (self.__cur_element.nodeName != 'path') :
-            raise OverflowError, "No path for moveto"
-        d = ' '.join([self.__cur_element.getAttribute('d'),'M',`x`,`-y`]).strip()
+            raise OverflowError("No path for moveto")
+        d = ' '.join([self.__cur_element.getAttribute('d'),'M',repr(x),repr(-y)]).strip()
         self.__cur_element.setAttribute('d', d)
     def lineto(self, x, y):
         if (self.__cur_element.nodeName != 'path') :
-            raise OverflowError, "No path for lineto"
-        d = ' '.join([self.__cur_element.getAttribute('d'),'L',`x`,`-y`]).strip()
+            raise OverflowError("No path for lineto")
+        d = ' '.join([self.__cur_element.getAttribute('d'),'L',repr(x),repr(-y)]).strip()
         self.__cur_element.setAttribute('d', d)
     def path_arc(self, x, y, radius, ratio, start_angle, end_angle):
         # mimic PS 'arc' given radius, yr/xr (=eccentricity), start and
@@ -168,7 +167,7 @@ class T(basecanvas.T):
         # We don't use rotate(=0) and flipped axes => all arcs are clockwise
 
         if (self.__cur_element.nodeName != 'path') :
-            raise OverflowError, "No path for path_arc"
+            raise OverflowError("No path for path_arc")
 
         self.comment('x=%g, y=%g, r=%g, :=%g, %g-%g'
                      % (x,y,radius,ratio,start_angle,end_angle))
@@ -205,13 +204,13 @@ class T(basecanvas.T):
         # In SVG this is just d='[M x0 y0] C x1 y1 x2 y2 x3 y3'
         #! I can't find an example of this being used to test it
         if (self.__cur_element.nodeNode != 'path') :
-            raise OverflowError, "No path for curveto"
+            raise OverflowError("No path for curveto")
         d = ' '.join([self.__cur_element.getAttribute('d'),'C',
-                      `x1`,`-y1`,`x2`,`-y2`,`x3`,`-y3`,]).strip()
+                      repr(x1),repr(-y1),repr(x2),repr(-y2),repr(x3),repr(-y3),]).strip()
         self.__cur_element.setAttribute('d', d)
     def closepath(self):                # close back to start of path
         if (self.__cur_element.nodeName != 'path') :
-            raise OverflowError, "No path for closepath"
+            raise OverflowError("No path for closepath")
         d = ' '.join([self.__cur_element.getAttribute('d'),'Z']).strip()
         self.__cur_element.setAttribute('d', d)
 
@@ -243,7 +242,7 @@ class T(basecanvas.T):
 
         # ... add it to a clipPath elt in the defs section
         clip = self.__doc.createElement('clipPath')
-        clipid = 'clip'+`len(self.__defs.childNodes)`
+        clipid = 'clip'+repr(len(self.__defs.childNodes))
         clip.setAttribute('id',clipid)
         clip.appendChild(p)
         self.__defs.appendChild(clip)
@@ -254,21 +253,21 @@ class T(basecanvas.T):
     # The text_xxx routines specify the start/end and contents of text
     def text_begin(self):
         if (self.__cur_element.nodeName != 'g') :
-            raise ValueError, "No group for text block"
+            raise ValueError("No group for text block")
         t = self.__doc.createElement('text')
         self.__cur_element.appendChild(t)
         self.__cur_element = t
     def text_moveto(self, x, y, angle):
         if (self.__cur_element.nodeName != 'text') :
-            raise ValueError, "No text for moveto"
-        self.__cur_element.setAttribute('x',`x`)
-        self.__cur_element.setAttribute('y',`-y`)
+            raise ValueError("No text for moveto")
+        self.__cur_element.setAttribute('x',repr(x))
+        self.__cur_element.setAttribute('y',repr(-y))
         if (angle) :
             self.__cur_element.setAttribute('transform',
                                         'rotate(%g,%g,%g)' % (-angle,x,-y))
     def text_show(self, font_name, size, color, string):
         if (self.__cur_element.nodeName != 'text') :
-            raise ValueError, "No text for show"
+            raise ValueError("No text for show")
 
         # PyChart constructs a postscript font name, for example:
         #
@@ -312,7 +311,7 @@ class T(basecanvas.T):
         self.__cur_element.appendChild(self.__doc.createTextNode(string.encode('utf-8')))
     def text_end(self):
         if (self.__cur_element.nodeName != 'text') :
-            raise ValueError, "No text for close"
+            raise ValueError("No text for close")
         self.__cur_element = self.__cur_element.parentNode
 
 
@@ -342,13 +341,13 @@ class T(basecanvas.T):
     # same time
     def gsave(self):
         if (self.__cur_element.nodeName not in ['g','svg']) :
-            raise ValueError, "No group for gsave"
+            raise ValueError("No group for gsave")
         g = self.__doc.createElement('g')
         self.__cur_element.appendChild(g)
         self.__cur_element = g
     def grestore(self):
         if (self.__cur_element.nodeName != 'g'):
-            raise ValueError, "No group for grestore"
+            raise ValueError("No group for grestore")
         # first pop off any auto-generated groups (see protectCurrentChildren)
         while (self.__cur_element.hasAttribute('auto')) :
             self.__cur_element.removeAttribute('auto')
@@ -377,7 +376,7 @@ class T(basecanvas.T):
             g.removeChild(elt)
             self.__cur_element = g
         else:
-            raise ValueError, "Illegal placement of push_transformation"
+            raise ValueError("Illegal placement of push_transformation")
 
         t = ''
         if baseloc :
@@ -413,7 +412,7 @@ class T(basecanvas.T):
         basecanvas.T.close(self)
         self.grestore()           # matching the gsave in __init__
         if (self.__cur_element.nodeName != 'svg') :
-            raise ValueError, "Incomplete document at close!"
+            raise ValueError("Incomplete document at close!")
 
         # Don't bother to output an empty document - this can happen
         # when we get close()d immediately by theme reinit

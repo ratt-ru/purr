@@ -2,10 +2,10 @@
 try:
   import PIL.Image
 except:
-  print """Please install the Python Imaging Library (PIL)!
+  print("""Please install the Python Imaging Library (PIL)!
 Purr will work fine without it, but your logs will be a lot less beautifully rendered.
 PIL is available from http://www.pythonware.com/products/pil/. On Debian-based systems
-(including Ubuntu and such), it can be as simple as installing the python-imaging package.""";
+(including Ubuntu and such), it can be as simple as installing the python-imaging package.""");
   raise
 
 import os.path
@@ -52,7 +52,7 @@ class ImageRenderer (DefaultRenderer):
         try:
           img.save(path,"PNG");
         except:
-          print "Error saving %s in PNG format"%path;
+          print("Error saving %s in PNG format"%path);
           traceback.print_exc();
           self.fullimage = dp.filename;
     else:
@@ -74,7 +74,7 @@ class ImageRenderer (DefaultRenderer):
           img = img.resize((int(width/factor),int(height/factor)),PIL.Image.ANTIALIAS);
           img.save(path,"PNG");
       except:
-        print "Error saving thumbnail %s in PNG format"%path;
+        print("Error saving thumbnail %s in PNG format"%path);
         traceback.print_exc();
         self.thumbnail = None;
 
