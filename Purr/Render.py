@@ -19,10 +19,10 @@ _verbosity = Kittens.utils.verbosity(name="render");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-try:
-  from urllib.parse import quote as quote_url
-except ImportError:
-  from urllib.parse import quote as quote_url
+from future.standard_library import hooks
+
+with hooks():
+    from urllib.parse import quote as quote_url
 
 def renderDefault (dp,relpath):
   """Fall-back rendering method (if all else fails), renders DP as a link""";
