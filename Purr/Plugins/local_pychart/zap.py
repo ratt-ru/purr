@@ -11,8 +11,8 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import fill_style
-import line_style
+from . import fill_style
+from . import line_style
 import copy
 
 def _draw_zap(can, p1, p2, style, pat):

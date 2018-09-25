@@ -11,9 +11,9 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import coord
+from . import coord
 import math
-import pychart_util
+from . import pychart_util
 
 class T(coord.T):
     def get_canvas_pos(self, size, val, min, max):

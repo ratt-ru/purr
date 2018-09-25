@@ -27,7 +27,7 @@ import Purr.Plugins
 from Purr import Config,dprint,dprintf
 
 import Kittens.utils
-import ConfigParser
+import configparser
 
 from PyQt4.Qt import QObject,SIGNAL
 
@@ -59,7 +59,7 @@ def make_pattern_list (patterns):
   return ";".join(pattstrs);
 
 def _printexc (message,*args):
-  print message%args;
+  print(message%args);
   traceback.print_exc();
 
 def matches_patterns (filename,patterns):
@@ -73,7 +73,7 @@ class Purrer (QObject):
     """;
     if not os.path.isdir(path):
       return False;
-    if filter(os.path.isdir,glob.glob(os.path.join(path,"entry-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]"))):
+    if list(filter(os.path.isdir,glob.glob(os.path.join(path,"entry-[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9]")))):
       return True;
     return os.path.exists(os.path.join(path,"dirconfig"));
 
@@ -260,7 +260,7 @@ class Purrer (QObject):
                       fname,time.strftime("%x %X",time.localtime(timestamp)));
       # else check current canaries for updates
       else:
-        for filename,watcher in list(self.canaries.iteritems()):
+        for filename,watcher in list(self.canaries.items()):
           updated = watcher.isUpdated();
           if updated is None:
             dprintf(2,"access error on canary %s, will no longer be watched",filename);
@@ -272,7 +272,7 @@ class Purrer (QObject):
             break;
         # now, if directory has updated, reset timestamps on all canaries
         if newfiles:
-          for watcher in self.canaries.itervalues():
+          for watcher in self.canaries.values():
             watcher.mtime = timestamp;
       # returns ourselves (as new file) if something has updated
       return (newfiles and [self.path]) or [];
@@ -403,7 +403,7 @@ class Purrer (QObject):
                     self.logtitle,time.strftime("%x %X",time.localtime(self.timestamp)));
         except:
           traceback.print_exc();
-          print "Error parsing %s, reverting to defaults"%self.indexfile;
+          print("Error parsing %s, reverting to defaults"%self.indexfile);
       # load log entries
       entries = [];
       for fname in os.listdir(self.logdir):
@@ -413,7 +413,7 @@ class Purrer (QObject):
             entry = Purr.LogEntry(load=pathname);
             dprint(2,"loaded log entry",pathname);
           except:
-            print "Error loading entry %s, skipping"%fname;
+            print("Error loading entry %s, skipping"%fname);
             traceback.print_exc();
             continue;
           entries.append(entry);
@@ -430,13 +430,13 @@ class Purrer (QObject):
       self._initIndexDir();
     # load configuration if it exists
     # init config file
-    self.dirconfig = ConfigParser.RawConfigParser();
+    self.dirconfig = configparser.RawConfigParser();
     self.dirconfigfile = os.path.join(self.logdir,"dirconfig");
     if os.path.exists(self.dirconfigfile):
       try:
         self.dirconfig.read(self.dirconfigfile);
       except:
-        print "Error loading config file %s"%self.dirconfigfile;
+        print("Error loading config file %s"%self.dirconfigfile);
         traceback.print_exc();
       # load directory configuration
       for dirname in self.dirconfig.sections():
@@ -462,11 +462,11 @@ class Purrer (QObject):
           # update dictiornary with latest timestamp
           ignores[filename] = int(timestamp),policy;
       except:
-        print "Error reading %s"%self.ignorelistfile;
+        print("Error reading %s"%self.ignorelistfile);
         traceback.print_exc();
       # now scan all listed files, and make sure their watchers' mtime is no older than the given
       # last-ignore-timestamp. This ensures that we don't pounce on these files after restarting purr.
-      for filename,(timestamp,policy) in ignores.iteritems():
+      for filename,(timestamp,policy) in ignores.items():
         watcher = self.watchers.get(filename,None);
         if watcher:
           watcher.mtime = max(watcher.mtime,timestamp);
@@ -506,7 +506,7 @@ class Purrer (QObject):
     return self._watching_state[pathname];
 
   def watchedDirectories (self):
-    return [ (dd,state) for dd,state in self._watching_state.iteritems() if state != Purr.REMOVED ];
+    return [ (dd,state) for dd,state in self._watching_state.items() if state != Purr.REMOVED ];
 
   def addWatchedDirectory (self,dirname,watching=Purr.WATCHED,save_config=True):
     """Starts watching the specified directories for changes"""
@@ -526,7 +526,7 @@ class Purrer (QObject):
               watch_patterns=self._watch_patterns,ignore_patterns=self._ignore_patterns);
       # fileset=None indicates error reading directory, so ignore it
       if wdir.fileset is None:
-        print "There was an error reading the directory %s, will stop watching it."%dirname;
+        print("There was an error reading the directory %s, will stop watching it."%dirname);
         self.setWatchingState(dirname,Purr.REMOVED,save_config=True);
         return;
       self.watchers[dirname] = wdir;
@@ -669,7 +669,7 @@ class Purrer (QObject):
           try:
             file(self.ignorelistfile,'a').write("%d %s %s\n"%(os.path.getmtime(dp.sourcepath),dp.policy,dp.sourcepath));
           except:
-            print "Error writing %s"%self.ignorelistfile;
+            print("Error writing %s"%self.ignorelistfile);
             traceback.print_exc();
       else:
         watcher = self.watchers.get(dp.sourcepath,None);
@@ -725,7 +725,7 @@ class Purrer (QObject):
     # store timestamp of scan
     self.last_scan_timestamp = time.time();
     # go through watched files/directories, check for mtime changes
-    for path,watcher in list(self.watchers.iteritems()):
+    for path,watcher in list(self.watchers.items()):
       # get list of new files from watcher
       newfiles = watcher.newFiles();
       # None indicates access error, so drop it from watcher set
@@ -764,14 +764,14 @@ class Purrer (QObject):
         # to detect renamed and deleted files
         self.temp_watchers[newfile] = Purrer.WatchedFile(newfile);
     # now, go through temp_watchers to see if any newly pounced-on files have disappeared
-    for path,watcher in list(self.temp_watchers.iteritems()):
+    for path,watcher in list(self.temp_watchers.items()):
       # get list of new files from watcher
       if watcher.newFiles() is None:
         dprintf(2,"access error on %s, marking as disappeared",watcher.path);
         del self.temp_watchers[path];
         self.emit(SIGNAL("disappearedFile"),path);
     # if we have new data products, send them to the main window
-    return self.makeDataProducts(newstuff.iteritems());
+    return self.makeDataProducts(iter(newstuff.items()));
 
 
   def makeDataProducts (self,files,unbanish=False,unignore=False):

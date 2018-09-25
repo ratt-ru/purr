@@ -11,7 +11,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import coord
+from . import coord
 import math
 
 class T(coord.T):
@@ -26,7 +26,7 @@ class T(coord.T):
         "Generate the list of places for drawing tick marks."
         v = []
         if min <= 0:
-            raise Exception, "Min value (%s) < 0 in a log coordinate." % min
+            raise Exception("Min value (%s) < 0 in a log coordinate." % min)
         x = min
         while x <= max:
             v.append(x)

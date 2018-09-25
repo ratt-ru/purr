@@ -11,15 +11,15 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import canvas
-import fill_style
-import line_style
-import pychart_util
-import chart_object
-import legend
-import font
-import color
-from pychart_types import *
+from . import canvas
+from . import fill_style
+from . import line_style
+from . import pychart_util
+from . import chart_object
+from . import legend
+from . import font
+from . import color
+from .pychart_types import *
 
 class T(chart_object.T):
     """Plots sector diagram which can be superimposed on one another.

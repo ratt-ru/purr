@@ -13,8 +13,8 @@
 #
 import sys
 import os
-import gs_frontend
-import theme
+from . import gs_frontend
+from . import theme
 
 class T(gs_frontend.T):
     def close(self):
@@ -38,7 +38,7 @@ class T(gs_frontend.T):
                 out_fd = sys.stdout
             else:
                 if not hasattr(self.__out_fname, "write"):
-                    raise Exception, "Expecting either a filename or a file-like object, but got %s" % self.__out_fname
+                    raise Exception("Expecting either a filename or a file-like object, but got %s" % self.__out_fname)
                 out_fd = self.__out_fname
             import tempfile
             temp_fname = tempfile.mktemp()

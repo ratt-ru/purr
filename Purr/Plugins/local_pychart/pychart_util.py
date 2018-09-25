@@ -65,9 +65,9 @@ def get_data_list(data, col):
 def get_data_range(data, col):
     data = get_data_list(data, col)
     for item in data:
-        if type(item) not in (types.IntType, types.LongType, types.FloatType):
-            print type(item),item;
-            raise TypeError, "Non-number passed to data: %s" % (data)
+        if type(item) not in (int, int, float):
+            print(type(item),item);
+            raise TypeError("Non-number passed to data: %s" % (data))
     return (min(data), max(data))
 
 def round_down(val, bound):
@@ -105,7 +105,7 @@ def apply_format(format, val, defaultidx):
     elif type(format) == StringType:
         return format % val[defaultidx]
     else:
-        return apply(format, val)
+        return format(*val)
 
     
 data_desc = "Specifies the data points. <<chart_data>>"
@@ -132,12 +132,12 @@ controlled using escape sequences. <<font>>"""
 class symbol_lookup_table:
     def __init__(self, dict, objs):
         self.names = {}
-        for name, val in dict.items():
+        for name, val in list(dict.items()):
             for obj in objs.list():
                 if val == obj:
                     self.names[val] = name
                     break
     def lookup(self, obj):
-        if self.names.has_key(obj):
+        if obj in self.names:
             return self.names[obj]
         return None

@@ -11,7 +11,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import theme
+from . import theme
 
 x_base = 300
 y_base = 300
@@ -24,5 +24,5 @@ def yscale(y):
 def nscale(x):
     return x * theme.scale_factor
 def nscale_seq(x):
-    return map(nscale, x)
+    return list(map(nscale, x))
 

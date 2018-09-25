@@ -27,11 +27,11 @@ values = []
 
 sys.stdout = oldstdout
 g = globals()
-for mod in g.keys():
+for mod in list(g.keys()):
     val = g[mod]
     if type(val) == ModuleType:
         dic = {}
-        for name in val.__dict__.keys():
+        for name in list(val.__dict__.keys()):
             v = val.__dict__[name]
             if name[0] != '_':
                 values.append((v, mod + "." + name))
@@ -87,7 +87,7 @@ def stringify_value(val):
     if val == None:
         return "None"
     if type(val) == ListType:
-        return map(stringify_value, val)
+        return list(map(stringify_value, val))
     for pair in values:
         if pair[0] == val:
             return pair[1]

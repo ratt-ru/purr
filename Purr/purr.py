@@ -9,12 +9,12 @@ import sys
 
 def trace_lines (frame, event, arg):
   if event == "line":
-    print "%s:%d"%(frame.f_code.co_filename,frame.f_lineno);
+    print("%s:%d"%(frame.f_code.co_filename,frame.f_lineno));
   return trace_lines;
 
 # runs Purr standalone
 if __name__ == "__main__":
-  print "Welcome to PURR!"
+  print("Welcome to PURR!")
 
   # parse options is the first thing we should do
   from optparse import OptionParser
@@ -29,7 +29,7 @@ if __name__ == "__main__":
   if options.trace:
     sys.settrace(trace_lines);
 
-  print "Please wait a second while the GUI starts up."
+  print("Please wait a second while the GUI starts up.")
 
   import sys
   import signal
@@ -56,15 +56,15 @@ if __name__ == "__main__":
 
   try:
     if not Purr.Startup.startWizard(rem_args,purrwin):
-      print "Cancelled by user";
+      print("Cancelled by user");
       os._exit(1);
-  except Purr.Startup.Error,err:
-    print err.error_message;
+  except Purr.Startup.Error as err:
+    print(err.error_message);
     os._exit(1);
 
   # handle SIGINT
   def sigint_handler (sig,stackframe):
-    print "Caught Ctrl+C, PURR exiting..."
+    print("Caught Ctrl+C, PURR exiting...")
     purrwin.detachPurrlog();
     app.quit();
   signal.signal(signal.SIGINT,sigint_handler);

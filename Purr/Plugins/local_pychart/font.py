@@ -11,12 +11,12 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import color
+from . import color
 import string
-import pychart_util
+from . import pychart_util
 import re
-import theme
-import afm.dir
+from . import theme
+from . import afm.dir
 
 __doc__ = """The module for manipulating texts and their attributes.
 
@@ -104,7 +104,7 @@ def _intern_afm(font, text):
         exec("import pychart.afm.%s" % re.sub("-", "_", font))
         return afm.dir.afm[font]
     except:
-        if not font2 and not _undefined_font_warned.has_key(font):
+        if not font2 and font not in _undefined_font_warned:
             pychart_util.warn('Warning: unknown font "%s" while parsing "%s"'
                               % (font, text))
             _undefined_font_warned[font] = 1
@@ -114,7 +114,7 @@ def _intern_afm(font, text):
             exec('import pychart.afm.%s' % re.sub('-', '_', font2))
             return afm.dir.afm[font2]
         except:
-            if not _undefined_font_warned.has_key(font):
+            if font not in _undefined_font_warned:
                 pychart_util.warn('Warning: unknown font "%s" while parsing "%s"' % (font, text))
                 _undefined_font_warned[font] = 1
     return None    
@@ -217,12 +217,12 @@ class text_state:
         
 class text_iterator:
     def __init__(self, s):
-        self.str = unicode(s)
+        self.str = str(s)
         self.i = 0
         self.ts = text_state()
         self.stack = []
     def reset(self, s):
-	self.str = unicode(s)
+	self.str = str(s)
 	self.i = 0
 
     def __return_state(self, ts, str):
@@ -259,7 +259,7 @@ class text_iterator:
                self.str[self.i] == '-'):
             self.i += 1
         return int(self.str[istart:self.i])
-    def next(self):
+    def __next__(self):
         "Get the next text segment. Return an 8-element array: (FONTNAME, SIZE, LINEHEIGHT, COLOR, H_ALIGN, V_ALIGN, ANGLE, STR."
         l = []
         changed = 0
@@ -273,7 +273,7 @@ class text_iterator:
 		self.old_state = self.ts.copy()
                 if ch == '/' or ch == '{' or ch == '}':
                     l.append(ch)
-                elif _font_family_map.has_key(ch):
+                elif ch in _font_family_map:
                     self.ts.family = _font_family_map[ch]
                     changed = 1
                 elif ch == 'F':
@@ -371,24 +371,24 @@ def unaligned_get_dimension(text):
     halign = None
     valign = None
     itr = text_iterator(None)
-    for line in unicode(text).split('\n'):
+    for line in str(text).split('\n'):
         cur_height = 0
         cur_width = 0
 	itr.reset(line)
         while 1:
-            elem = itr.next()
+            elem = next(itr)
             if not elem:
                 break
             (font, size, line_height, color, new_h, new_v, new_a, chunk) = elem
             if halign != None and new_h != halign:
                 raise FontException('Only one "/h" can appear in a string.',
-                                    unicode(text))
+                                    str(text))
             if valign != None and new_v != valign:
                 raise FontException('Only one "/v" can appear in a string.',
-                                    unicode(text))
+                                    str(text))
             if angle != None and new_a != angle:
                 raise FontException('Only one "/a" can appear in a string.',
-                                    unicode(text))
+                                    str(text))
             halign = new_h
             valign = new_v
             angle = new_a

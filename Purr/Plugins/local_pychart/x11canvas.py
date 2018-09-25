@@ -12,8 +12,8 @@
 # for more details.
 #
 import os
-import gs_frontend
-import theme
+from . import gs_frontend
+from . import theme
 import sys
 
 class T(gs_frontend.T):

@@ -11,15 +11,15 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import line_style
-import fill_style
-import pychart_util
-import chart_object
-import legend
-import bar_plot_doc
-import theme
+from . import line_style
+from . import fill_style
+from . import pychart_util
+from . import chart_object
+from . import legend
+from . import bar_plot_doc
+from . import theme
 from types import *
-from pychart_types import *
+from .pychart_types import *
 
 fill_styles = None
 
@@ -75,7 +75,7 @@ The
                     The style of each bar is chosen in a round-robin fashion, if the
                     number of elements in "line_styles" is smaller than
                     actual number of boxes."""),
-    "fill_styles": (ListType, [lambda: fill_styles.next(), None],
+    "fill_styles": (ListType, [lambda: next(fill_styles), None],
                     """List of fill styles for bars.
                     The style of each bar is chosen in a round-robin fashion, if the
                     number of elements in "line_styles" is smaller than
@@ -119,7 +119,7 @@ class T(chart_object.T):
         for pair in self.data:
             if pair[self.bcol] == bval:
                 return pair[self.hcol]
-	raise ValueError, str(bval) + ": can't find the xval"
+	raise ValueError(str(bval) + ": can't find the xval")
 
     def __get_data_range(self, col):
         gmin = 99999999

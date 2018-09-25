@@ -19,10 +19,10 @@ _verbosity = Kittens.utils.verbosity(name="render");
 dprint = _verbosity.dprint;
 dprintf = _verbosity.dprintf;
 
-try:
-  from urllib2 import quote as quote_url
-except ImportError:
-  from urllib import quote as quote_url
+from future.standard_library import hooks
+
+with hooks():
+    from urllib.parse import quote as quote_url
 
 def renderDefault (dp,relpath):
   """Fall-back rendering method (if all else fails), renders DP as a link""";
@@ -211,7 +211,7 @@ class DefaultRenderer (object):
     if thumb:
       return "\n".join(
         [ "    <TR>" ] +
-        [ "      <TD>%s</TD>"%element for element in thumb,comment ] +
+        [ "      <TD>%s</TD>"%element for element in (thumb,comment) ] +
         [ "    </TR>\n" ]);
     else:
       return """
@@ -225,7 +225,7 @@ def addRenderer (renderer_class,module_name,module_file):
   rdrid = renderer_class.renderer_id;
   rdrclass,mod = available_renderers.get(rdrid,(None,None));
   if rdrclass:
-    raise RuntimeError,"renderer '%s' already registered by module '%s'"%(rdrid,mod);
+    raise RuntimeError("renderer '%s' already registered by module '%s'"%(rdrid,mod));
   renderer_class.module_mtime = mtime = os.path.getmtime(module_file);
   global youngest_renderer;
   youngest_renderer = max(mtime,youngest_renderer);
@@ -242,11 +242,11 @@ def getRenderers (filename):
   the renderers that support the source file type""";
   global available_renderers;
   renderers = [];
-  for rdrid,(renderer,module) in available_renderers.iteritems():
+  for rdrid,(renderer,module) in available_renderers.items():
     try:
       priority = renderer.canRender(filename);
     except:
-      print """Error in renderer: %s.canRender("%s"):"""%(rdrid,filename);
+      print("""Error in renderer: %s.canRender("%s"):"""%(rdrid,filename));
       traceback.print_exc();
       priority = None;
     if priority:
@@ -262,7 +262,7 @@ def makeRenderer (rdrid,dp,refresh=False):
   try:
     return available_renderers[rdrid][0](dp,refresh=refresh);
   except:
-    print """Error creating renderer %s for %s:"""%(rdrid,dp.fullpath);
+    print("""Error creating renderer %s for %s:"""%(rdrid,dp.fullpath));
     traceback.print_exc();
     return DefaultRenderer(dp);
   
@@ -271,7 +271,7 @@ def _callRender (renderer,method,relpath,fallback="%s"):
     return getattr(renderer,method)(relpath=relpath);
   except:
     dp = getattr(renderer,'dp',None);
-    print """Error calling %s.%s for %s"""%(renderer,method,dp and dp.fullpath);
+    print("""Error calling %s.%s for %s"""%(renderer,method,dp and dp.fullpath));
     traceback.print_exc();
     # if a fallback is specified (and does not contain %s), return that
     if fallback.find("%s") < 0:
@@ -302,4 +302,4 @@ addRenderer(DefaultRenderer,"built-in",__file__);
 
 # we don't really need this, but it's better to import it here rather than from a plugin, since
 # then we detect errors sooner
-import CachingRenderer
+from . import CachingRenderer

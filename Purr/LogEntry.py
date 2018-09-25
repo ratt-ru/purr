@@ -60,7 +60,7 @@ class DataProduct (object):
 
   def set_policy (self,policy):
     if self.archived:
-      raise TypeError,"cannot change policy of archived DP";
+      raise TypeError("cannot change policy of archived DP");
     self.policy = policy;
     self.ignored = policy in ("ignore","banish");
 
@@ -72,16 +72,16 @@ class DataProduct (object):
   def remove_file (self):
     """Removes archived file associated with this DP""";
     if not self.fullpath or not self.archived:
-      raise RuntimeError,"""Can't remove a non-archived data product""";
+      raise RuntimeError("""Can't remove a non-archived data product""");
     try:
       os.remove(self.fullpath);
     except:
-      print "Error removing %s: %s"%(self.fullpath,sys.exc_info()[1]);
+      print("Error removing %s: %s"%(self.fullpath,sys.exc_info()[1]));
 
   def remove_subproducts (self):
     """Removes all archived files subproducts associated with this DP""";
     if not self.fullpath or not self.archived:
-      raise RuntimeError,"""Can't remove a non-archived data product""";
+      raise RuntimeError("""Can't remove a non-archived data product""");
     for root, dirs, files in os.walk(self.subproduct_dir(),topdown=False):
       for name in files:
         try:
@@ -99,14 +99,14 @@ class DataProduct (object):
     if newname == self.filename:
       return None;
     if not self.fullpath or not self.archived:
-      raise RuntimeError,"""Can't rename a non-archived data product""";
+      raise RuntimeError("""Can't rename a non-archived data product""");
     dirname = os.path.dirname(self.fullpath);
     newpath = os.path.join(dirname,newname);
     oldsubname = self.subproduct_dir();
     try:
       os.rename(self.fullpath,newpath);
     except:
-      print "Error renaming %s to %s: %s"%(self.fullpath,newpath,sys.exc_info()[1]);
+      print("Error renaming %s to %s: %s"%(self.fullpath,newpath,sys.exc_info()[1]));
       return None;
     # remove subproducts, if they exist -- need to re-render with new name anyway
     self.remove_subproducts();
@@ -222,9 +222,9 @@ class LogEntry (object):
       return None;
     self.ignore = (match.group(1) == "ignore");
     if not os.path.isdir(pathname):
-      raise ValueError,"%s: not a directory"%pathname;
+      raise ValueError("%s: not a directory"%pathname);
     if not os.access(pathname,os.R_OK|os.W_OK):
-      raise ValueError,"%s: insufficient access privileges"%pathname;
+      raise ValueError("%s: insufficient access privileges"%pathname);
     # parse index.html file
     parser = Purr.Parsers.LogEntryIndexParser(pathname);
     self.index_file = os.path.join(pathname,'index.html');
@@ -283,7 +283,7 @@ class LogEntry (object):
       self.pathname = pathname = os.path.join(dirname,"%s-%s"%
                         (("ignore" if self.ignore else "entry"),timestr));
     elif not self.pathname:
-      raise ValueError,"Cannot save entry: pathname not specified";
+      raise ValueError("Cannot save entry: pathname not specified");
     else:
       pathname = self.pathname;
     # set timestamp
@@ -324,8 +324,8 @@ class LogEntry (object):
           dps.append(dp);
           continue;
         if os.system("/bin/rm -fr '%s'"%destname):
-          print "Error removing %s, which is in the way of %s"%(destname,sourcepath);
-          print "This data product is not saved.";
+          print("Error removing %s, which is in the way of %s"%(destname,sourcepath));
+          print("This data product is not saved.");
           continue;
       # for directories, compress with tar
       if os.path.isdir(sourcepath):
@@ -335,8 +335,8 @@ class LogEntry (object):
           if os.system("tar zcf '%s' -C '%s' '%s'"%(destname,
                                                      os.path.dirname(sourcepath),
                                                      os.path.basename(sourcepath))):
-            print "Error archiving %s to %s"%(sourcepath,destname);
-            print "This data product is not saved.";
+            print("Error archiving %s to %s"%(sourcepath,destname));
+            print("This data product is not saved.");
             continue;
           if dp.policy.startswith("move"):
             os.system("/bin/rm -fr '%s'"%sourcepath);
@@ -346,13 +346,13 @@ class LogEntry (object):
         if dp.policy == "copy":
           dprintf(2,"copying\n");
           if _copy_update(sourcepath,destname):
-            print "Error copying %s to %s"%(sourcepath,destname);
-            print "This data product is not saved.";
+            print("Error copying %s to %s"%(sourcepath,destname));
+            print("This data product is not saved.");
             continue;
         elif dp.policy.startswith('move'):
           if _move_update(sourcepath,destname):
-            print "Error moving %s to %s"%(sourcepath,destname);
-            print "This data product is not saved.";
+            print("Error moving %s to %s"%(sourcepath,destname));
+            print("This data product is not saved.");
             continue;
       # success, set timestamp and append
       dp.timestamp = os.path.getmtime(destname);
@@ -390,7 +390,7 @@ class LogEntry (object):
     if not self.pathname:
       return;
     if os.system("/bin/rm -fr '%s'"%self.pathname):
-      print "Error removing %s";
+      print("Error removing %s");
 
   def timeLabel (self):
     return time.strftime("%x %X",time.localtime(self.timestamp));
@@ -419,7 +419,7 @@ class LogEntry (object):
           dprintf(2,"include cache %s out of date, will regenerate\n",self.cached_include);
           self.cached_include_valid = False;
       except:
-        print "Error reading cached include code from %s, will regenerate"%self.cached_include;
+        print("Error reading cached include code from %s, will regenerate"%self.cached_include);
         if verbosity.get_verbose() > 0:
           dprint(1,"Error traceback follows:");
           traceback.print_exc();

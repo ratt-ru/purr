@@ -52,7 +52,7 @@ class DPTreeWidget (Kittens.widgets.ClickableTreeWidget):
     self.header().setDefaultSectionSize(120);
     columns = [ "action","filename","type","rename to","render","comment" ];
     self.setHeaderLabels(columns);
-    self.ColAction,self.ColFilename,self.ColType,self.ColRename,self.ColRender,self.ColComment = range(len(columns));
+    self.ColAction,self.ColFilename,self.ColType,self.ColRename,self.ColRender,self.ColComment = list(range(len(columns)));
     self.setSortingEnabled(False);
     self.setRootIsDecorated(False);
     self.setEditTriggers(QAbstractItemView.AllEditTriggers);
