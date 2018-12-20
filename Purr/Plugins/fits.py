@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# PIL and pyfits are show-stoppers for this plugin
+# PIL is show-stoppers for this plugin
 try:
   import PIL.Image
 except:
@@ -11,13 +11,9 @@ http://www.pythonware.com/index.htm.
   raise;
 
 try:
-  ## ugly hack to get around UGLY FSCKING ARROGNAT (misspelling fully intentional) pyfits-2.3 bug
-  import Kittens.utils
-  pyfits = Kittens.utils.import_pyfits();
+  from astropy.io import fits
 except:
-  print("""PyFITS package not found, rendering of FITS files will not be available.
-PyFITS can be installed from the Debian/Ubuntu package python-pyfits, or can be downloaded
-from http://www.stsci.edu/resources/software_hardware/pyfits.
+  print("""astropy package not found, rendering of FITS files will not be available.
 """);
   raise
 
@@ -130,7 +126,7 @@ class FITSRenderer (CachingRenderer):
   def regenerate (self):
     Purr.progressMessage("reading %s"%self.dp.filename,sub=True);
     # init fitsfile to None, so that _read() above is forced to re-read it
-    fitsfile = pyfits.open(self.dp.fullpath);
+    fitsfile = fits.open(self.dp.fullpath);
     header = fitsfile[0].header;
 
     dprintf(3,"beginning render of",self.dp.fullpath); t0 = time.time();
