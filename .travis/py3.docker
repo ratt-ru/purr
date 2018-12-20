@@ -1,0 +1,10 @@
+FROM kernsuite/base:4
+RUN docker-apt-install \
+    python3-pyqt4 \
+    python3-pil \
+    python3-scipy \
+    python3-astropy \
+    python3-future \
+    python3-pip
+ADD . /code
+RUN pip3 install /code
