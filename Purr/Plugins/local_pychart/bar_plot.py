@@ -155,7 +155,7 @@ class T(chart_object.T):
         for pair in self._abs_data:
             if pair[self.bcol] == bval:
                 return pair[self.hcol]
-	raise ValueError(str(bval) + ": can't find the xval")
+        raise ValueError(str(bval) + ": can't find the xval")
 
     def get_data_range(self, which):
         if self.direction == 'vertical':
@@ -249,7 +249,7 @@ class T(chart_object.T):
         return None
         
     def draw(self, ar, can):
-	assert self.check_integrity()
+        assert self.check_integrity()
         can.clip(ar.loc[0], ar.loc[1],
                 ar.loc[0] + ar.size[0], ar.loc[1] + ar.size[1])
             
