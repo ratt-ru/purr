@@ -22,7 +22,7 @@ for scheme in INSTALL_SCHEMES.values():
         scheme['data'] = scheme['purelib']
 
 setup(name='purr',
-      version='1.4.0',
+      version='1.4.1',
       description='Data reduction logging tool, Useful for remembering reductions',
       author='Oleg Smirnov',
       author_email='Oleg Smirnov <osmirnov@gmail.com>',
