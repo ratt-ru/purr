@@ -11,15 +11,18 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-from . import pychart_util
+from six import string_types, integer_types
 import types
+
 AnyType = 9998
+
 
 def IntervalType(val):
     if type(val) in (int, int,
                      float, types.FunctionType):
-	return None
+        return None
     return "Expecting a number or a function"
+
 
 def CoordType(val):
     if type(val) not in (tuple, list):
@@ -29,28 +32,56 @@ def CoordType(val):
     for v in val:
         if v != None and NumberType(v):
             return "Expecting a pair of numbers (got %s)" % str(v)
-    return None 
-    
+    return None
+
+
 def NumberType(val):
     if type(val) in (int, int, float):
         return None
     else:
         return "Expecting a number"
 
+
 def UnitType(val):
     if type(val) in (int, int, float):
         return
     else:
         return "Expecting a unit"
+
+
 def ShadowType(val):
     if type(val) not in (tuple, list):
-	return "Expecting tuple or list."
+        return "Expecting tuple or list."
     if len(val) != 3:
-	return "Expecting (xoff, yoff, fill)."
+        return "Expecting (xoff, yoff, fill)."
     return None
+
 
 def FormatType(val):
     if type(val) in (bytes, types.FunctionType):
         return None
     return "Format must be a string or a function"
 
+
+def StringType(val):
+    if type(val) in string_types:
+        return None
+    return "Expected a string"
+
+
+def IntType(val):
+    if type(val) in integer_types:
+        return None
+    return "Expected a integer"
+
+
+def ListType(val):
+    if type(val) is list:
+        return None
+    return "Expected a list"
+
+
+def TupleType(val):
+    if type(val) is tuple:
+        return None
+    return "Expected a tuple"

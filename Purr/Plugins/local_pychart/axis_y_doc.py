@@ -11,7 +11,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-doc="""Attributes supported by this class are:
+doc = """Attributes supported by this class are:
 minor_tic_len(type:number):
     The length of minor tick marks. 
     default value=3.

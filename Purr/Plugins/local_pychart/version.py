@@ -13,4 +13,3 @@
 #
 version = "1.39"
 copyright = "Copyright 1999-2006 Yasushi Saito"
-

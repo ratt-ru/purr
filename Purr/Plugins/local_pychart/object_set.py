@@ -14,30 +14,37 @@
 class T(object):
     def __init__(self, *objs):
         self.__objs = list(objs)
+
     def add(self, *objs):
         self.__objs.extend(objs)
+
     def add_objects(self, objs):
         self.__objs.extend(objs)
+
     def iterate(self):
         return Iterator(self)
+
     def list(self):
         return self.__objs
+
     def __getitem__(self, idx):
         return self.__objs[idx]
+
     def nth(self, idx):
         return self.__objs[idx]
-    
+
+
 class Iterator(object):
     def __init__(self, set_):
         self.__set = set_
         self.__idx = 0
+
     def reset(self):
         self.__idx = 0
+
     def __next__(self):
         val = self.__set.nth(self.__idx)
         self.__idx += 1
         if self.__idx >= len(self.__set.list()):
             self.__idx = 0
         return val
-
-    

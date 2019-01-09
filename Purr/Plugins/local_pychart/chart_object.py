@@ -11,8 +11,10 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-from . import pychart_types
 import types
+
+from . import pychart_types
+
 
 def set_defaults(cls, **dict):
     validAttrs = getattr(cls, "keys")
@@ -26,6 +28,7 @@ def set_defaults(cls, **dict):
         # 3: defaultValue document (optional)
         tuple[1] = val
         validAttrs[attr] = tuple
+
 
 class T(object):
     def init(self, args):
@@ -68,7 +71,9 @@ class T(object):
         elif isinstance(value, typeval):
             pass
         else:
-            raise TypeError("%s: Expecting type %s, but got %s (attr=%s, %s)"  % (self, typeval, value,  item, self.keys[item]))
+            raise TypeError(
+                "%s: Expecting type %s, but got %s (attr=%s, %s)" % (self, typeval, value, item, self.keys[item]))
+
     def __init__(self, **args):
         self.init(args)
 

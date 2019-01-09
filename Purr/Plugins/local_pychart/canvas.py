@@ -11,25 +11,25 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import sys
 import atexit
-import atexit
-from . import basecanvas
-from . import pscanvas
-from . import pdfcanvas
-from . import svgcanvas
-from . import pngcanvas
-from . import x11canvas
-from . import theme
 import re
+import sys
+
+from . import basecanvas
+from . import pdfcanvas
+from . import pngcanvas
+from . import pscanvas
+from . import svgcanvas
+from . import theme
+from . import x11canvas
 
 invalid_coord = -999999
 _oldexitfunc = None
 
 T = basecanvas.T
 
-def init(fname = None, format = None):
 
+def init(fname=None, format=None):
     """This is a "factory" procedure that creates a new canvas.T object.
     Both parameters, <fname> and
     <format>, are optional. Parameter <fname> specifies either the output
@@ -40,10 +40,10 @@ def init(fname = None, format = None):
     When <fname> is omitted or is None, the output is sent to standard
     output. When <format> is omitted, it is guessed from the <fname>'s
     suffix; failing that, "ps" is selected."""
-    
+
     fname = fname or theme.output_file
     format = format or theme.output_format
-    
+
     if format == None:
         if not isinstance(fname, str):
             format = "ps"
@@ -62,13 +62,14 @@ def init(fname = None, format = None):
         can = pngcanvas.T(fname)
     elif format == "x11":
         can = x11canvas.T(fname)
-    elif format == "svg":               
+    elif format == "svg":
         can = svgcanvas.T(fname)
-    elif format == "pdf-uncompressed":               
+    elif format == "pdf-uncompressed":
         can = pdfcanvas.T(fname, False)
     else:
         can = pdfcanvas.T(fname, theme.compress_output)
     return can
+
 
 def default_canvas():
     if len(basecanvas.active_canvases) > 0:
@@ -76,52 +77,72 @@ def default_canvas():
     else:
         return init(None)
 
+
 def _exit():
     global _oldexitfunc, _active_canvases
-    
+
     for can in basecanvas.active_canvases[:]:
         can.close()
-        
+
     if _oldexitfunc:
         foo = _oldexitfunc
         _oldexitfunc = None
         foo()
+
 
 #
 # The following procedures are there just for backward compatibility.
 # 
 def line(style, x1, y1, x2, y2):
     default_canvas().line(style, x1, y1, x2, y2)
+
+
 def curve(style, points):
     default_canvas().curve(style, points)
+
+
 def clip(x1, y1, x2, y2):
     default_canvas().clip(x1, y1, x2, y2)
+
+
 def endclip():
     default_canvas().endclip()
+
+
 def clip_polygon(points):
     default_canvas().clip_polygon(points)
-def clip_ellipsis(x, y, radius, ratio = 1.0):
+
+
+def clip_ellipsis(x, y, radius, ratio=1.0):
     default_canvas().clip_ellipsis(x, y, radius, ratio)
-def ellipsis(line_style, pattern, x, y, radius, ratio = 1.0,
+
+
+def ellipsis(line_style, pattern, x, y, radius, ratio=1.0,
              start_angle=0, end_angle=360, shadow=None):
     default_canvas().ellipsis(line_style, pattern, x, y, radius, ratio,
                               start_angle, end_angle, shadow)
-def rectangle(edge_style, pat, x1, y1, x2, y2, shadow = None):
+
+
+def rectangle(edge_style, pat, x1, y1, x2, y2, shadow=None):
     default_canvas().rectangle(edge_style, pat, x1, y1, x2, y2, shadow)
-def polygon(edge_style, pat, points, shadow = None):
-    default_canvas().polygon(edge_style, pat, points, shadow = None)
+
+
+def polygon(edge_style, pat, points, shadow=None):
+    default_canvas().polygon(edge_style, pat, points, shadow=None)
+
+
 def close():
     default_canvas().close()
+
+
 def round_rectangle(style, fill, x1, y1, x2, y2, radius, shadow=None):
     default_canvas().round_rectangle(style, fill, x1, y1, x2, y2, radius, shadow)
+
+
 def show(x, y, str):
     default_canvas().show(x, y, str)
-    
 
-if "exitfunc" not in vars(sys):
-    atexit.register(_exit)
-elif sys.exitfunc != _exit:
-    _oldexitfunc = sys.exitfunc
-    atexit.register(_exit)
 
-#theme.add_reinitialization_hook(lambda: init(None))
+atexit.register(_exit)
+
+# theme.add_reinitialization_hook(lambda: init(None))

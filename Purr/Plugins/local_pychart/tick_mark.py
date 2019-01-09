@@ -11,122 +11,146 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-from . import color
-from . import line_style
-from . import fill_style
 from . import chart_object
+from . import fill_style
+from . import line_style
 from . import object_set
-from . import pychart_util
 from . import tick_mark_doc
+from . import pychart_util
 from .pychart_types import *
 
 _keys = {
     "line_style": (line_style.T, line_style.default, "The line style of the tick mark."),
     "fill_style": (fill_style.T, fill_style.white, "The fill style."),
     "size": (UnitType, 5, "Size of the tick mark."),
-    }
+}
+
 
 class T(chart_object.T):
     __doc__ = tick_mark_doc.doc
     keys = _keys
+
+
 ##AUTOMATICALLY GENERATED
 
 ##END AUTOMATICALLY GENERATED
-    
+
 class Circle(T):
     """Draws a circle. """
+
     def draw(self, can, x, y):
         can.ellipsis(self.line_style, self.fill_style, x, y,
-                        self.size/2.0, 1)
-        
+                     self.size / 2.0, 1)
+
+
 class Square(T):
     """Draws a square."""
+
     def draw(self, can, x, y):
         # move to the bottom-left corner
-        x = x - self.size/2.0
-        y = y - self.size/2.0
+        x = x - self.size / 2.0
+        y = y - self.size / 2.0
         can.rectangle(self.line_style, self.fill_style,
-                         x, y, x+self.size, y+self.size)
+                      x, y, x + self.size, y + self.size)
+
 
 class Triangle(T):
     """Draws a triangle pointing up."""
+
     def draw(self, can, x, y):
         can.polygon(self.line_style, self.fill_style,
-                       ((x-self.size/1.6, y-self.size/2.0),
-                        (x+self.size/1.6, y-self.size/2.0),
-                        (x, y+self.size/2.0)))
+                    ((x - self.size / 1.6, y - self.size / 2.0),
+                     (x + self.size / 1.6, y - self.size / 2.0),
+                     (x, y + self.size / 2.0)))
+
+
 class DownTriangle(T):
     """Draws a triangle pointing down."""
+
     def draw(self, can, x, y):
         can.polygon(self.line_style, self.fill_style,
-                       ((x, y-self.size/2.0),
-                        (x-self.size/1.6, y+self.size/2.0),
-                        (x+self.size/1.6, y+self.size/2.0)))
+                    ((x, y - self.size / 2.0),
+                     (x - self.size / 1.6, y + self.size / 2.0),
+                     (x + self.size / 1.6, y + self.size / 2.0)))
 
 
 class X(T):
     """Draw a "X"-shaped tick mark. Attribute "fill-style" is ignored."""
     keys = pychart_util.union_dict(T.keys,
-                         {"line_style": (line_style.T,
-                                         line_style.T(width=0.7),
-                                         "The line style of the tick mark")})
+                                   {"line_style": (line_style.T,
+                                                   line_style.T(width=0.7),
+                                                   "The line style of the tick mark")})
+
     def draw(self, can, x, y):
         # move to the bottom-left corner
-        x = x - self.size/2.0
-        y = y - self.size/2.0
-        can.line(self.line_style, x, y, x+self.size, y+self.size)
-        can.line(self.line_style, x+self.size, y, x, y+self.size)
-        
+        x = x - self.size / 2.0
+        y = y - self.size / 2.0
+        can.line(self.line_style, x, y, x + self.size, y + self.size)
+        can.line(self.line_style, x + self.size, y, x, y + self.size)
+
+
 class Plus(T):
     """Draw a "+"-shaped tick mark. Attribute "fill-style" is ignored."""
     keys = pychart_util.union_dict(T.keys,
-                         {"line_style": (line_style.T, 
-                                        line_style.T(width=1),
-                                         "The line style of the tick mark.")})
+                                   {"line_style": (line_style.T,
+                                                   line_style.T(width=1),
+                                                   "The line style of the tick mark.")})
+
     def draw(self, can, x, y):
         # move to the bottom-left corner
-        can.line(self.line_style, x-self.size/1.4, y, x+self.size/1.4, y)
-        can.line(self.line_style, x, y-self.size/1.4, x, y+self.size/1.4)
-        
+        can.line(self.line_style, x - self.size / 1.4, y, x + self.size / 1.4, y)
+        can.line(self.line_style, x, y - self.size / 1.4, x, y + self.size / 1.4)
+
+
 class Diamond(T):
     """Draw a square rotated at 45 degrees."""
+
     def draw(self, can, x, y):
         # move to the bottom-left corner
         can.polygon(self.line_style, self.fill_style,
-                   ((x-self.size/1.4, y), (x, y+self.size/1.4),
-                    (x+self.size/1.4, y), (x, y-self.size/1.4)))
+                    ((x - self.size / 1.4, y), (x, y + self.size / 1.4),
+                     (x + self.size / 1.4, y), (x, y - self.size / 1.4)))
+
 
 class Star(T):
     """Draw a "*". Attribute "fill-style" is ignored."""
     keys = pychart_util.union_dict(T.keys,
-                         {"line_style": (line_style.T,
-                                        line_style.T(width=1),
-                                         "The line style of the tick mark.")})
+                                   {"line_style": (line_style.T,
+                                                   line_style.T(width=1),
+                                                   "The line style of the tick mark.")})
+
     def draw(self, can, x, y):
         # move to the bottom-left corner
         midx = x
         midy = y
         d_len = self.size / 2.0
         r_len = self.size * 1.414 / 2.0
-        can.line(self.line_style, x-d_len, y-d_len, x+d_len, y+d_len)
-        can.line(self.line_style, x+d_len, y-d_len, x-d_len, y+d_len) 
-        can.line(self.line_style, midx, y-r_len, midx, y+r_len)
-        can.line(self.line_style, x-r_len, midy, x+r_len, midy)
-        
+        can.line(self.line_style, x - d_len, y - d_len, x + d_len, y + d_len)
+        can.line(self.line_style, x + d_len, y - d_len, x - d_len, y + d_len)
+        can.line(self.line_style, midx, y - r_len, midx, y + r_len)
+        can.line(self.line_style, x - r_len, midy, x + r_len, midy)
+
+
 class Null(T):
     """This tickmark doesn't draw anything. All the attributes are ignored."""
-    def __init__ (self):
+
+    def __init__(self):
         self.line_style = None
         self.fill_style = None
         self.size = -1
+
     def draw(self, can, x, y):
         pass
-    
+
+
 standards = object_set.T()
+
+
 def _intern(style):
     standards.add(style)
     return style
-     
+
+
 square = _intern(Square())
 square3 = _intern(Square(size=3))
 square5 = square
@@ -172,4 +196,3 @@ gray70dtri3 = _intern(DownTriangle(size=3, fill_style=fill_style.gray70))
 gray70circle1 = _intern(Circle(size=1, fill_style=fill_style.gray70))
 gray70circle3 = _intern(Circle(size=3, fill_style=fill_style.gray70))
 default = _intern(Null())
-

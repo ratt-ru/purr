@@ -1,2 +1,6 @@
 build
-
+MANIFEST
+.mypy_cache/
+.venv2/
+dist/
+*.pyc

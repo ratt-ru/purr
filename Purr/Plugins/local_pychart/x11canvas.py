@@ -11,10 +11,10 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import os
-from . import gs_frontend
-from . import theme
 import sys
+
+from . import gs_frontend
+
 
 class T(gs_frontend.T):
     def close(self):
@@ -22,4 +22,3 @@ class T(gs_frontend.T):
         self.start_gs("-sDEVICE=x11")
         sys.stdin.readline()
         self.close_gs()
-

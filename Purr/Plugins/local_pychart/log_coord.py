@@ -11,8 +11,10 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-from . import coord
 import math
+
+from . import coord
+
 
 class T(coord.T):
     def get_canvas_pos(self, size, val, min, max):
@@ -21,7 +23,8 @@ class T(coord.T):
         xminl = math.log(min)
         xmaxl = math.log(max)
         vl = math.log(val)
-        return size * (vl-xminl) / float(xmaxl-xminl)
+        return size * (vl - xminl) / float(xmaxl - xminl)
+
     def get_tics(self, min, max, interval):
         "Generate the list of places for drawing tick marks."
         v = []
@@ -32,9 +35,10 @@ class T(coord.T):
             v.append(x)
             x = x * interval
         return v
+
     def get_min_max(self, dmin, dmax, interval):
         interval = interval or 10
-	dmin = max(0, dmin) # we can't have a negative value with a log scale.
+        dmin = max(0, dmin)  # we can't have a negative value with a log scale.
         v = 1.0
         while v > dmin:
             v = v / interval
@@ -45,4 +49,3 @@ class T(coord.T):
         dmax = v
 
         return dmin, dmax, interval
-    

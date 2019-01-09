@@ -11,16 +11,15 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-from . import line_style
-from . import color
-from . import chart_object
-from . import object_set
 import math
+
 from . import arrow_doc
 from . import canvas
-
+from . import chart_object
+from . import color
+from . import line_style
+from . import object_set
 from .pychart_types import *
-from types import *
 from .scaling import *
 
 __doc__ = """
@@ -36,17 +35,18 @@ ar.draw()
 a.draw([(10,10), (20,30)])
 """
 
+
 def draw_arrowhead(can, tailx, taily, tipx, tipy, thickness, head_len, style):
-    can.comment("ARROWHEAD tail=(%d,%d) tip=(%d,%d)\n" 
-	        % (tailx, taily, tipx, tipy))
-    
-    halfthickness = thickness/2.0
+    can.comment("ARROWHEAD tail=(%d,%d) tip=(%d,%d)\n"
+                % (tailx, taily, tipx, tipy))
+
+    halfthickness = thickness / 2.0
     dx = tipx - tailx
     dy = tipy - taily
-    arrow_len = math.sqrt(dx*dx + dy*dy)
-    angle = math.atan2(dy, dx) * 360 / (2*math.pi)
+    arrow_len = math.sqrt(dx * dx + dy * dy)
+    angle = math.atan2(dy, dx) * 360 / (2 * math.pi)
     base = arrow_len - head_len
-    can.push_transformation((tailx, taily), None, angle)    
+    can.push_transformation((tailx, taily), None, angle)
 
     can.newpath()
     if style == 0:
@@ -62,13 +62,13 @@ def draw_arrowhead(can, tailx, taily, tipx, tipy, thickness, head_len, style):
         can.lineto(arrow_len, 0)
         can.closepath()
     elif style == 2:
-        can.moveto(base + head_len/2.0, 0)
+        can.moveto(base + head_len / 2.0, 0)
         can.path_arc(base + head_len / 2.0, 0, head_len / 2.0, 1.0, 0, 400)
     elif style == 3:
         can.moveto(base, 0)
-        can.lineto(base + head_len/2.0, -halfthickness)
+        can.lineto(base + head_len / 2.0, -halfthickness)
         can.lineto(arrow_len, 0)
-        can.lineto(base + head_len/2.0, halfthickness)
+        can.lineto(base + head_len / 2.0, halfthickness)
         can.closepath()
     else:
         raise Exception("Arrow style must be a number between 0 and 3.")
@@ -76,15 +76,16 @@ def draw_arrowhead(can, tailx, taily, tipx, tipy, thickness, head_len, style):
     can.pop_transformation()
     can.comment("end ARROWHEAD.\n")
 
+
 def draw_arrowbody(can, tailx, taily, tipx, tipy, head_len):
     dx = tipx - tailx
     dy = tipy - taily
-    arrow_len = math.sqrt(dx*dx + dy*dy)
-    angle = math.atan2(dy, dx) * 360 / (2*math.pi)
+    arrow_len = math.sqrt(dx * dx + dy * dy)
+    angle = math.atan2(dy, dx) * 360 / (2 * math.pi)
     base = arrow_len - head_len
     can.push_transformation((tailx, taily), None, angle)
     can.moveto(0, 0)
-    can.lineto(base+head_len*0.1, 0)
+    can.lineto(base + head_len * 0.1, 0)
     can.stroke()
     can.pop_transformation()
 
@@ -92,21 +93,22 @@ def draw_arrowbody(can, tailx, taily, tipx, tipy, head_len):
 class T(chart_object.T):
     __doc__ = arrow_doc.doc
     keys = {
-        "thickness" : (UnitType, 4,
-                        "The width of the arrow head."),
+        "thickness": (UnitType, 4,
+                      "The width of the arrow head."),
         "head_len": (UnitType, 8,
-                    "The length of the arrow head."),
+                     "The length of the arrow head."),
         "head_color": (color.T, color.default,
-                      "The color of the arrow head."),
+                       "The color of the arrow head."),
         "line_style": (line_style.T, line_style.default,
                        "Line style."),
         "head_style": (IntType, 1,
                        "The value of 0 draws a triangular arrow head. The value of 1 draws a swallow-tail arrow head. The value of 2 draws a circular head. The value of 3 draws a diamond-shaped head.")
-            }
-##AUTOMATICALLY GENERATED
+    }
 
-##END AUTOMATICALLY GENERATED
-    def draw(self, points, can = None):
+    ##AUTOMATICALLY GENERATED
+
+    ##END AUTOMATICALLY GENERATED
+    def draw(self, points, can=None):
         """Parameter <points> specifies the
         list of points the arrow traverses through.
         It should contain at least two points, i.e.,
@@ -118,7 +120,7 @@ class T(chart_object.T):
         assert self.check_integrity()
         xtip = points[-1][0]
         ytip = points[-1][1]
-        
+
         xtail = points[-2][0]
         ytail = points[-2][1]
 
@@ -126,7 +128,7 @@ class T(chart_object.T):
         can.set_line_style(self.line_style)
         if len(points) > 2:
             can.moveto(points[0][0], points[0][1])
-            for i in range(1, len(points)-1):
+            for i in range(1, len(points) - 1):
                 can.lineto(points[i][0], points[i][1])
 
         draw_arrowbody(can, xscale(xtail), yscale(ytail),
@@ -139,27 +141,31 @@ class T(chart_object.T):
                        nscale(self.thickness),
                        nscale(self.head_len),
                        self.head_style)
-        
+
         can.setbb(xtail, ytail)
         can.setbb(xtip, ytip)
 
+
 standards = object_set.T()
+
+
 def _intern(a):
     global standards
     standards.add(a)
     return a
 
+
 a0 = _intern(T(head_style=0))
 a1 = _intern(T(head_style=1))
 a2 = _intern(T(head_style=2))
 a3 = _intern(T(head_style=3))
-gray0 = _intern(T(head_style=0, head_color = color.gray50,
+gray0 = _intern(T(head_style=0, head_color=color.gray50,
                   line_style=line_style.T(color=color.gray50)))
-gray1 = _intern(T(head_style=1, head_color = color.gray50,
+gray1 = _intern(T(head_style=1, head_color=color.gray50,
                   line_style=line_style.T(color=color.gray50)))
-gray2 = _intern(T(head_style=2, head_color = color.gray50,
+gray2 = _intern(T(head_style=2, head_color=color.gray50,
                   line_style=line_style.T(color=color.gray50)))
-gray3 = _intern(T(head_style=3, head_color = color.gray50,
+gray3 = _intern(T(head_style=3, head_color=color.gray50,
                   line_style=line_style.T(color=color.gray50)))
 
 fat0 = _intern(T(head_style=0, head_len=12, thickness=10, line_style=line_style.T(width=2)))
@@ -167,18 +173,16 @@ fat1 = _intern(T(head_style=1, head_len=12, thickness=10, line_style=line_style.
 fat2 = _intern(T(head_style=2, head_len=12, thickness=10, line_style=line_style.T(width=2)))
 fat3 = _intern(T(head_style=3, head_len=12, thickness=10, line_style=line_style.T(width=2)))
 fatgray0 = _intern(T(head_style=0, head_len=12, thickness=10,
-                      head_color = color.gray50,
-                      line_style=line_style.T(width=2, color=color.gray50)))
+                     head_color=color.gray50,
+                     line_style=line_style.T(width=2, color=color.gray50)))
 fatgray1 = _intern(T(head_style=1, head_len=12, thickness=10,
-                      head_color = color.gray50,
-                      line_style=line_style.T(width=2, color=color.gray50)))
+                     head_color=color.gray50,
+                     line_style=line_style.T(width=2, color=color.gray50)))
 fatgray2 = _intern(T(head_style=2, head_len=12, thickness=10,
-                      head_color = color.gray50,
-                      line_style=line_style.T(width=2, color=color.gray50)))
+                     head_color=color.gray50,
+                     line_style=line_style.T(width=2, color=color.gray50)))
 fatgray3 = _intern(T(head_style=3, head_len=12, thickness=10,
-                      head_color = color.gray50,
-                      line_style=line_style.T(width=2, color=color.gray50)))
+                     head_color=color.gray50,
+                     line_style=line_style.T(width=2, color=color.gray50)))
 
 default = a1
-
-

@@ -11,9 +11,10 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-import sys,string,re,math
-from xml.dom.minidom import Document,Comment
-from . import theme
+import math
+import re
+from xml.dom.minidom import Document, Comment
+
 from . import basecanvas
 from . import version
 from .scaling import *
@@ -22,14 +23,16 @@ from .scaling import *
 # system is inverted wrt postscript/PDF - note it's not enough to
 # scale(1,-1) since that turns text into mirror writing with wrong origin
 
-_comment_p = 0                           # whether comment() writes output
+_comment_p = 0  # whether comment() writes output
+
 
 def _svgcolor(color):
     """
     Convert a PyChart color object to an SVG rgb() value.
     See color.py.
     """
-    return 'rgb(%d,%d,%d)' % tuple([int(255*x) for x in [color.r,color.g,color.b]])
+    return 'rgb(%d,%d,%d)' % tuple([int(255 * x) for x in [color.r, color.g, color.b]])
+
 
 def _parse_style_str(s):
     """
@@ -37,12 +40,13 @@ def _parse_style_str(s):
     and parse it into a dictionary like {'stroke' : 'none', 'fill' : 'black'}.
     """
     styledict = {}
-    if s :
+    if s:
         # parses L -> R so later keys overwrite earlier ones
         for keyval in s.split(';'):
             l = keyval.strip().split(':')
             if l and len(l) == 2: styledict[l[0].strip()] = l[1].strip()
     return styledict
+
 
 def _make_style_str(styledict):
     """
@@ -50,19 +54,20 @@ def _make_style_str(styledict):
     """
     s = ''
     for key in list(styledict.keys()):
-        s += "%s:%s;"%(key, styledict[key])
+        s += "%s:%s;" % (key, styledict[key])
     return s
+
 
 def _protect_current_children(elt):
     # If elt is a group, check to see whether there are any non-comment
     # children, and if so, create a new group to hold attributes
     # to avoid affecting previous children.  Return either the current
     # elt or the newly generated group.
-    if (elt.nodeName == 'g') :
-        for kid in elt.childNodes :
+    if (elt.nodeName == 'g'):
+        for kid in elt.childNodes:
             if kid.nodeType != Comment.nodeType:
                 g = elt.ownerDocument.createElement('g')
-                g.setAttribute('auto','')
+                g.setAttribute('auto', '')
                 if _comment_p:
                     g.appendChild(g.ownerDocument.createComment
                                   ('auto-generated group'))
@@ -71,31 +76,32 @@ def _protect_current_children(elt):
                 break
     return elt
 
+
 class T(basecanvas.T):
     def __init__(self, fname):
         basecanvas.T.__init__(self)
         self.__out_fname = fname
-        self.__xmin, self.__xmax, self.__ymin, self.__ymax = 0,0,0,0
+        self.__xmin, self.__xmax, self.__ymin, self.__ymax = 0, 0, 0, 0
         self.__doc = Document()
         self.__doc.appendChild(self.__doc.createComment
-             ('Created by PyChart ' + version.version + ' ' + version.copyright))
-        self.__svg = self.__doc.createElement('svg') # the svg doc
+                               ('Created by PyChart ' + version.version + ' ' + version.copyright))
+        self.__svg = self.__doc.createElement('svg')  # the svg doc
         self.__doc.appendChild(self.__svg)
-        self.__defs = self.__doc.createElement('defs') # for clip paths
+        self.__defs = self.__doc.createElement('defs')  # for clip paths
         self.__svg.appendChild(self.__defs)
         self.__cur_element = self.__svg
-        self.gsave()       # create top-level group for dflt styles
-        self.__update_style(font_family = theme.default_font_family,
-                            font_size = theme.default_font_size,
-                            font_style = 'normal',
-                            font_weight = 'normal',
-                            font_stretch = 'normal',
-                            fill = 'none',
-                            stroke = 'rgb(0,0,0)', #SVG dflt none, PS dflt blk
-                            stroke_width = theme.default_line_width,
-                            stroke_linejoin = 'miter',
-                            stroke_linecap = 'butt',
-                            stroke_dasharray = 'none')
+        self.gsave()  # create top-level group for dflt styles
+        self.__update_style(font_family=theme.default_font_family,
+                            font_size=theme.default_font_size,
+                            font_style='normal',
+                            font_weight='normal',
+                            font_stretch='normal',
+                            fill='none',
+                            stroke='rgb(0,0,0)',  # SVG dflt none, PS dflt blk
+                            stroke_width=theme.default_line_width,
+                            stroke_linejoin='miter',
+                            stroke_linecap='butt',
+                            stroke_dasharray='none')
 
     def __update_style(self, **addstyledict):
         elt = _protect_current_children(self.__cur_element)
@@ -105,7 +111,7 @@ class T(basecanvas.T):
 
         # concat all ancestor style strings to get default styles for this node
         parent, s = elt.parentNode, ''
-        while parent.nodeType != Document.nodeType :
+        while parent.nodeType != Document.nodeType:
             # prepend parent str so later keys will override earlier ones
             s = parent.getAttribute('style') + s
             parent = parent.parentNode
@@ -116,18 +122,18 @@ class T(basecanvas.T):
         # variable names, eg. stroke_width => stroke-width.
         # Also convert all RHS values to strs
         for key in list(addstyledict.keys()):
-            k = re.sub('_','-',key)
-            addstyledict[k] = str(addstyledict[key]) # all vals => strs
-            if (k != key) : del addstyledict[key]
+            k = re.sub('_', '-', key)
+            addstyledict[k] = str(addstyledict[key])  # all vals => strs
+            if (k != key): del addstyledict[key]
 
-        for k in list(addstyledict.keys()) :
-            if (k in my_style_dict or # need to overwrite it
-                (k not in default_style_dict) or # need to set it
-                default_style_dict[k] != addstyledict[k]) : # need to override it
+        for k in list(addstyledict.keys()):
+            if (k in my_style_dict or  # need to overwrite it
+                    (k not in default_style_dict) or  # need to set it
+                    default_style_dict[k] != addstyledict[k]):  # need to override it
                 my_style_dict[k] = addstyledict[k]
 
         s = _make_style_str(my_style_dict)
-        if s : elt.setAttribute('style',s)
+        if s: elt.setAttribute('style', s)
 
         self.__cur_element = elt
 
@@ -136,8 +142,8 @@ class T(basecanvas.T):
 
     # First are a set of methods to start, construct and finalize a path
 
-    def newpath(self):                  # Start a new path
-        if (self.__cur_element.nodeName != 'g') :
+    def newpath(self):  # Start a new path
+        if (self.__cur_element.nodeName != 'g'):
             raise OverflowError("No containing group for newpath")
         # Just insert a new 'path' element into the document
         p = self.__doc.createElement('path')
@@ -147,16 +153,18 @@ class T(basecanvas.T):
     # This set of methods add data to an existing path element,
     # simply add to the 'd' (data) attribute of the path elt
 
-    def moveto(self, x, y):             #
-        if (self.__cur_element.nodeName != 'path') :
+    def moveto(self, x, y):  #
+        if (self.__cur_element.nodeName != 'path'):
             raise OverflowError("No path for moveto")
-        d = ' '.join([self.__cur_element.getAttribute('d'),'M',repr(x),repr(-y)]).strip()
+        d = ' '.join([self.__cur_element.getAttribute('d'), 'M', repr(x), repr(-y)]).strip()
         self.__cur_element.setAttribute('d', d)
+
     def lineto(self, x, y):
-        if (self.__cur_element.nodeName != 'path') :
+        if (self.__cur_element.nodeName != 'path'):
             raise OverflowError("No path for lineto")
-        d = ' '.join([self.__cur_element.getAttribute('d'),'L',repr(x),repr(-y)]).strip()
+        d = ' '.join([self.__cur_element.getAttribute('d'), 'L', repr(x), repr(-y)]).strip()
         self.__cur_element.setAttribute('d', d)
+
     def path_arc(self, x, y, radius, ratio, start_angle, end_angle):
         # mimic PS 'arc' given radius, yr/xr (=eccentricity), start and
         # end angles.  PS arc draws from CP (if exists) to arc start,
@@ -166,52 +174,54 @@ class T(basecanvas.T):
         # A xr yr rotate majorArcFlag counterclockwiseFlag xe ye
         # We don't use rotate(=0) and flipped axes => all arcs are clockwise
 
-        if (self.__cur_element.nodeName != 'path') :
+        if (self.__cur_element.nodeName != 'path'):
             raise OverflowError("No path for path_arc")
 
         self.comment('x=%g, y=%g, r=%g, :=%g, %g-%g'
-                     % (x,y,radius,ratio,start_angle,end_angle))
+                     % (x, y, radius, ratio, start_angle, end_angle))
 
-        xs = x+radius*math.cos(2*math.pi/360.*start_angle)
-        ys = y+ratio*radius*math.sin(2*math.pi/360.*start_angle)
-        xe = x+radius*math.cos(2*math.pi/360.*end_angle)
-        ye = y+ratio*radius*math.sin(2*math.pi/360.*end_angle)
-        if (end_angle < start_angle) :  # make end bigger than start
-            while end_angle <= start_angle: # '<=' so 360->0 becomes 360->720
+        xs = x + radius * math.cos(2 * math.pi / 360. * start_angle)
+        ys = y + ratio * radius * math.sin(2 * math.pi / 360. * start_angle)
+        xe = x + radius * math.cos(2 * math.pi / 360. * end_angle)
+        ye = y + ratio * radius * math.sin(2 * math.pi / 360. * end_angle)
+        if (end_angle < start_angle):  # make end bigger than start
+            while end_angle <= start_angle:  # '<=' so 360->0 becomes 360->720
                 end_angle += 360
-        full_circ = (end_angle - start_angle >= 360) # draw a full circle?
+        full_circ = (end_angle - start_angle >= 360)  # draw a full circle?
 
         d = self.__cur_element.getAttribute('d')
-        d += ' %s %g %g' % (d and 'L' or 'M',xs,-ys) # draw from CP, if exists
-        if (radius > 0) : # skip, eg. 0-radius 'rounded' corners which blowup
-            if (full_circ) :
+        d += ' %s %g %g' % (d and 'L' or 'M', xs, -ys)  # draw from CP, if exists
+        if (radius > 0):  # skip, eg. 0-radius 'rounded' corners which blowup
+            if (full_circ):
                 # If we're drawing a full circle, move to the end coord
                 # and draw half a circle to the reflected xe,ye
-                d += ' M %g %g A %g %g 0 1 0 %g %g'%(xe,-ye,
-                                                     radius,radius*ratio,
-                                                     2*x-xe,-(2*y-ye))
+                d += ' M %g %g A %g %g 0 1 0 %g %g' % (xe, -ye,
+                                                       radius, radius * ratio,
+                                                       2 * x - xe, -(2 * y - ye))
             # Draw arc from the CP (either reflected xe,ye for full circle else
             # xs,ys) to the end coord - note with full_circ the
             # 'bigArcFlag' value is moot, with exactly 180deg left to draw
-            d += ' A %g %g 0 %d 0 %g %g' % (radius,radius*ratio,
-                                            end_angle-start_angle>180,
-                                            xe,-ye)
-        self.__cur_element.setAttribute('d',d.strip())
-    def curveto(self, x1,y1,x2,y2,x3,y3):
+            d += ' A %g %g 0 %d 0 %g %g' % (radius, radius * ratio,
+                                            end_angle - start_angle > 180,
+                                            xe, -ye)
+        self.__cur_element.setAttribute('d', d.strip())
+
+    def curveto(self, x1, y1, x2, y2, x3, y3):
         # Equivalent of PostScript's x1 y1 x2 y2 x3 y3 curveto which
         # draws a cubic bezier curve from curr pt to x3,y3 with ctrl points
         # x1,y1, and x2,y2
         # In SVG this is just d='[M x0 y0] C x1 y1 x2 y2 x3 y3'
-        #! I can't find an example of this being used to test it
-        if (self.__cur_element.nodeNode != 'path') :
+        # ! I can't find an example of this being used to test it
+        if (self.__cur_element.nodeNode != 'path'):
             raise OverflowError("No path for curveto")
-        d = ' '.join([self.__cur_element.getAttribute('d'),'C',
-                      repr(x1),repr(-y1),repr(x2),repr(-y2),repr(x3),repr(-y3),]).strip()
+        d = ' '.join([self.__cur_element.getAttribute('d'), 'C',
+                      repr(x1), repr(-y1), repr(x2), repr(-y2), repr(x3), repr(-y3), ]).strip()
         self.__cur_element.setAttribute('d', d)
-    def closepath(self):                # close back to start of path
-        if (self.__cur_element.nodeName != 'path') :
+
+    def closepath(self):  # close back to start of path
+        if (self.__cur_element.nodeName != 'path'):
             raise OverflowError("No path for closepath")
-        d = ' '.join([self.__cur_element.getAttribute('d'),'Z']).strip()
+        d = ' '.join([self.__cur_element.getAttribute('d'), 'Z']).strip()
         self.__cur_element.setAttribute('d', d)
 
     # Next we have three methods for finalizing a path element,
@@ -219,54 +229,58 @@ class T(basecanvas.T):
     # canvas.polygon() can generate fill/clip cmds with
     # no corresponding path so just ignore them
     def stroke(self):
-        if (self.__cur_element.nodeName != 'path') :
+        if (self.__cur_element.nodeName != 'path'):
             self.comment('No path - ignoring stroke')
             return
         self.__update_style(fill='none')
         self.__cur_element = self.__cur_element.parentNode
+
     def fill(self):
-        if (self.__cur_element.nodeName != 'path') :
+        if (self.__cur_element.nodeName != 'path'):
             self.comment('No path - ignoring fill')
             return
         self.__update_style(stroke='none')
         self.__cur_element = self.__cur_element.parentNode
+
     def clip_sub(self):
-        if (self.__cur_element.nodeName != 'path') :
+        if (self.__cur_element.nodeName != 'path'):
             self.comment('No path - ignoring clip')
             return
 
         # remove the current path from the tree ...
         p = self.__cur_element
-        self.__cur_element=p.parentNode
+        self.__cur_element = p.parentNode
         self.__cur_element.removeChild(p)
 
         # ... add it to a clipPath elt in the defs section
         clip = self.__doc.createElement('clipPath')
-        clipid = 'clip'+repr(len(self.__defs.childNodes))
-        clip.setAttribute('id',clipid)
+        clipid = 'clip' + repr(len(self.__defs.childNodes))
+        clip.setAttribute('id', clipid)
         clip.appendChild(p)
         self.__defs.appendChild(clip)
 
         # ... update the local style to point to it
-        self.__update_style(clip_path = 'url(#%s)'%clipid)
+        self.__update_style(clip_path='url(#%s)' % clipid)
 
     # The text_xxx routines specify the start/end and contents of text
     def text_begin(self):
-        if (self.__cur_element.nodeName != 'g') :
+        if (self.__cur_element.nodeName != 'g'):
             raise ValueError("No group for text block")
         t = self.__doc.createElement('text')
         self.__cur_element.appendChild(t)
         self.__cur_element = t
+
     def text_moveto(self, x, y, angle):
-        if (self.__cur_element.nodeName != 'text') :
+        if (self.__cur_element.nodeName != 'text'):
             raise ValueError("No text for moveto")
-        self.__cur_element.setAttribute('x',repr(x))
-        self.__cur_element.setAttribute('y',repr(-y))
-        if (angle) :
+        self.__cur_element.setAttribute('x', repr(x))
+        self.__cur_element.setAttribute('y', repr(-y))
+        if (angle):
             self.__cur_element.setAttribute('transform',
-                                        'rotate(%g,%g,%g)' % (-angle,x,-y))
+                                            'rotate(%g,%g,%g)' % (-angle, x, -y))
+
     def text_show(self, font_name, size, color, string):
-        if (self.__cur_element.nodeName != 'text') :
+        if (self.__cur_element.nodeName != 'text'):
             raise ValueError("No text for show")
 
         # PyChart constructs a postscript font name, for example:
@@ -286,34 +300,36 @@ class T(basecanvas.T):
         # font-style = normal (aka roman) | italic | oblique
         # font-weight = normal | bold (aka demi?)
         # font-stretch = normal | wider | narrower | ultra-condensed |
-        #	extra-condensed | condensed | semi-condensed |
-        #	semi-expanded | expanded | extra-expanded | ultra-expanded
+        #          extra-condensed | condensed | semi-condensed |
+        #          semi-expanded | expanded | extra-expanded | ultra-expanded
         # ('narrow' seems to correspond to 'condensed')
         font_name, modifiers = re.match(r'([^-]*)(-.*)?', font_name).groups()
-        if font_name == 'Courier' : font_name = 'CourierNew'
+        if font_name == 'Courier': font_name = 'CourierNew'
         font_style = font_weight = font_stretch = 'normal'
-        if modifiers :
-            if re.search('Italic',modifiers) : font_style = 'italic'
-            elif re.search('Oblique',modifiers) : font_style = 'oblique'
-            if re.search('Bold|Demi',modifiers) : font_weight = 'bold'
-            if re.search('Narrow',modifiers) : font_stretch = 'condensed'
-        #! translate ascii symbol font chars -> unicode (see www.unicode.org)
-        #! http://www.unicode.org/Public/MAPPINGS/VENDORS/ADOBE/symbol.txt
-        #! but xml Text element writes unicode chars as '?' to XML file...
-        string = re.sub(r'\\([()])',r'\1',string) # unescape brackets
+        if modifiers:
+            if re.search('Italic', modifiers):
+                font_style = 'italic'
+            elif re.search('Oblique', modifiers):
+                font_style = 'oblique'
+            if re.search('Bold|Demi', modifiers): font_weight = 'bold'
+            if re.search('Narrow', modifiers): font_stretch = 'condensed'
+        # ! translate ascii symbol font chars -> unicode (see www.unicode.org)
+        # ! http://www.unicode.org/Public/MAPPINGS/VENDORS/ADOBE/symbol.txt
+        # ! but xml Text element writes unicode chars as '?' to XML file...
+        string = re.sub(r'\\([()])', r'\1', string)  # unescape brackets
         self.__update_style(fill=_svgcolor(color),
-                          stroke='none',
-                          font_family=font_name,
-                          font_size=size,
-                          font_style=font_style,
-                          font_weight=font_weight,
-                          font_stretch=font_stretch)
+                            stroke='none',
+                            font_family=font_name,
+                            font_size=size,
+                            font_style=font_style,
+                            font_weight=font_weight,
+                            font_stretch=font_stretch)
         self.__cur_element.appendChild(self.__doc.createTextNode(string.encode('utf-8')))
+
     def text_end(self):
-        if (self.__cur_element.nodeName != 'text') :
+        if (self.__cur_element.nodeName != 'text'):
             raise ValueError("No text for close")
         self.__cur_element = self.__cur_element.parentNode
-
 
     # Three methods that change the local style of elements
     # If applied to a group, they persist until the next grestore,
@@ -322,41 +338,46 @@ class T(basecanvas.T):
     # behavior, it appears to correspond to reflect mode of use of this API
     def set_fill_color(self, color):
         self.__update_style(fill=_svgcolor(color))
+
     def set_stroke_color(self, color):
         self.__update_style(stroke=_svgcolor(color))
+
     def set_line_style(self, style):  # see line_style.py
-        linecap = {0:'butt', 1:'round', 2:'square'}
-        linejoin = {0:'miter', 1:'round', 2:'bevel'}
-        if style.dash: dash = ','.join(map(str,style.dash))
-        else : dash = 'none'
-        self.__update_style(stroke_width = style.width,
-                          stroke = _svgcolor(style.color),
-                          stroke_linecap = linecap[style.cap_style],
-                          stroke_linejoin = linejoin[style.join_style],
-                          stroke_dasharray = dash)
+        linecap = {0: 'butt', 1: 'round', 2: 'square'}
+        linejoin = {0: 'miter', 1: 'round', 2: 'bevel'}
+        if style.dash:
+            dash = ','.join(map(str, style.dash))
+        else:
+            dash = 'none'
+        self.__update_style(stroke_width=style.width,
+                            stroke=_svgcolor(style.color),
+                            stroke_linecap=linecap[style.cap_style],
+                            stroke_linejoin=linejoin[style.join_style],
+                            stroke_dasharray=dash)
 
     # gsave & grestore respectively push & pop a new context to hold
     # new style and transform parameters.  push/pop transformation are
     # similar but explicitly specify a coordinate transform at the
     # same time
     def gsave(self):
-        if (self.__cur_element.nodeName not in ['g','svg']) :
+        if (self.__cur_element.nodeName not in ['g', 'svg']):
             raise ValueError("No group for gsave")
         g = self.__doc.createElement('g')
         self.__cur_element.appendChild(g)
         self.__cur_element = g
+
     def grestore(self):
         if (self.__cur_element.nodeName != 'g'):
             raise ValueError("No group for grestore")
         # first pop off any auto-generated groups (see protectCurrentChildren)
-        while (self.__cur_element.hasAttribute('auto')) :
+        while (self.__cur_element.hasAttribute('auto')):
             self.__cur_element.removeAttribute('auto')
             self.__cur_element = self.__cur_element.parentNode
         # then pop off the original caller-generated group
         self.__cur_element = self.__cur_element.parentNode
 
     def push_transformation(self, baseloc, scale, angle, in_text=0):
-        #? in_text arg appears to always be ignored
+        # ? in_text arg appears to always be ignored
 
         # In some cases this gets called after newpath, with
         # corresonding pop_transformation called after the path is
@@ -371,7 +392,7 @@ class T(basecanvas.T):
         elt = self.__cur_element
         if elt.nodeName == 'g':
             elt = None
-        elif (elt.nodeName == 'path' and not elt.hasAttribute('d')) :
+        elif (elt.nodeName == 'path' and not elt.hasAttribute('d')):
             g = elt.parentNode
             g.removeChild(elt)
             self.__cur_element = g
@@ -379,25 +400,25 @@ class T(basecanvas.T):
             raise ValueError("Illegal placement of push_transformation")
 
         t = ''
-        if baseloc :
-            t += 'translate(%g,%g) '%(baseloc[0],-baseloc[1])
-        if angle :
-            t += 'rotate(%g) '%-angle
-        if scale :
-            t += 'scale(%g,%g) '%tuple(scale)
+        if baseloc:
+            t += 'translate(%g,%g) ' % (baseloc[0], -baseloc[1])
+        if angle:
+            t += 'rotate(%g) ' % -angle
+        if scale:
+            t += 'scale(%g,%g) ' % tuple(scale)
 
         self.gsave()
-        self.__cur_element.setAttribute('transform',t.strip())
-        if elt:                         # elt has incomplete 'path' or None
+        self.__cur_element.setAttribute('transform', t.strip())
+        if elt:  # elt has incomplete 'path' or None
             self.__cur_element.appendChild(elt)
             self.__cur_element = elt
 
-    def pop_transformation(self, in_text=0): #? in_text unused?
+    def pop_transformation(self, in_text=0):  # ? in_text unused?
         self.grestore()
 
     # If verbose, add comments to the output stream (helps debugging)
     def comment(self, string):
-        if _comment_p :
+        if _comment_p:
             self.__cur_element.appendChild(self.__doc.createComment(string))
 
     # The verbatim method is currently not supported - presumably with
@@ -410,26 +431,26 @@ class T(basecanvas.T):
     # DOM document to XML text to the specified file (or stdout)
     def close(self):
         basecanvas.T.close(self)
-        self.grestore()           # matching the gsave in __init__
-        if (self.__cur_element.nodeName != 'svg') :
+        self.grestore()  # matching the gsave in __init__
+        if (self.__cur_element.nodeName != 'svg'):
             raise ValueError("Incomplete document at close!")
 
         # Don't bother to output an empty document - this can happen
         # when we get close()d immediately by theme reinit
-        if (len(self.__svg.childNodes[-1].childNodes) == 0) :
+        if (len(self.__svg.childNodes[-1].childNodes) == 0):
             return
 
         fp, need_close = self.open_output(self.__out_fname)
         bbox = theme.adjust_bounding_box([self.__xmin, self.__ymin,
                                           self.__xmax, self.__ymax])
-        self.__svg.setAttribute('viewBox','%g %g %g %g'
+        self.__svg.setAttribute('viewBox', '%g %g %g %g'
                                 % (xscale(bbox[0]),
                                    -yscale(bbox[3]),
-                                   xscale(bbox[2])-xscale(bbox[0]),
-                                   yscale(bbox[3])-yscale(bbox[1])))
-        self.__svg.setAttribute('xmlns','http://www.w3.org/2000/svg')
-        self.__svg.setAttribute('xmlns:xlink','http://www.w3.org/1999/xlink')
+                                   xscale(bbox[2]) - xscale(bbox[0]),
+                                   yscale(bbox[3]) - yscale(bbox[1])))
+        self.__svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+        self.__svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
 
-        self.__doc.writexml(fp,'','  ','\n')
+        self.__doc.writexml(fp, '', '  ', '\n')
         if need_close:
             fp.close()

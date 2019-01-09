@@ -12,15 +12,15 @@
 # for more details.
 #
 import math
+import re
 import sys
 import time
-import re
 
 from . import font
 from . import pychart_util
-from . import theme
 from . import version
 from .scaling import *
+
 
 def _compute_bounding_box(points):
     """Given the list of coordinates (x,y), this procedure computes
@@ -33,6 +33,7 @@ def _compute_bounding_box(points):
         ymax = max(ymax, p[1])
     return (xmin, ymin, xmax, ymax)
 
+
 def _intersect_box(b1, b2):
     xmin = max(b1[0], b2[0])
     ymin = max(b1[1], b2[1])
@@ -40,22 +41,27 @@ def _intersect_box(b1, b2):
     ymax = min(b1[3], b2[3])
     return (xmin, ymin, xmax, ymax)
 
+
 def invisible_p(x, y):
     """Return true if the point (X, Y) is visible in the canvas."""
     if x < -499999 or y < -499999:
         return 1
     return 0
 
+
 def to_radian(deg):
-    return deg*2*math.pi / 360.0
+    return deg * 2 * math.pi / 360.0
+
 
 def midpoint(p1, p2):
-    return ( (p1[0]+p2[0])/2.0, (p1[1]+p2[1])/2.0 )
+    return ((p1[0] + p2[0]) / 2.0, (p1[1] + p2[1]) / 2.0)
 
 
 active_canvases = []
 
 InvalidCoord = 999999
+
+
 class T(object):
     def __init__(self):
         global active_canvases
@@ -160,7 +166,7 @@ class T(object):
             self.lineto(xscale(point[0]), yscale(point[1]))
         self.closepath()
 
-    def polygon(self, edge_style, pat, points, shadow = None):
+    def polygon(self, edge_style, pat, points, shadow=None):
         """Draw a polygon with EDGE_STYLE, fill with PAT, and the edges
         POINTS. POINTS is a sequence of coordinates, e.g., ((10,10), (15,5),
         (20,8)). SHADOW is either None or a tuple (XDELTA, YDELTA,
@@ -169,16 +175,16 @@ class T(object):
 
         if pat:
             self.comment("POLYGON points=[%s] pat=[%s]"
-                        % (str(points), str(pat)))
+                         % (str(points), str(pat)))
             (xmin, ymin, xmax, ymax) = _compute_bounding_box(points)
 
             if shadow:
                 xoff, yoff, shadow_pat = shadow
                 self.gsave()
-                self._path_polygon(list(map(lambda p, xoff=xoff, yoff=yoff: (p[0]+xoff, p[1]+yoff), points)))
+                self._path_polygon(list(map(lambda p, xoff=xoff, yoff=yoff: (p[0] + xoff, p[1] + yoff), points)))
                 self.clip_sub()
-                self.fill_with_pattern(shadow_pat, xmin+xoff, ymin+yoff,
-                                       xmax+xoff, ymax+yoff)
+                self.fill_with_pattern(shadow_pat, xmin + xoff, ymin + yoff,
+                                       xmax + xoff, ymax + yoff)
                 self.grestore()
 
             self.gsave()
@@ -198,23 +204,23 @@ class T(object):
         self.rectangle(None, pat, x1, y1, x2, y2)
         self.__xmax, self.__xmin, self.__ymax, self.__ymin = xmax, xmin, ymax, ymin
 
-    def rectangle(self, edge_style, pat, x1, y1, x2, y2, shadow = None):
+    def rectangle(self, edge_style, pat, x1, y1, x2, y2, shadow=None):
         """Draw a rectangle with EDGE_STYLE, fill with PAT, and the
         bounding box (X1, Y1, X2, Y2).  SHADOW is either None or a
         tuple (XDELTA, YDELTA, fillstyle). If non-null, a shadow of
         FILLSTYLE is drawn beneath the polygon at the offset of
         (XDELTA, YDELTA)."""
 
-        self.polygon(edge_style, pat, [(x1,y1), (x1,y2), (x2,y2), (x2, y1)],
+        self.polygon(edge_style, pat, [(x1, y1), (x1, y2), (x2, y2), (x2, y1)],
                      shadow)
 
     def _path_ellipsis(self, x, y, radius, ratio, start_angle, end_angle):
-        self.setbb(x - radius, y - radius*ratio)
-        self.setbb(x + radius, y + radius*ratio)
+        self.setbb(x - radius, y - radius * ratio)
+        self.setbb(x + radius, y + radius * ratio)
         oradius = nscale(radius)
         centerx, centery = xscale(x), yscale(y)
-        startx, starty = centerx+oradius * math.cos(to_radian(start_angle)), \
-                         centery+oradius * math.sin(to_radian(start_angle))
+        startx, starty = centerx + oradius * math.cos(to_radian(start_angle)), \
+                         centery + oradius * math.sin(to_radian(start_angle))
         self.moveto(centerx, centery)
         if start_angle % 360 != end_angle % 360:
             self.moveto(centerx, centery)
@@ -222,10 +228,10 @@ class T(object):
         else:
             self.moveto(startx, starty)
         self.path_arc(xscale(x), yscale(y), nscale(radius),
-                     ratio, start_angle, end_angle)
+                      ratio, start_angle, end_angle)
         self.closepath()
 
-    def ellipsis(self, line_style, pattern, x, y, radius, ratio = 1.0,
+    def ellipsis(self, line_style, pattern, x, y, radius, ratio=1.0,
                  start_angle=0, end_angle=360, shadow=None):
         """Draw an ellipsis with line_style and fill PATTERN. The center is \
         (X, Y), X radius is RADIUS, and Y radius is RADIUS*RATIO, whose \
@@ -233,7 +239,7 @@ class T(object):
         YDELTA, fillstyle). If non-null, a shadow of FILLSTYLE is drawn
         beneath the polygon at the offset of (XDELTA, YDELTA)."""
 
-        if invisible_p(x + radius, y + radius*ratio):
+        if invisible_p(x + radius, y + radius * ratio):
             return
 
         if pattern:
@@ -241,22 +247,22 @@ class T(object):
                 x_off, y_off, shadow_pat = shadow
                 self.gsave()
                 self.newpath()
-                self._path_ellipsis(x+x_off, y+y_off, radius, ratio,
+                self._path_ellipsis(x + x_off, y + y_off, radius, ratio,
                                     start_angle, end_angle)
                 self.clip_sub()
                 self.fill_with_pattern(shadow_pat,
-                                       x-radius*2+x_off,
-                                       y-radius*ratio*2+y_off,
-                                       x+radius*2+x_off,
-                                       y+radius*ratio*2+y_off)
+                                       x - radius * 2 + x_off,
+                                       y - radius * ratio * 2 + y_off,
+                                       x + radius * 2 + x_off,
+                                       y + radius * ratio * 2 + y_off)
                 self.grestore()
             self.gsave()
             self.newpath()
             self._path_ellipsis(x, y, radius, ratio, start_angle, end_angle)
             self.clip_sub()
             self.fill_with_pattern(pattern,
-                                   (x-radius*2), (y-radius*ratio*2),
-                                   (x+radius*2), (y+radius*ratio*2))
+                                   (x - radius * 2), (y - radius * ratio * 2),
+                                   (x + radius * 2), (y + radius * ratio * 2))
             self.grestore()
         if line_style:
             self.set_line_style(line_style)
@@ -264,13 +270,13 @@ class T(object):
             self._path_ellipsis(x, y, radius, ratio, start_angle, end_angle)
             self.stroke()
 
-    def clip_ellipsis(self, x, y, radius, ratio = 1.0):
+    def clip_ellipsis(self, x, y, radius, ratio=1.0):
         """Create an elliptical clip region. You must call endclip() after
         you completed drawing. See also the ellipsis method."""
 
         self.gsave()
         self.newpath()
-        self.moveto(xscale(x)+nscale(radius), yscale(y))
+        self.moveto(xscale(x) + nscale(radius), yscale(y))
         self.path_arc(xscale(x), yscale(y), nscale(radius), ratio, 0, 360)
         self.closepath()
         self.__clip_stack.append(self.__clip_box)
@@ -330,8 +336,8 @@ canvas.endclip()
             elif n == 3:
                 x4 = midpoint(x3, points[i])
                 self.curveto(xscale(x2[0]), xscale(x2[1]),
-                            xscale(x3[0]), xscale(x3[1]),
-                            xscale(x4[0]), xscale(x4[1]))
+                             xscale(x3[0]), xscale(x3[1]),
+                             xscale(x4[0]), xscale(x4[1]))
                 n = 1
             i += 1
             if n == 1:
@@ -340,8 +346,8 @@ canvas.endclip()
                 self.lineto(xscale(x2[0]), xscale(x2[1]))
             if n == 3:
                 self.curveto(xscale(x2[0]), xscale(x2[1]),
-                            xscale(x2[0]), xscale(x2[1]),
-                            xscale(x3[0]), xscale(x3[1]))
+                             xscale(x2[0]), xscale(x2[1]),
+                             xscale(x3[0]), xscale(x3[1]))
             self.stroke()
 
     def line(self, style, x1, y1, x2, y2):
@@ -378,12 +384,12 @@ canvas.endclip()
     def _path_round_rectangle(self, x1, y1, x2, y2, radius):
         self.moveto(xscale(x1 + radius), yscale(y1))
         self.lineto(xscale(x2 - radius), yscale(y1))
-        self.path_arc(xscale(x2-radius), yscale(y1+radius), nscale(radius), 1, 270, 360)
-        self.lineto(xscale(x2), yscale(y2-radius))
-        self.path_arc(xscale(x2-radius), yscale(y2-radius), nscale(radius), 1, 0, 90)
-        self.lineto(xscale(x1+radius), yscale(y2))
+        self.path_arc(xscale(x2 - radius), yscale(y1 + radius), nscale(radius), 1, 270, 360)
+        self.lineto(xscale(x2), yscale(y2 - radius))
+        self.path_arc(xscale(x2 - radius), yscale(y2 - radius), nscale(radius), 1, 0, 90)
+        self.lineto(xscale(x1 + radius), yscale(y2))
         self.path_arc(xscale(x1 + radius), yscale(y2 - radius), nscale(radius), 1, 90, 180)
-        self.lineto(xscale(x1), xscale(y1+radius))
+        self.lineto(xscale(x1), xscale(y1 + radius))
         self.path_arc(xscale(x1 + radius), yscale(y1 + radius), nscale(radius), 1, 180, 270)
 
     def round_rectangle(self, style, fill, x1, y1, x2, y2, radius, shadow=None):
@@ -397,17 +403,17 @@ canvas.endclip()
         if fill:
             if shadow:
                 x_off, y_off, shadow_fill = shadow
-                self.gsave();
+                self.gsave()
                 self.newpath()
-                self._path_round_rectangle(x1+x_off, y1+y_off, x2+x_off, y2+y_off,
+                self._path_round_rectangle(x1 + x_off, y1 + y_off, x2 + x_off, y2 + y_off,
                                            radius)
                 self.closepath()
                 self.clip_sub()
-                self.fill_with_pattern(shadow_fill, x1+x_off, y1+y_off,
-                                       x2+x_off, y2+y_off)
+                self.fill_with_pattern(shadow_fill, x1 + x_off, y1 + y_off,
+                                       x2 + x_off, y2 + y_off)
                 self.grestore()
 
-            self.gsave();
+            self.gsave()
             self.newpath()
             self._path_round_rectangle(x1, y1, x2, y2, radius)
             self.closepath()
@@ -433,8 +439,8 @@ canvas.endclip()
 
         # rectangle(line_style.default, None, x+xmin, y+ymin, x+xmax, y+ymax)
         # ellipsis(line_style.default, None, x, y, 1)
-        self.setbb(x+xmin, y+ymin)
-        self.setbb(x+xmax, y+ymax)
+        self.setbb(x + xmin, y + ymin)
+        self.setbb(x + xmax, y + ymax)
 
         (halign, valign, angle) = font.get_align(str)
 
@@ -450,8 +456,8 @@ canvas.endclip()
             y = font.unaligned_text_height(str) / 2.0
 
         (xmin, xmax, ymin, ymax) = font.get_dimension(org_str)
-        self.setbb(x+xmin, y_org+y+ymin)
-        self.setbb(x+xmax, y_org+y+ymax)
+        self.setbb(x + xmin, y_org + y + ymin)
+        self.setbb(x + xmax, y_org + y + ymax)
         itr = font.text_iterator(None)
 
         max_width = 0
@@ -488,7 +494,7 @@ canvas.endclip()
             y = y - cur_height
             self.comment("cury: %d hei %d str %s\n" % (cur_y, cur_height, strs))
             if halign == 'C':
-                cur_x = -cur_width/2.0
+                cur_x = -cur_width / 2.0
             elif halign == 'R':
                 cur_x = -cur_width
             else:
@@ -497,7 +503,7 @@ canvas.endclip()
             rel_x, rel_y = pychart_util.rotate(cur_x, cur_y, angle)
             self.text_begin()
             self.text_moveto(xscale(base_x + rel_x),
-                            yscale(base_y + rel_y), angle)
+                             yscale(base_y + rel_y), angle)
             for segment in strs:
                 font_name, size, color, str = segment
                 self.text_show(font_name, nscale(size), color, str)

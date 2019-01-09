@@ -11,9 +11,11 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-from . import coord
 import math
+
+from . import coord
 from . import pychart_util
+
 
 class T(coord.T):
     def get_canvas_pos(self, size, val, min, max):
@@ -26,12 +28,13 @@ class T(coord.T):
             v.append(x)
             x += interval
         return v
+
     def get_min_max(self, dmin, dmax, interval):
         if not interval:
             if dmax == dmin:
                 interval = 10
             else:
-                interval = 10 ** (float(int(math.log(dmax-dmin)/math.log(10))))
+                interval = 10 ** (float(int(math.log(dmax - dmin) / math.log(10))))
         dmin = min(dmin, pychart_util.round_down(dmin, interval))
-        dmax = max(dmax, pychart_util.round_up(dmax, interval) + interval/2.0)
+        dmax = max(dmax, pychart_util.round_up(dmax, interval) + interval / 2.0)
         return dmin, dmax, interval
