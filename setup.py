@@ -28,7 +28,7 @@ setup(name='purr',
       author_email='Oleg Smirnov <osmirnov@gmail.com>',
       url='https://github.com/ska-sa/purr',
       packages=['Purr', 'Purr/Plugins', 'Purr/Plugins/local_pychart', 'Purr/Plugins/local_pychart/afm'],
-      requires=['kittens', 'PyQt4', 'PIL', 'scipy', 'astropy', 'future'],
+      install_requires=['kittens', 'pillow', 'scipy', 'astropy', 'future'],  # 'PyQt4',
       scripts=['Purr/purr.py', 'Purr/purr'],
       data_files=data_files,
      )
