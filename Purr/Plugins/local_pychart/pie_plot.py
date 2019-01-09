@@ -33,7 +33,7 @@ class T(chart_object.T):
         "radius": (UnitType, None, "The radius of the pie."),
         "line_style": (line_style.T, line_style.default, "The style of the outer edge of each pie slice."),
 
-        "fill_styles": (ListType, fill_style.standards.list(),
+        "fill_styles": (ListType, fill_style.standards.list(),  # type: ignore
                         """The fill style of each item. The length of the
                         list should be equal to the length of the data. 
                         """),

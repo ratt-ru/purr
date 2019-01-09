@@ -23,7 +23,7 @@ from . import pychart_util
 from .pychart_types import *
 
 default_width = 1.2
-line_style_itr = None
+line_style_itr = iter([])  # type: ignore
 
 _keys = {
     'data': (AnyType, None, pychart_util.data_desc),

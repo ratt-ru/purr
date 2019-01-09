@@ -30,7 +30,7 @@ class T(chart_object.T):
         "center": (CoordType, None, ""),
         "base_radius": (NumberType, None, ""),
         "line_style": (line_style.T, line_style.T(color=color.black, width=0.3), ""),
-        "fill_styles": (list, fill_style.standards.list()[:],
+        "fill_styles": (list, fill_style.standards.list()[:],  # type: ignore
                         """The fill style of each item. The length of the
                         list should be equal to the length of the data.
                         """),

@@ -21,7 +21,7 @@ from . import theme
 from . import pychart_util
 from .pychart_types import *
 
-fill_styles = None
+fill_styles = iter([])  # type: ignore
 
 _keys = {
     "direction": (StringType, "vertical",
