@@ -9,11 +9,11 @@ import Kittens.widgets
 from PyQt4.Qt import (QWidget, QDialog, QWizard, QWizardPage, QButtonGroup, QVBoxLayout,
                       QRadioButton, QObject, SIGNAL, QHBoxLayout, QLineEdit, QPushButton,
                       QFileDialog, QMessageBox, QHeaderView, QAbstractItemView,
-                      QFontMetrics, QFont, QTreeWidget, QSizePolicy, QMenuQMimeData, QUrl,
+                      QFontMetrics, QFont, QTreeWidget, QSizePolicy, QMenu, QMimeData, QUrl,
                       QComboBox, QMimeData, QTreeWidgetItem, Qt, QVariant, QApplication,
                       QClipboard, QLabel, QSplitter, QTextEdit, QTextDocument, QSize,
                       QFrame, QStackedWidget, QWidgetAction, QMenu, QTextBrowser, QPoint,
-                      QDragQListWidget, QListWidgetItem, QMainWindow, QToolBar, QTimer,
+                      QDrag, QListWidget, QListWidgetItem, QMainWindow, QToolBar, QTimer,
                       QCoreApplication, QEventLoop, QCursor, QListWidget)
 
 import Purr
