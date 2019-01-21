@@ -10,7 +10,9 @@ RUN docker-apt-install \
 RUN docker-apt-install \
     wget \
     makems \
-    meqtrees-timba
+    meqtrees-timba \
+    libboost-python-dev \
+    python-casacore
 
 ADD . /code/purr
 RUN pip install /code/purr
