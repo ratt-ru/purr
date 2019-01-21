@@ -11,10 +11,11 @@ RUN docker-apt-install \
     wget \
     makems
 
-ADD . /code
-RUN pip3 install /code
+ADD . /code/purr
+RUN pip3 install /code/purr
 
 # get the test from pyxis
+WORKDIR /code
 RUN wget https://github.com/ska-sa/pyxis/archive/v1.6.2.tar.gz
 RUN tar -xvf v1.6.2.tar.gz
 WORKDIR /code/pyxis-1.6.2
