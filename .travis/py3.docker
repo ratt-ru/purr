@@ -9,7 +9,8 @@ RUN docker-apt-install \
 
 RUN docker-apt-install \
     wget \
-    makems
+    makems \
+    meqtrees-timba
 
 ADD . /code/purr
 RUN pip3 install /code/purr
