@@ -12,7 +12,8 @@ RUN docker-apt-install \
     makems \
     meqtrees-timba \
     libboost-python-dev \
-    python-casacore
+    python-casacore \
+    meqtrees-cattery
 
 ADD . /code/purr
 RUN pip3 install /code/purr
