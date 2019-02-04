@@ -1,4 +1,4 @@
-FROM kernsuite/base:4
+FROM kernsuite/base:5
 RUN docker-apt-install \
     python3-pyqt4 \
     python3-pil \
@@ -13,7 +13,12 @@ RUN docker-apt-install \
     meqtrees-timba \
     libboost-python-dev \
     python-casacore \
-    meqtrees-cattery
+    casacore-dev \
+    wcslib-dev \
+    libcfitsio-dev
+
+RUN pip3 install meqtrees-cattery
+RUN pip3 install owlcat
 
 ADD . /code/purr
 RUN pip3 install /code/purr
