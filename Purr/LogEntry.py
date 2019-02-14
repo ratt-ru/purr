@@ -76,7 +76,7 @@ class DataProduct(object):
         try:
             os.remove(self.fullpath)
         except:
-            print("Error removing %s: %s" % (self.fullpath, sys.exc_info()[1]))
+            print(("Error removing %s: %s" % (self.fullpath, sys.exc_info()[1])))
 
     def remove_subproducts(self):
         """Removes all archived files subproducts associated with this DP"""
@@ -106,7 +106,7 @@ class DataProduct(object):
         try:
             os.rename(self.fullpath, newpath)
         except:
-            print("Error renaming %s to %s: %s" % (self.fullpath, newpath, sys.exc_info()[1]))
+            print(("Error renaming %s to %s: %s" % (self.fullpath, newpath, sys.exc_info()[1])))
             return None
         # remove subproducts, if they exist -- need to re-render with new name anyway
         self.remove_subproducts()
@@ -326,7 +326,7 @@ class LogEntry(object):
                     dps.append(dp)
                     continue
                 if os.system("/bin/rm -fr '%s'" % destname):
-                    print("Error removing %s, which is in the way of %s" % (destname, sourcepath))
+                    print(("Error removing %s, which is in the way of %s" % (destname, sourcepath)))
                     print("This data product is not saved.")
                     continue
             # for directories, compress with tar
@@ -337,7 +337,7 @@ class LogEntry(object):
                     if os.system("tar zcf '%s' -C '%s' '%s'" % (destname,
                                                                 os.path.dirname(sourcepath),
                                                                 os.path.basename(sourcepath))):
-                        print("Error archiving %s to %s" % (sourcepath, destname))
+                        print(("Error archiving %s to %s" % (sourcepath, destname)))
                         print("This data product is not saved.")
                         continue
                     if dp.policy.startswith("move"):
@@ -348,12 +348,12 @@ class LogEntry(object):
                 if dp.policy == "copy":
                     dprintf(2, "copying\n")
                     if _copy_update(sourcepath, destname):
-                        print("Error copying %s to %s" % (sourcepath, destname))
+                        print(("Error copying %s to %s" % (sourcepath, destname)))
                         print("This data product is not saved.")
                         continue
                 elif dp.policy.startswith('move'):
                     if _move_update(sourcepath, destname):
-                        print("Error moving %s to %s" % (sourcepath, destname))
+                        print(("Error moving %s to %s" % (sourcepath, destname)))
                         print("This data product is not saved.")
                         continue
             # success, set timestamp and append
@@ -421,7 +421,7 @@ class LogEntry(object):
                     dprintf(2, "include cache %s out of date, will regenerate\n", self.cached_include)
                     self.cached_include_valid = False
             except:
-                print("Error reading cached include code from %s, will regenerate" % self.cached_include)
+                print(("Error reading cached include code from %s, will regenerate" % self.cached_include))
                 if verbosity.get_verbose() > 0:
                     dprint(1, "Error traceback follows:")
                     traceback.print_exc()

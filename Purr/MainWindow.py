@@ -157,7 +157,7 @@ class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
     class DirItem(QListWidgetItem):
         # these represent the watch-states
         ToCheckState = {Purr.UNWATCHED: Qt.Unchecked, Purr.WATCHED: Qt.PartiallyChecked, Purr.POUNCE: Qt.Checked}
-        FromCheckState = dict([(state, watch) for watch, state in ToCheckState.items()])
+        FromCheckState = dict([(state, watch) for watch, state in list(ToCheckState.items())])
 
         def __init__(self, pathname, parent=None, watching=Purr.WATCHED):
             self._pathname = pathname
@@ -724,7 +724,7 @@ class MainWindow(QMainWindow):
                     dprint(2, "showing dialog")
                     self.new_entry_dialog.show()
         # else read stuff from pipe
-        for pipe in self.purrpipes.values():
+        for pipe in list(self.purrpipes.values()):
             do_show = False
             for command, show, content in pipe.read():
                 if command == "title":
@@ -735,7 +735,7 @@ class MainWindow(QMainWindow):
                     self.new_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
                         [(content, not show)], unbanish=True))
                 else:
-                    print("Unknown command received from Purr pipe: ", command)
+                    print(("Unknown command received from Purr pipe: ", command))
                     continue
                 do_show = do_show or show
             if do_show:

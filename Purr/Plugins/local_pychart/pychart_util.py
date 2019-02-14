@@ -73,7 +73,7 @@ def get_data_range(data, col):
     data = get_data_list(data, col)
     for item in data:
         if type(item) not in (int, int, float):
-            print(type(item), item)
+            print((type(item), item))
             raise TypeError("Non-number passed to data: %s" % (data))
     return (min(data), max(data))
 

@@ -16,7 +16,7 @@ PURR_ICONS = {16: "purr16.png", 24: "purr24.png", 32: "purr32.png"}
 
 
 def initIndexDir(logdir):
-    for sz, filename in PURR_ICONS.items():
+    for sz, filename in list(PURR_ICONS.items()):
         path = os.path.join(logdir, filename)
         if not os.path.exists(path):
             Purr.pixmaps.purr_logo.pm().scaled(QSize(sz, sz), Qt.KeepAspectRatioByExpanding,
@@ -41,7 +41,7 @@ def writeLogIndex(logdir, title, timestamp, entries, refresh=0):
             try:
                 os.remove(fullindex)
             except:
-                print("Error removing %s:" % fullindex)
+                print(("Error removing %s:" % fullindex))
                 traceback.print_exc()
         fullindex = tocindex
         tocindex = None

@@ -191,7 +191,7 @@ def add_reinitialization_hook(proc):
 
 
 def usage():
-    print("Usage: %s [options..]" % sys.argv[0])
+    print(("Usage: %s [options..]" % sys.argv[0]))
     print("""
     --scale=X: Set the scaling factor to X (default: 1.0).
     --format=[ps|png|pdf|x11|svg]: Set the output format (default: ps).
