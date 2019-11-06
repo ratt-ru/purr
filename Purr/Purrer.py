@@ -433,7 +433,8 @@ class Purrer(QObject):
             if six.PY2:
                 entries.sort(lambda a, b: cmp(a.timestamp, b.timestamp))
             else:
-                entries.sort(key = lambda a, b: cmp(a.timestamp, b.timestamp))
+                from functools import cmp_to_key
+                entries.sort(key = cmp_to_key(lambda a, b: cmp(a.timestamp, b.timestamp)))
             self.setLogEntries(entries, save=False)
             # update own timestamp
             if entries:
@@ -816,6 +817,6 @@ class Purrer(QObject):
                                             policy=policy, comment=comment, quiet=quiet))
         import six
         if six.PY3:
-            return sorted(dps, key=lambda a, b: cmp(a.filename, b.filename))
+            return sorted(dps, key=cmp_to_key(lambda a, b: cmp(a.filename, b.filename)))
         else:
             return sorted(dps, lambda a, b: cmp(a.filename, b.filename))

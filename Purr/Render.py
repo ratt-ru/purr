@@ -255,7 +255,8 @@ def getRenderers(filename):
         if priority:
             renderers.append((priority, rdrid))
     # sort by priority
-    renderers.sort(lambda a, b: cmp(a[0], b[0]))
+    from functools import cmp_to_key
+    renderers.sort(key=cmp_to_key(lambda a, b: cmp(a[0], b[0])))
     # return list of IDs. Note that "none" should always be available and working
     return [a[1] for a in renderers] or ["link"]
 
