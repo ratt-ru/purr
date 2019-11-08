@@ -433,6 +433,7 @@ class Purrer(QObject):
             if six.PY2:
                 entries.sort(lambda a, b: cmp(a.timestamp, b.timestamp))
             else:
+                from past.builtins import cmp
                 from functools import cmp_to_key
                 entries.sort(key = cmp_to_key(lambda a, b: cmp(a.timestamp, b.timestamp)))
             self.setLogEntries(entries, save=False)
@@ -816,6 +817,8 @@ class Purrer(QObject):
                 dps.append(Purr.DataProduct(filename=filename, sourcepath=sourcepath,
                                             policy=policy, comment=comment, quiet=quiet))
         import six
+        from past.builtins import cmp
+        from functools import cmp_to_key
         if six.PY3:
             return sorted(dps, key=cmp_to_key(lambda a, b: cmp(a.filename, b.filename)))
         else:

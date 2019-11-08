@@ -10,11 +10,16 @@ from PyQt4.Qt import (QWidget, QDialog, QWizard, QWizardPage, QButtonGroup, QVBo
                       QRadioButton, QObject, SIGNAL, QHBoxLayout, QLineEdit, QPushButton,
                       QFileDialog, QMessageBox, QHeaderView, QAbstractItemView,
                       QFontMetrics, QFont, QTreeWidget, QSizePolicy, QMenu, QMimeData, QUrl,
-                      QComboBox, QMimeData, QTreeWidgetItem, Qt, QVariant, QApplication,
+                      QComboBox, QMimeData, QTreeWidgetItem, Qt, QApplication,
                       QClipboard, QLabel, QSplitter, QTextEdit, QTextDocument, QSize,
                       QFrame, QStackedWidget, QWidgetAction, QMenu, QTextBrowser, QPoint,
                       QDrag, QListWidget, QListWidgetItem, QMainWindow, QToolBar, QTimer,
                       QCoreApplication, QEventLoop, QCursor, QListWidget)
+import six
+if six.PY3:
+    QVariant = str
+else:
+    from PyQt4.Qt import (QVariant)
 
 import Purr
 import Purr.Editors
