@@ -233,7 +233,7 @@ class FITSRenderer(CachingRenderer):
             if uptodate:
                 dprintf(3, "%s(%d): stats file %s up-to-date, reading in\n", self.dp.fullpath, num_image, recfile)
                 try:
-                    self.imgrec[num_image] = pickle.load(file(recpath))
+                    self.imgrec[num_image] = pickle.load(open(recpath, "rb"))
                     continue
                 except:
                     print(("Error reading stats file %s, regenerating everything" % recpath))
@@ -422,7 +422,7 @@ class FITSRenderer(CachingRenderer):
                 rec.thumbnail = None
             # write stats
             try:
-                pickle.dump(rec, file(recpath, 'w'))
+                pickle.dump(rec, open(recpath, 'rw'))
             except:
                 print(("Error writing stats file  %s" % recpath))
                 traceback.print_exc()
