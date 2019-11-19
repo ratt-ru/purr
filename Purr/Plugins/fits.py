@@ -150,7 +150,7 @@ class FITSRenderer(CachingRenderer):
             try:
                 open(path, "w").write(html)
             except:
-                print("Error writing file %s" % path)
+                print(("Error writing file %s" % path))
                 traceback.print_exc()
                 self.headerfile = None
 
@@ -233,10 +233,10 @@ class FITSRenderer(CachingRenderer):
             if uptodate:
                 dprintf(3, "%s(%d): stats file %s up-to-date, reading in\n", self.dp.fullpath, num_image, recfile)
                 try:
-                    self.imgrec[num_image] = pickle.load(file(recpath))
+                    self.imgrec[num_image] = pickle.load(open(recpath, "rb"))
                     continue
                 except:
-                    print("Error reading stats file %s, regenerating everything" % recpath)
+                    print(("Error reading stats file %s, regenerating everything" % recpath))
                     traceback.print_exc()
             # out of date, so we regenerate everything
             # build up record of stuff associated with this image
@@ -308,7 +308,7 @@ class FITSRenderer(CachingRenderer):
                         dprint(3, "rendering histogram took", time.time() - t0, "secs");
                         t0 = time.time()
                     except:
-                        print("Error rendering histogram %s" % hf_path)
+                        print(("Error rendering histogram %s" % hf_path))
                         traceback.print_exc()
                         rec.histogram_full = None
                     # if histogram was rendered, make a thumbnail
@@ -358,7 +358,7 @@ class FITSRenderer(CachingRenderer):
                                 dprint(3, "rendering zoomed histogram took", time.time() - t0, "secs");
                                 t0 = time.time()
                             except:
-                                print("Error rendering histogram %s" % hz_path)
+                                print(("Error rendering histogram %s" % hz_path))
                                 traceback.print_exc()
                                 rec.histogram_zoom = None
                         else:  # no meaningful zoomed area to render
@@ -404,7 +404,7 @@ class FITSRenderer(CachingRenderer):
                 dprint(3, "saving took", time.time() - t0, "secs");
                 t0 = time.time()
             except:
-                print("Error rendering image %s" % path)
+                print(("Error rendering image %s" % path))
                 traceback.print_exc()
                 rec.fullimage = img = None
             # if image was rendered, make a thumbnail
@@ -422,9 +422,9 @@ class FITSRenderer(CachingRenderer):
                 rec.thumbnail = None
             # write stats
             try:
-                pickle.dump(rec, file(recpath, 'w'))
+                pickle.dump(rec, open(recpath, 'rw'))
             except:
-                print("Error writing stats file  %s" % recpath)
+                print(("Error writing stats file  %s" % recpath))
                 traceback.print_exc()
 
     def makeThumb(self, imagepath, thumbpath, tsize, img=None):
@@ -448,7 +448,7 @@ class FITSRenderer(CachingRenderer):
             img.save(thumbpath, "PNG")
             return thumbpath
         except:
-            print("Error rendering thumbnail %s" % thumbpath)
+            print(("Error rendering thumbnail %s" % thumbpath))
             traceback.print_exc()
             return None
 

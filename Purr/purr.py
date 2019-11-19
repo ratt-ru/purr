@@ -10,7 +10,7 @@ import sys
 
 def trace_lines(frame, event, arg):
     if event == "line":
-        print("%s:%d" % (frame.f_code.co_filename, frame.f_lineno))
+        print(("%s:%d" % (frame.f_code.co_filename, frame.f_lineno)))
     return trace_lines
 
 
@@ -60,7 +60,7 @@ if __name__ == "__main__":
             print("Cancelled by user")
             os._exit(1)
     except Purr.Startup.Error as err:
-        print(err.error_message)
+        print((err.error_message))
         os._exit(1)
 
 

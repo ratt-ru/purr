@@ -1,4 +1,4 @@
-FROM kernsuite/base:4
+FROM kernsuite/base:5
 RUN docker-apt-install \
     python3-pyqt4 \
     python3-pil \
@@ -6,5 +6,34 @@ RUN docker-apt-install \
     python3-astropy \
     python3-future \
     python3-pip
-ADD . /code
-RUN pip3 install /code
+
+RUN docker-apt-install \
+    wget \
+    makems \
+    meqtrees-timba \
+    libboost-python-dev \
+    python-casacore \
+    casacore-dev \
+    wcslib-dev \
+    libcfitsio-dev
+
+RUN pip3 install meqtrees-cattery
+RUN pip3 install owlcat
+
+ADD . /code/purr
+RUN pip3 install /code/purr
+
+# get the test from pyxis
+WORKDIR /code
+RUN wget https://github.com/ska-sa/pyxis/archive/v1.6.2.tar.gz
+RUN tar -xvf v1.6.2.tar.gz
+WORKDIR /code/pyxis-1.6.2
+RUN pip3 install -U .
+
+# run test when built
+RUN pip3 install nose
+WORKDIR /usr/local/lib/python3.6/dist-packages/Pyxis/recipies/meqtrees-batch-test
+RUN python3.6 -m "nose"
+
+ENTRYPOINT ["meqtree-pipeliner.py"]
+CMD ["--help"]

@@ -10,11 +10,16 @@ from PyQt4.Qt import (QWidget, QDialog, QWizard, QWizardPage, QButtonGroup, QVBo
                       QRadioButton, QObject, SIGNAL, QHBoxLayout, QLineEdit, QPushButton,
                       QFileDialog, QMessageBox, QHeaderView, QAbstractItemView,
                       QFontMetrics, QFont, QTreeWidget, QSizePolicy, QMenu, QMimeData, QUrl,
-                      QComboBox, QMimeData, QTreeWidgetItem, Qt, QVariant, QApplication,
+                      QComboBox, QMimeData, QTreeWidgetItem, Qt, QApplication,
                       QClipboard, QLabel, QSplitter, QTextEdit, QTextDocument, QSize,
                       QFrame, QStackedWidget, QWidgetAction, QMenu, QTextBrowser, QPoint,
                       QDrag, QListWidget, QListWidgetItem, QMainWindow, QToolBar, QTimer,
                       QCoreApplication, QEventLoop, QCursor, QListWidget)
+import six
+if six.PY3:
+    QVariant = str
+else:
+    from PyQt4.Qt import (QVariant)
 
 import Purr
 import Purr.Editors
@@ -157,7 +162,7 @@ class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
     class DirItem(QListWidgetItem):
         # these represent the watch-states
         ToCheckState = {Purr.UNWATCHED: Qt.Unchecked, Purr.WATCHED: Qt.PartiallyChecked, Purr.POUNCE: Qt.Checked}
-        FromCheckState = dict([(state, watch) for watch, state in ToCheckState.items()])
+        FromCheckState = dict([(state, watch) for watch, state in list(ToCheckState.items())])
 
         def __init__(self, pathname, parent=None, watching=Purr.WATCHED):
             self._pathname = pathname
@@ -724,7 +729,7 @@ class MainWindow(QMainWindow):
                     dprint(2, "showing dialog")
                     self.new_entry_dialog.show()
         # else read stuff from pipe
-        for pipe in self.purrpipes.values():
+        for pipe in list(self.purrpipes.values()):
             do_show = False
             for command, show, content in pipe.read():
                 if command == "title":
@@ -735,7 +740,7 @@ class MainWindow(QMainWindow):
                     self.new_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
                         [(content, not show)], unbanish=True))
                 else:
-                    print("Unknown command received from Purr pipe: ", command)
+                    print(("Unknown command received from Purr pipe: ", command))
                     continue
                 do_show = do_show or show
             if do_show:

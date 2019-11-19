@@ -9,8 +9,12 @@ import Kittens.widgets
 from PyQt4.Qt import (QWidget, QDialog, QWizard, QWizardPage, QButtonGroup, QVBoxLayout, QRadioButton, QObject, SIGNAL,
                       QHBoxLayout, QLineEdit, QPushButton, QFileDialog, QMessageBox, QHeaderView, QAbstractItemView,
                       QFontMetrics, QFont, QTreeWidget, QSizePolicy, QMenu, QMimeData, QUrl, QComboBox, QMimeData,
-                      QTreeWidgetItem, Qt, QVariant, QApplication, QClipboard, QLabel, QSplitter, QTextEdit,
+                      QTreeWidgetItem, Qt, QApplication, QClipboard, QLabel, QSplitter, QTextEdit,
                       QTextDocument, QSize, QFrame, QStackedWidget, QWidgetAction, QMenu, QTextBrowser, QPoint, QDrag)
+if six.PY3:
+    QVariant = str
+else:
+    from PyQt4.Qt import QVariant
 
 import Purr.LogEntry
 import Purr.Render
@@ -41,7 +45,6 @@ else:
     import string
     maketrans = string.maketrans
 
-
 _sanitize_chars = "\\:*?\"<>|"
 _sanitize_trans = maketrans(_sanitize_chars, '_' * len(_sanitize_chars))
 
@@ -50,7 +53,7 @@ def _sanitizeFilename(filename):
     """Sanitizes filename for use on Windows and other brain-dead systems, by replacing a number of illegal characters
     with underscores."""
     global _sanitize_trans
-    out = filename.translate(_sanitize_trans)
+    out = str(filename).translate(_sanitize_trans)
     # leading dot becomes "_"
     if out and out[0] == '.':
         out = out[1:]
@@ -295,7 +298,7 @@ class DPTreeWidget(Kittens.widgets.ClickableTreeWidget):
         item.setText(self.ColType, ext)
         item.setToolTip(self.ColFilename, basename)
         item.setToolTip(self.ColType, basename)
-        item.setData(self.ColComment, Qt.EditRole, QVariant(dp.comment or ""))
+        item.setData(self.ColComment, Qt.EditRole, str(dp.comment or ""))
         # make sure new filenames are unique
         filename = _sanitizeFilename(dp.filename)
         if not dp.archived:
@@ -309,7 +312,7 @@ class DPTreeWidget(Kittens.widgets.ClickableTreeWidget):
                     taken_names.add(str(i0.text(self.ColRename)))
             # ensure uniqueness of filename
             filename = _makeUniqueFilename(taken_names, filename)
-        item.setData(self.ColRename, Qt.EditRole, QVariant(filename))
+        item.setData(self.ColRename, Qt.EditRole, str(filename))
         # get list of available renderers
         item._renderers = Purr.Render.getRenderers(dp.fullpath or dp.sourcepath)
         item._render = 0

@@ -245,17 +245,18 @@ def getRenderers(filename):
     the renderers that support the source file type"""
     global available_renderers
     renderers = []
-    for rdrid, (renderer, module) in available_renderers.items():
+    for rdrid, (renderer, module) in list(available_renderers.items()):
         try:
             priority = renderer.canRender(filename)
         except:
-            print("""Error in renderer: %s.canRender("%s"):""" % (rdrid, filename))
+            print(("""Error in renderer: %s.canRender("%s"):""" % (rdrid, filename)))
             traceback.print_exc()
             priority = None
         if priority:
             renderers.append((priority, rdrid))
     # sort by priority
-    renderers.sort(lambda a, b: cmp(a[0], b[0]))
+    from functools import cmp_to_key
+    renderers.sort(key=cmp_to_key(lambda a, b: cmp(a[0], b[0])))
     # return list of IDs. Note that "none" should always be available and working
     return [a[1] for a in renderers] or ["link"]
 
@@ -266,7 +267,7 @@ def makeRenderer(rdrid, dp, refresh=False):
     try:
         return available_renderers[rdrid][0](dp, refresh=refresh)
     except:
-        print("""Error creating renderer %s for %s:""" % (rdrid, dp.fullpath))
+        print(("""Error creating renderer %s for %s:""" % (rdrid, dp.fullpath)))
         traceback.print_exc()
         return DefaultRenderer(dp)
 
@@ -276,7 +277,7 @@ def _callRender(renderer, method, relpath, fallback="%s"):
         return getattr(renderer, method)(relpath=relpath)
     except:
         dp = getattr(renderer, 'dp', None)
-        print("""Error calling %s.%s for %s""" % (renderer, method, dp and dp.fullpath))
+        print(("""Error calling %s.%s for %s""" % (renderer, method, dp and dp.fullpath)))
         traceback.print_exc()
         # if a fallback is specified (and does not contain %s), return that
         if fallback.find("%s") < 0:

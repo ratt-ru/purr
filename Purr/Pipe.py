@@ -26,7 +26,7 @@ class Pipe(object):
         try:
             open(self.pipefile, "a").write(what)
         except:
-            print("Error writing to %s:" % self.pipefile)
+            print(("Error writing to %s:" % self.pipefile))
             traceback.print_exc()
 
     def title(self, title, show=False):
@@ -69,7 +69,7 @@ class Pipe(object):
         try:
             os.rename(self.pipefile, self.pipefile_read)
         except:
-            print("Error renaming %s to %s:" % self.pipefile, self.pipefile_read)
+            print(("Error renaming %s to %s:" % self.pipefile, self.pipefile_read))
             traceback.print_exc()
             self.pipefile_read = None
             return []
@@ -77,7 +77,7 @@ class Pipe(object):
         try:
             lines = open(self.pipefile_read).readlines()
         except:
-            print("Error reading %s:" % self.pipefile_read)
+            print(("Error reading %s:" % self.pipefile_read))
             traceback.print_exc()
             self.pipefile_read = None
             return []

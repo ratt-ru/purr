@@ -42,7 +42,7 @@ class CachingRenderer(DefaultRenderer):
             try:
                 content = open(path).read()
             except:
-                print("Error reading render cache file", path, ", will regenerate")
+                print(("Error reading render cache file", path, ", will regenerate"))
                 traceback.print_exc()
         else:
             dprintf(3, "render cache %s is out of date, will regenerate\n", path)
@@ -64,6 +64,6 @@ class CachingRenderer(DefaultRenderer):
         try:
             open(cachekey, 'w').write(content)
         except:
-            print("Error writing cache file", cachekey, ", will regenerate next time")
+            print(("Error writing cache file", cachekey, ", will regenerate next time"))
             traceback.print_exc()
         return content

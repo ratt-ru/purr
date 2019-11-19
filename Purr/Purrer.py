@@ -59,7 +59,7 @@ def make_pattern_list(patterns):
 
 
 def _printexc(message, *args):
-    print(message % args)
+    print((message % args))
     traceback.print_exc()
 
 
@@ -280,7 +280,7 @@ class Purrer(QObject):
                         break
                 # now, if directory has updated, reset timestamps on all canaries
                 if newfiles:
-                    for watcher in self.canaries.values():
+                    for watcher in list(self.canaries.values()):
                         watcher.mtime = timestamp
             # returns ourselves (as new file) if something has updated
             return (newfiles and [self.path]) or []
@@ -412,7 +412,7 @@ class Purrer(QObject):
                             self.logtitle, time.strftime("%x %X", time.localtime(self.timestamp)))
                 except:
                     traceback.print_exc()
-                    print("Error parsing %s, reverting to defaults" % self.indexfile)
+                    print(("Error parsing %s, reverting to defaults" % self.indexfile))
             # load log entries
             entries = []
             for fname in os.listdir(self.logdir):
@@ -422,14 +422,20 @@ class Purrer(QObject):
                         entry = Purr.LogEntry(load=pathname)
                         dprint(2, "loaded log entry", pathname)
                     except:
-                        print("Error loading entry %s, skipping" % fname)
+                        print(("Error loading entry %s, skipping" % fname))
                         traceback.print_exc()
                         continue
                     entries.append(entry)
                 else:
                     dprint(2, fname, "is not a valid Purr entry")
             # sort log entires by timestamp
-            entries.sort(lambda a, b: cmp(a.timestamp, b.timestamp))
+            import six
+            if six.PY2:
+                entries.sort(lambda a, b: cmp(a.timestamp, b.timestamp))
+            else:
+                from past.builtins import cmp
+                from functools import cmp_to_key
+                entries.sort(key = cmp_to_key(lambda a, b: cmp(a.timestamp, b.timestamp)))
             self.setLogEntries(entries, save=False)
             # update own timestamp
             if entries:
@@ -445,7 +451,7 @@ class Purrer(QObject):
             try:
                 self.dirconfig.read(self.dirconfigfile)
             except:
-                print("Error loading config file %s" % self.dirconfigfile)
+                print(("Error loading config file %s" % self.dirconfigfile))
                 traceback.print_exc()
             # load directory configuration
             for dirname in self.dirconfig.sections():
@@ -471,11 +477,11 @@ class Purrer(QObject):
                     # update dictiornary with latest timestamp
                     ignores[filename] = int(timestamp), policy
             except:
-                print("Error reading %s" % self.ignorelistfile)
+                print(("Error reading %s" % self.ignorelistfile))
                 traceback.print_exc()
             # now scan all listed files, and make sure their watchers' mtime is no older than the given
             # last-ignore-timestamp. This ensures that we don't pounce on these files after restarting purr.
-            for filename, (timestamp, policy) in ignores.items():
+            for filename, (timestamp, policy) in list(ignores.items()):
                 watcher = self.watchers.get(filename, None)
                 if watcher:
                     watcher.mtime = max(watcher.mtime, timestamp)
@@ -509,13 +515,13 @@ class Purrer(QObject):
                 self.dirconfig.add_section(path)
             self.dirconfig.set(path, "watching", str(watching))
         if save_config:
-            self.dirconfig.write(file(self.dirconfigfile, 'wt'))
+            self.dirconfig.write(open(self.dirconfigfile, 'wt'))
 
     def watchingState(self, pathname):
         return self._watching_state[pathname]
 
     def watchedDirectories(self):
-        return [(dd, state) for dd, state in self._watching_state.items() if state != Purr.REMOVED]
+        return [(dd, state) for dd, state in list(self._watching_state.items()) if state != Purr.REMOVED]
 
     def addWatchedDirectory(self, dirname, watching=Purr.WATCHED, save_config=True):
         """Starts watching the specified directories for changes"""
@@ -535,7 +541,7 @@ class Purrer(QObject):
                                      watch_patterns=self._watch_patterns, ignore_patterns=self._ignore_patterns)
             # fileset=None indicates error reading directory, so ignore it
             if wdir.fileset is None:
-                print("There was an error reading the directory %s, will stop watching it." % dirname)
+                print(("There was an error reading the directory %s, will stop watching it." % dirname))
                 self.setWatchingState(dirname, Purr.REMOVED, save_config=True)
                 return
             self.watchers[dirname] = wdir
@@ -681,7 +687,7 @@ class Purrer(QObject):
                         open(self.ignorelistfile, 'a').write(
                             "%d %s %s\n" % (os.path.getmtime(dp.sourcepath), dp.policy, dp.sourcepath))
                     except:
-                        print("Error writing %s" % self.ignorelistfile)
+                        print(("Error writing %s" % self.ignorelistfile))
                         traceback.print_exc()
             else:
                 watcher = self.watchers.get(dp.sourcepath, None)
@@ -784,7 +790,7 @@ class Purrer(QObject):
                 del self.temp_watchers[path]
                 self.emit(SIGNAL("disappearedFile"), path)
         # if we have new data products, send them to the main window
-        return self.makeDataProducts(iter(newstuff.items()))
+        return self.makeDataProducts(iter(list(newstuff.items())))
 
     def makeDataProducts(self, files, unbanish=False, unignore=False):
         """makes a list of DPs from a list of (filename,quiet) pairs.
@@ -810,4 +816,10 @@ class Purrer(QObject):
                     policy = "copy"
                 dps.append(Purr.DataProduct(filename=filename, sourcepath=sourcepath,
                                             policy=policy, comment=comment, quiet=quiet))
-        return sorted(dps, lambda a, b: cmp(a.filename, b.filename))
+        import six
+        from past.builtins import cmp
+        from functools import cmp_to_key
+        if six.PY3:
+            return sorted(dps, key=cmp_to_key(lambda a, b: cmp(a.filename, b.filename)))
+        else:
+            return sorted(dps, lambda a, b: cmp(a.filename, b.filename))

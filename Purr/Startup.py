@@ -48,7 +48,7 @@ def startWizard(args, mainwin, modal=True):
          * if purr dialog is visible, do same as "purr ."
      $ from meqbrowser, when purr button is pressed and purr is not yet visible
          * do "purr ."
-     $ from Calico, when an MS is selected:
+     $ from Cattery.Calico, when an MS is selected:
          * do purr MS.purrlog .
     """
 
