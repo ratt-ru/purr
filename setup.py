@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 from distutils.core import setup
@@ -22,7 +22,7 @@ for scheme in list(INSTALL_SCHEMES.values()):
         scheme['data'] = scheme['purelib']
 
 setup(name='purr',
-      version='1.5.2',
+      version='1.5.3',
       description='Data reduction logging tool, Useful for remembering reductions',
       author='Oleg Smirnov',
       author_email='Oleg Smirnov <osmirnov@gmail.com>',

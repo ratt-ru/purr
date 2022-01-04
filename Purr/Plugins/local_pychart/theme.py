@@ -224,7 +224,7 @@ def get_options(argv=None):
     "|--debug-level=|<N>", "|bbox=|<left,bottom,right,top>".
     The below code shows an example.
 
-#!/usr/bin/python
+#!/usr/bin/env python3
 from pychart import *
 args = theme.get_options()
 ar = area.T(...)
