@@ -29,7 +29,7 @@ setup(name='purr',
       url='https://github.com/ska-sa/purr',
       python_requires='>=3.0.0',
       packages=['Purr', 'Purr/Plugins', 'Purr/Plugins/local_pychart', 'Purr/Plugins/local_pychart/afm'],
-      install_requires=['kittens', 'pillow', 'scipy', 'astropy', 'future'],  # 'PyQt4',
+      install_requires=['astro-kittens', 'six', 'pillow', 'scipy', 'astropy', 'future'],  # 'PyQt4',
       scripts=['Purr/purr.py', 'Purr/purr'],
       data_files=data_files,
      )
