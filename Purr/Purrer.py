@@ -17,10 +17,9 @@ import os.path
 import re
 import time
 import traceback
-from past.builtins import cmp
 
 import Kittens.utils
-from PyQt4.Qt import QObject, SIGNAL
+from .qt import QObject, Signal
 
 import Purr
 import Purr.Parsers
@@ -68,6 +67,9 @@ def matches_patterns(filename, patterns):
 
 
 class Purrer(QObject):
+    # path of a watched file that has disappeared
+    disappearedFile = Signal(str)
+
     @staticmethod
     def is_purrlog(path):
         """Checks if path refers to a valid purrlog.
@@ -429,13 +431,7 @@ class Purrer(QObject):
                 else:
                     dprint(2, fname, "is not a valid Purr entry")
             # sort log entires by timestamp
-            import six
-            if six.PY2:
-                entries.sort(lambda a, b: cmp(a.timestamp, b.timestamp))
-            else:
-                from past.builtins import cmp
-                from functools import cmp_to_key
-                entries.sort(key = cmp_to_key(lambda a, b: cmp(a.timestamp, b.timestamp)))
+            entries.sort(key=lambda a: a.timestamp)
             self.setLogEntries(entries, save=False)
             # update own timestamp
             if entries:
@@ -754,7 +750,7 @@ class Purrer(QObject):
                     dprintf(2, "access error on %s, will no longer be watched\n", watcher.path)
                     del self.watchers[path]
                 if not watcher.disappeared:
-                    self.emit(SIGNAL("disappearedFile"), path)
+                    self.disappearedFile.emit(path)
                     watcher.disappeared = True
                 continue
             dprintf(5, "%s: %d new file(s)\n", watcher.path, len(newfiles))
@@ -788,7 +784,7 @@ class Purrer(QObject):
             if watcher.newFiles() is None:
                 dprintf(2, "access error on %s, marking as disappeared", watcher.path)
                 del self.temp_watchers[path]
-                self.emit(SIGNAL("disappearedFile"), path)
+                self.disappearedFile.emit(path)
         # if we have new data products, send them to the main window
         return self.makeDataProducts(iter(list(newstuff.items())))
 
@@ -816,10 +812,4 @@ class Purrer(QObject):
                     policy = "copy"
                 dps.append(Purr.DataProduct(filename=filename, sourcepath=sourcepath,
                                             policy=policy, comment=comment, quiet=quiet))
-        import six
-        from past.builtins import cmp
-        from functools import cmp_to_key
-        if six.PY3:
-            return sorted(dps, key=cmp_to_key(lambda a, b: cmp(a.filename, b.filename)))
-        else:
-            return sorted(dps, lambda a, b: cmp(a.filename, b.filename))
+        return sorted(dps, key=lambda a: a.filename)

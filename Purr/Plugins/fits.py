@@ -19,7 +19,7 @@ except:
 
 try:
     import numpy
-    import scipy.ndimage.measurements
+    import scipy.ndimage
 except:
     print("""numpy and/or scipy packages not found, rendering of FITS files will not be available.
 Numpy and scipy can be installed from Debian/Ubuntu packages python-numpy and python-scipy, or can
@@ -108,7 +108,7 @@ class FITSRenderer(CachingRenderer):
         for a, b in zip(x, y):
             xy += [(a, b), (a + width, b)]
         # Make sure all spaces in path are escaped as pychart cannot handle them
-        path = path.replace('\ ', ' ').replace(' ', '\ ')
+        path = path.replace('\\ ', ' ').replace(' ', '\\ ')
         canv = canvas.init(path)
         ar = area.T(
             x_axis=axis.X(label="/20{}" + title, format="/20{}%g", tic_interval=self.compute_tics),
@@ -277,15 +277,15 @@ class FITSRenderer(CachingRenderer):
             datamask = ~numpy.isfinite(data)
             dprint(3, "making mask took", time.time() - t0, "secs");
             t0 = time.time()
-            datamin, datamax = scipy.ndimage.measurements.extrema(data, datamask, False)[:2]
+            datamin, datamax = scipy.ndimage.extrema(data, datamask, False)[:2]
             dprint(3, "computing min/max took", time.time() - t0, "secs");
             t0 = time.time()
             rec.datamin, rec.datamax = datamin, datamax
             # mean and sigma
-            rec.datamean = scipy.ndimage.measurements.mean(data, datamask, False)
+            rec.datamean = scipy.ndimage.mean(data, datamask, False)
             dprint(3, "computing mean took", time.time() - t0, "secs");
             t0 = time.time()
-            rec.datastd = scipy.ndimage.measurements.standard_deviation(data, datamask, False)
+            rec.datastd = scipy.ndimage.standard_deviation(data, datamask, False)
             dprint(3, "computing std took", time.time() - t0, "secs");
             t0 = time.time()
             # thumbnail files will be "" if images are small enough to be inlined.
@@ -296,7 +296,7 @@ class FITSRenderer(CachingRenderer):
             # and either pychart is available (so we can produce plots), or histogram clipping is in effect
             if datamin != datamax and nbins and (pychart or hclip):
                 dprintf(3, "%s plane %d: computing histogram\n", self.dp.fullpath, num_image)
-                counts = scipy.ndimage.measurements.histogram(data, datamin, datamax, nbins, labels=datamask,
+                counts = scipy.ndimage.histogram(data, datamin, datamax, nbins, labels=datamask,
                                                               index=False);  # needed for 1.3+ to avoid warnings
                 edges = datamin + (datamax - datamin) * (numpy.arange(nbins, dtype=float) + .5) / nbins
                 dprint(3, "computing histogram took", time.time() - t0, "secs");
@@ -348,7 +348,7 @@ class FITSRenderer(CachingRenderer):
                     # render zoomed histogram
                     if pychart:
                         if rec.clipmax != rec.clipmin:
-                            zcounts = scipy.ndimage.measurements.histogram(data, rec.clipmin, rec.clipmax, nbins,
+                            zcounts = scipy.ndimage.histogram(data, rec.clipmin, rec.clipmax, nbins,
                                                                            labels=datamask,
                                                                            index=False);  # needed for 1.3+ to avoid warnings
                             zedges = rec.clipmin + (rec.clipmax - rec.clipmin) * (

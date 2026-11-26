@@ -11,7 +11,8 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 # for more details.
 #
-from six import string_types, integer_types
+string_types = (str,)
+integer_types = (int,)
 import types
 
 AnyType = 9998

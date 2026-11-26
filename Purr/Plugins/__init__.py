@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import fnmatch
-import imp
+import importlib.util
 import os
 import os.path
 import sys
@@ -25,25 +25,19 @@ def loadPlugins(paths):
     for fullpath in modfiles:
         modfile = os.path.basename(fullpath)
         modname, ext = os.path.splitext(modfile)
-        # try to find the module via the imp mechanism
-        try:
-            fp, pathname, desc = imp.find_module(modname, paths)
-        except:
-            err = sys.exc_info()[1]
-            dprintf(1, "Error finding module for plugin %s: %s\n", fullpath, err)
-            bad_plugins[modname] = err
-            continue
+        pathname = fullpath
+        fullname = 'Purr.Plugins.%s' % modname
         # try to import the module
-        #   setattr(modname,"plugin_mtime",os.path.getmtime(pathname))
         try:
+            spec = importlib.util.spec_from_file_location(fullname, pathname)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[fullname] = module
             try:
-                imp.acquire_lock()
-                module = imp.load_module('Purr.Plugins.%s' % modname, fp, pathname, desc)
-            finally:
-                imp.release_lock()
-                if fp:
-                    fp.close()
-        except:
+                spec.loader.exec_module(module)
+            except BaseException:
+                del sys.modules[fullname]
+                raise
+        except Exception:
             err = sys.exc_info()[1]
             dprintf(0, "Error importing module %s: %s\n", pathname, err)
             traceback.print_exc()

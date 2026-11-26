@@ -3,11 +3,7 @@ import os
 import os.path
 import traceback
 
-try:
-    from PyQt4.Qt import *
-except ImportError as e:
-    print("Failed to load Qt4. Purr is not available")
-    raise e
+from .qt import QSize, Qt
 
 import Purr
 import Purr.Render

@@ -65,7 +65,7 @@ def stringify_type(t):
     mo = re.match("<type '([^']+)'>", s)
     if mo:
         return mo.group(1)
-    mo = re.match("<class 'pychart\.([^']+)'>", s)
+    mo = re.match(r"<class 'pychart\.([^']+)'>", s)
     if mo:
         return mo.group(1)
     mo = re.match("<class '([^']+)'>", s)

@@ -4,7 +4,7 @@ import os
 import os.path
 import time
 import traceback
-from past.builtins import cmp
+from urllib.parse import quote as quote_url
 
 import Kittens.config
 import Kittens.utils
@@ -14,11 +14,6 @@ from Purr import ConfigFile
 _verbosity = Kittens.utils.verbosity(name="render")
 dprint = _verbosity.dprint
 dprintf = _verbosity.dprintf
-
-from future.standard_library import hooks
-
-with hooks():
-    from six.moves.urllib.parse import quote as quote_url
 
 
 def renderDefault(dp, relpath):
@@ -255,8 +250,7 @@ def getRenderers(filename):
         if priority:
             renderers.append((priority, rdrid))
     # sort by priority
-    from functools import cmp_to_key
-    renderers.sort(key=cmp_to_key(lambda a, b: cmp(a[0], b[0])))
+    renderers.sort(key=lambda a: a[0])
     # return list of IDs. Note that "none" should always be available and working
     return [a[1] for a in renderers] or ["link"]
 

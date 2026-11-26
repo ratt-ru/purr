@@ -120,7 +120,7 @@ class DataProduct(object):
         Asks for confirmation along the way if parent is not None
         (in which case it will be the parent widget for confirmation dialogs)
         """
-        from PyQt4.Qt import QMessageBox
+        from .qt import QMessageBox
         exists = os.path.exists(self.sourcepath)
         if parent:
             msg = """<P>Do you really want to restore <tt>%s</tt> from
@@ -129,11 +129,11 @@ class DataProduct(object):
             if exists:
                 msg += """<P>Current file exists, and will be overwritten.</P>"""
                 if QMessageBox.warning(parent, "Restoring from archive", msg,
-                                       QMessageBox.Yes, QMessageBox.No) != QMessageBox.Yes:
+                                       QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
                     return False
             else:
                 if QMessageBox.question(parent, "Restoring from archive", msg,
-                                        QMessageBox.Yes, QMessageBox.No) != QMessageBox.Yes:
+                                        QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
                     return False
         busy = Purr.BusyIndicator()
         # remove file if in the way
@@ -144,7 +144,7 @@ class DataProduct(object):
                     QMessageBox.warning(parent, "Error removing file", """<P>
             There was an error removing %s. Archived copy was not restored.
             The text console may have more information.</P>""" % self.sourcepath,
-                                        QMessageBox.Ok, 0)
+                                        QMessageBox.Ok)
                 return False
         # unpack archived file
         if self.fullpath.endswith('.tgz'):
@@ -155,7 +155,7 @@ class DataProduct(object):
                 if parent:
                     QMessageBox.warning(parent, "Error unpacking file", """<P>
             There was an error unpacking the archived version to %s. The text console may have more information.</P>""" % self.sourcepath,
-                                        QMessageBox.Ok, 0)
+                                        QMessageBox.Ok)
                 return False
         # else simply copy over
         else:
@@ -164,13 +164,13 @@ class DataProduct(object):
                 if parent:
                     QMessageBox.warning(parent, "Error copying file", """<P>
             There was an error copying the archived version to %s. The text console may have more information.</P>""" % self.sourcepath,
-                                        QMessageBox.Ok, 0)
+                                        QMessageBox.Ok)
                 return False
         busy = None
         if parent:
             QMessageBox.information(parent, "Restored file", """<P>Restored %s from this entry's
           archived copy.</P>""" % self.sourcepath,
-                                    QMessageBox.Ok, 0)
+                                    QMessageBox.Ok)
         return True
 
 
@@ -200,7 +200,7 @@ class LogEntry(object):
         # next/prev/up links
         self._next_link = self._prev_link = self._up_link = None
 
-    _entry_re = re.compile(".*/(entry|ignore)-(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$")
+    _entry_re = re.compile(r".*/(entry|ignore)-(\d\d\d\d)(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)$")
 
     @staticmethod
     def isValidPathname(name):
@@ -408,7 +408,7 @@ class LogEntry(object):
         If 'relpath' is empty and 'prev', 'next' and/or 'up' is set, then Prev/Next/Up links will be inserted
         """
         # check if cache can be used
-        refresh_index = max(refresh, refresh_index)
+        refresh_index = max(refresh or 0, refresh_index or 0)
         dprintf(2, "%s: rendering HTML index with relpath='%s', refresh=%s refresh_index=%s\n", self.pathname, relpath,
                 time.strftime("%x %X", time.localtime(refresh)),
                 time.strftime("%x %X", time.localtime(refresh_index)))

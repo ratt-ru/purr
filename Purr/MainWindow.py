@@ -6,20 +6,11 @@ import time
 
 import Kittens.utils
 import Kittens.widgets
-from PyQt4.Qt import (QWidget, QDialog, QWizard, QWizardPage, QButtonGroup, QVBoxLayout,
-                      QRadioButton, QObject, SIGNAL, QHBoxLayout, QLineEdit, QPushButton,
-                      QFileDialog, QMessageBox, QHeaderView, QAbstractItemView,
-                      QFontMetrics, QFont, QTreeWidget, QSizePolicy, QMenu, QMimeData, QUrl,
-                      QComboBox, QMimeData, QTreeWidgetItem, Qt, QApplication,
-                      QClipboard, QLabel, QSplitter, QTextEdit, QTextDocument, QSize,
-                      QFrame, QStackedWidget, QWidgetAction, QMenu, QTextBrowser, QPoint,
-                      QDrag, QListWidget, QListWidgetItem, QMainWindow, QToolBar, QTimer,
-                      QCoreApplication, QEventLoop, QCursor, QListWidget)
-import six
-if six.PY3:
-    QVariant = str
-else:
-    from PyQt4.Qt import (QVariant)
+from .qt import (QWidget, QDialog, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QFileDialog,
+                 QMessageBox, QHeaderView, QTreeWidget, QSizePolicy, QMenu, QMimeData, QUrl,
+                 QTreeWidgetItem, Qt, QApplication, QClipboard, QLabel, QSize, QFrame, QWidgetAction,
+                 QTextBrowser, QListWidget, QListWidgetItem, QMainWindow, QToolBar, QTimer,
+                 QCoreApplication, QEventLoop, QCursor, Signal, set_margin)
 
 import Purr
 import Purr.Editors
@@ -39,13 +30,16 @@ class BusyIndicator(object):
 
 class HTMLViewerDialog(QDialog):
     """This class implements a dialog to view a piece of HTML text."""
+    # name of the user button that was clicked
+    buttonClicked = Signal(str)
+    viewPath = Signal(str)
 
     def __init__(self, parent, config_name=None, buttons=[], *args):
         """Creates dialog.
         'config_name' is used to get/set default window size from Config object
         'buttons' can be a list of names or (QPixmapWrapper,name[,tooltip]) tuples to provide
         custom buttons at the bottom of the dialog. When a button is clicked, the dialog
-        emits SIGNAL("name").
+        emits buttonClicked(name).
         A "Close" button is always provided, this simply hides the dialog.
         """
         QDialog.__init__(self, parent, *args)
@@ -61,7 +55,7 @@ class HTMLViewerDialog(QDialog):
         lo.addWidget(self.viewer)
         # self.viewer.setReadOnly(True)
         self.viewer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        QObject.connect(self.viewer, SIGNAL("anchorClicked(const QUrl &)"), self._urlClicked)
+        self.viewer.anchorClicked.connect(self._urlClicked)
         self._source = None
         lo.addSpacing(5)
         # create button bar
@@ -71,7 +65,7 @@ class HTMLViewerDialog(QDialog):
         lo.addWidget(btnfr)
         lo.addSpacing(5)
         btnfr_lo = QHBoxLayout(btnfr)
-        btnfr_lo.setMargin(5)
+        set_margin(btnfr_lo, 5)
         # add user buttons
         self._user_buttons = {}
         for name in buttons:
@@ -87,13 +81,12 @@ class HTMLViewerDialog(QDialog):
                 if tip:
                     btn.setToolTip(tip)
             self._user_buttons[name] = btn
-            btn._clicked = Kittens.utils.curry(self.emit, SIGNAL(name))
-            self.connect(btn, SIGNAL("clicked()"), btn._clicked)
+            btn.clicked.connect(lambda checked=False, name=name: self.buttonClicked.emit(name))
             btnfr_lo.addWidget(btn, 1)
         # add a Close button
         btnfr_lo.addStretch(100)
         closebtn = QPushButton(pixmaps.grey_round_cross.icon(), "Close", btnfr)
-        self.connect(closebtn, SIGNAL("clicked()"), self.hide)
+        closebtn.clicked.connect(self.hide)
         btnfr_lo.addWidget(closebtn, 1)
         # resize selves
         self.config_name = config_name or "html-viewer"
@@ -118,7 +111,7 @@ class HTMLViewerDialog(QDialog):
     def _urlClicked(self, url):
         path = str(url.path())
         if path:
-            self.emit(SIGNAL("viewPath"), path)
+            self.viewPath.emit(path)
         # to make sure it keeps displaying the same thing
         self.viewer.setSource(self._source)
 
@@ -143,6 +136,11 @@ class HTMLViewerDialog(QDialog):
 class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
     """This class implements a QTreeWidget for data products.
     """
+    # pathname of selected directory, or None
+    directorySelected = Signal(object)
+    hasSelection = Signal(bool)
+    # pathname, new watching state
+    directoryStateChanged = Signal(str, int)
 
     def __init__(self, *args):
         Kittens.widgets.ClickableListWidget.__init__(self, *args)
@@ -151,8 +149,8 @@ class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
         self.setAcceptDrops(True)
         self.setSelectionMode(QListWidget.SingleSelection)
         self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
-        QObject.connect(self, SIGNAL("itemSelectionChanged()"), self._selectionChanged)
-        QObject.connect(self, SIGNAL("itemChanged(QListWidgetItem *)"), self._itemChanged)
+        self.itemSelectionChanged.connect(self._selectionChanged)
+        self.itemChanged.connect(self._itemChanged)
         self._items = {}
         self._item_height = None
         self._max_height_items = 5
@@ -169,7 +167,7 @@ class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
             pathname = Kittens.utils.collapseuser(pathname)
             self._in_setWatching = True
             QListWidgetItem.__init__(self, pathname, parent)
-            self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsTristate)
+            self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsAutoTristate)
             self.setWatching(watching)
 
         def pathname(self):
@@ -186,13 +184,13 @@ class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
 
     def _selectionChanged(self):
         sel = self.selectedItems()
-        self.emit(SIGNAL("directorySelected"), sel and sel[0].pathname())
-        self.emit(SIGNAL("hasSelection"), bool(sel))
+        self.directorySelected.emit(sel[0].pathname() if sel else None)
+        self.hasSelection.emit(bool(sel))
 
     def _itemChanged(self, item):
         if not getattr(item, '_in_setWatching', False):
             item.setWatching((item._watching + 1) % (Purr.POUNCE + 1))
-            self.emit(SIGNAL("directoryStateChanged"), item.pathname(), item.watching())
+            self.directoryStateChanged.emit(item.pathname(), item.watching())
 
     def _checkSize(self):
         """Automatically resizes widget to display at most max_height_items items"""
@@ -222,7 +220,7 @@ class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
 
     def _removeItem(self, item):
         del self._items[item.pathname()]
-        self.emit(SIGNAL("directoryStateChanged"), item.pathname(), Purr.REMOVED)
+        self.directoryStateChanged.emit(item.pathname(), Purr.REMOVED)
         self.takeItem(self.row(item))
         self._checkSize()
 
@@ -233,7 +231,7 @@ class DirectoryListWidget(Kittens.widgets.ClickableListWidget):
                 if QMessageBox.warning(self, "Detaching from directory",
                                        """Do you really want to stop monitoring the directory <tt>%s</tt>?""" % sel[
                                            0].pathname(),
-                                       QMessageBox.Yes, QMessageBox.No) == QMessageBox.Yes:
+                                       QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
                     return self._removeItem(sel[0])
         return None
 
@@ -288,7 +286,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(cw)
         cwlo = QVBoxLayout(cw)
         cwlo.setContentsMargins(0, 0, 0, 0)
-        cwlo.setMargin(5)
+        set_margin(cwlo, 5)
         cwlo.setSpacing(0)
         toplo = QHBoxLayout();
         cwlo.addLayout(toplo)
@@ -308,8 +306,8 @@ class MainWindow(QMainWindow):
                                                         the last time the files were generated.</P>
                                                         """)])
         self._viewer_timestamp = None
-        self.connect(self.viewer_dialog, SIGNAL("Regenerate"), self._regenerateLog)
-        self.connect(self.viewer_dialog, SIGNAL("viewPath"), self._viewPath)
+        self.viewer_dialog.buttonClicked.connect(lambda name: name == "Regenerate" and self._regenerateLog())
+        self.viewer_dialog.viewPath.connect(self._viewPath)
 
         # Log title toolbar
         title_tb = QToolBar(cw)
@@ -320,19 +318,19 @@ class MainWindow(QMainWindow):
         title_tb.addWidget(title_label)
         self.title_editor = QLineEdit(title_tb)
         title_tb.addWidget(self.title_editor)
-        self.connect(self.title_editor, SIGNAL("editingFinished()"), self._titleChanged)
+        self.title_editor.editingFinished.connect(self._titleChanged)
         tip = """<P>This is your current log title. To rename the log, enter new name here and press Enter.</P>"""
         title_label.setToolTip(tip)
         self.title_editor.setToolTip(tip)
         self.wviewlog = title_tb.addAction(pixmaps.openbook.icon(), "View", self._showViewerDialog)
         self.wviewlog.setToolTip("Click to see an HTML rendering of your current log.")
-        qa = title_tb.addAction(pixmaps.purr_logo.icon(), "About...", self._about_dialog.exec_)
+        qa = title_tb.addAction(pixmaps.purr_logo.icon(), "About...", self._about_dialog.exec)
         qa.setToolTip("<P>Click to see the About... dialog, which will tell you something about PURR.</P>")
 
         self.wdirframe = QFrame(cw)
         cwlo.addWidget(self.wdirframe)
         self.dirs_lo = QVBoxLayout(self.wdirframe)
-        self.dirs_lo.setMargin(5)
+        set_margin(self.dirs_lo, 5)
         self.dirs_lo.setContentsMargins(5, 0, 5, 5)
         self.dirs_lo.setSpacing(0)
         self.wdirframe.setFrameStyle(QFrame.Box | QFrame.Raised)
@@ -360,7 +358,7 @@ class MainWindow(QMainWindow):
         # add directory list widget
         self.wdirlist = DirectoryListWidget(self.wdirframe)
         self.wdirlist.setToolTip(self._dirs_tip)
-        QObject.connect(self.wdirlist, SIGNAL("directoryStateChanged"), self._changeWatchedDirState)
+        self.wdirlist.directoryStateChanged.connect(self._changeWatchedDirState)
         self.dirs_lo.addWidget(self.wdirlist)
         # self.wdirlist.setMaximumSize(1000000,64)
 
@@ -372,7 +370,7 @@ class MainWindow(QMainWindow):
         delbtn = dirs_tb.addAction(pixmaps.list_remove.icon(), "Remove", self.wdirlist.removeCurrent)
         delbtn.setEnabled(False)
         delbtn.setToolTip("<P>Click to removed the currently selected directory from the list.</P>")
-        QObject.connect(self.wdirlist, SIGNAL("hasSelection"), delbtn.setEnabled)
+        self.wdirlist.hasSelection.connect(delbtn.setEnabled)
 
         #    # qa = dirs_tb.addAction(pixmaps.blue_round_reload.icon(),"Rescan",self._forceRescan)
         #    # qa.setToolTip("Click to rescan the directories for any new or updated files.")
@@ -389,7 +387,7 @@ class MainWindow(QMainWindow):
         wlogframe = QFrame(cw)
         cwlo.addWidget(wlogframe)
         log_lo = QVBoxLayout(wlogframe)
-        log_lo.setMargin(5)
+        set_margin(log_lo, 5)
         log_lo.setContentsMargins(5, 5, 5, 5)
         log_lo.setSpacing(0)
         wlogframe.setFrameStyle(QFrame.Box | QFrame.Raised)
@@ -399,15 +397,15 @@ class MainWindow(QMainWindow):
         self.etw = LogEntryTree(cw)
         log_lo.addWidget(self.etw, 1)
         self.etw.header().setDefaultSectionSize(128)
-        self.etw.header().setMovable(False)
+        self.etw.header().setSectionsMovable(False)
         self.etw.setHeaderLabels(["date", "entry title", "comment"])
         if hasattr(QHeaderView, 'ResizeToContents'):
-            self.etw.header().setResizeMode(0, QHeaderView.ResizeToContents)
+            self.etw.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         else:
-            self.etw.header().setResizeMode(0, QHeaderView.Custom)
+            self.etw.header().setSectionResizeMode(0, QHeaderView.Custom)
             self.etw.header().resizeSection(0, 120)
-        self.etw.header().setResizeMode(1, QHeaderView.Interactive)
-        self.etw.header().setResizeMode(2, QHeaderView.Stretch)
+        self.etw.header().setSectionResizeMode(1, QHeaderView.Interactive)
+        self.etw.header().setSectionResizeMode(2, QHeaderView.Stretch)
         self.etw.header().show()
         try:
             self.etw.setAllColumnsShowFocus(True)
@@ -418,9 +416,9 @@ class MainWindow(QMainWindow):
         # self.etw.setColumnAlignment(2,Qt.AlignLeft|Qt.AlignTop)
         self.etw.setSelectionMode(QTreeWidget.ExtendedSelection)
         self.etw.setRootIsDecorated(True)
-        self.connect(self.etw, SIGNAL("itemSelectionChanged()"), self._entrySelectionChanged)
-        self.connect(self.etw, SIGNAL("itemActivated(QTreeWidgetItem*,int)"), self._viewEntryItem)
-        self.connect(self.etw, SIGNAL("itemContextMenuRequested"), self._showItemContextMenu)
+        self.etw.itemSelectionChanged.connect(self._entrySelectionChanged)
+        self.etw.itemActivated.connect(self._viewEntryItem)
+        self.etw.itemContextMenuRequested.connect(self._showItemContextMenu)
         # create popup menu for data products
         self._archived_dp_menu = menu = QMenu(self)
         self._archived_dp_menu_title = QLabel()
@@ -457,14 +455,14 @@ class MainWindow(QMainWindow):
         self.weditbtn.setToolTip("Click to view or edit the selected log entry/")
         # self.weditbtn.setFlat(True)
         self.weditbtn.setEnabled(False)
-        self.connect(self.weditbtn, SIGNAL("clicked()"), self._viewEntryItem)
+        self.weditbtn.clicked.connect(self._viewEntryItem)
         btnlo.addWidget(self.weditbtn)
         btnlo.addSpacing(5)
         self.wdelbtn = QPushButton(pixmaps.editdelete.icon(), "Delete", cw)
         self.wdelbtn.setToolTip("Click to delete the selected log entry or entries.")
         # self.wdelbtn.setFlat(True)
         self.wdelbtn.setEnabled(False)
-        self.connect(self.wdelbtn, SIGNAL("clicked()"), self._deleteSelectedEntries)
+        self.wdelbtn.clicked.connect(self._deleteSelectedEntries)
         btnlo.addWidget(self.wdelbtn)
         # enable status line
         self.statusBar().show()
@@ -472,28 +470,27 @@ class MainWindow(QMainWindow):
         self._prev_msg = None
         # editor dialog for new entry
         self.new_entry_dialog = Purr.Editors.NewLogEntryDialog(self)
-        self.connect(self.new_entry_dialog, SIGNAL("newLogEntry"), self._newLogEntry)
-        self.connect(self.new_entry_dialog, SIGNAL("filesSelected"), self._addDPFiles)
-        self.connect(self.wnewbtn, SIGNAL("clicked()"), self.new_entry_dialog.show)
-        self.connect(self.new_entry_dialog, SIGNAL("shown"), self._checkPounceStatus)
+        self.new_entry_dialog.newLogEntry.connect(self._newLogEntry)
+        self.new_entry_dialog.filesSelected.connect(self._addDPFiles)
+        self.wnewbtn.clicked.connect(self.new_entry_dialog.show)
+        self.new_entry_dialog.shown.connect(lambda shown: self._checkPounceStatus())
         # entry viewer dialog
         self.view_entry_dialog = Purr.Editors.ExistingLogEntryDialog(self)
-        self.connect(self.view_entry_dialog, SIGNAL("previous()"), self._viewPrevEntry)
-        self.connect(self.view_entry_dialog, SIGNAL("next()"), self._viewNextEntry)
-        self.connect(self.view_entry_dialog, SIGNAL("viewPath"), self._viewPath)
-        self.connect(self.view_entry_dialog, SIGNAL("filesSelected"), self._addDPFilesToOldEntry)
-        self.connect(self.view_entry_dialog, SIGNAL("entryChanged"), self._entryChanged)
+        self.view_entry_dialog.showPrevious.connect(self._viewPrevEntry)
+        self.view_entry_dialog.showNext.connect(self._viewNextEntry)
+        self.view_entry_dialog.viewPath.connect(self._viewPath)
+        self.view_entry_dialog.filesSelected.connect(self._addDPFilesToOldEntry)
+        self.view_entry_dialog.entryChanged.connect(self._entryChanged)
         # saving a data product to an older entry will automatically drop it from the
         # new entry dialog
-        self.connect(self.view_entry_dialog, SIGNAL("creatingDataProduct"),
-                     self.new_entry_dialog.dropDataProducts)
+        self.view_entry_dialog.creatingDataProduct.connect(self.new_entry_dialog.dropDataProducts)
         # resize selves
         width = Config.getint('main-window-width', 512)
         height = Config.getint('main-window-height', 512)
         self.resize(QSize(width, height))
         # create timer for pouncing
         self._timer = QTimer(self)
-        self.connect(self._timer, SIGNAL("timeout()"), self._rescan)
+        self._timer.timeout.connect(self._rescan)
         # create dict mapping index.html paths to entry numbers
         self._index_paths = {}
 
@@ -578,21 +575,19 @@ class MainWindow(QMainWindow):
                 # check that we could attach, display message if not
                 QMessageBox.warning(self, "Catfight!", """<P><NOBR>It appears that another PURR process (%s)</NOBR>
           is already attached to <tt>%s</tt>, so we're not allowed to touch it. You should exit the other PURR
-          process first.</P>""" % (err.args[0], os.path.abspath(purrlog)), QMessageBox.Ok, 0)
+          process first.</P>""" % (err.args[0], os.path.abspath(purrlog)), QMessageBox.Ok)
                 return False
             except Purr.Purrer.LockFailError as err:
                 QMessageBox.warning(self, "Failed to obtain lock", """<P><NOBR>PURR was unable to obtain a lock</NOBR>
           on directory <tt>%s</tt> (error was "%s"). The most likely cause is insufficient permissions.</P>""" % (
-                os.path.abspath(purrlog), err.args[0]), QMessageBox.Ok, 0)
+                os.path.abspath(purrlog), err.args[0]), QMessageBox.Ok)
                 return False
             self.purrer_stack.insert(0, purrer)
             # discard end of stack
             self.purrer_stack = self.purrer_stack[:3]
             # attach signals
-            self.connect(purrer, SIGNAL("disappearedFile"),
-                         self.new_entry_dialog.dropDataProducts)
-            self.connect(purrer, SIGNAL("disappearedFile"),
-                         self.view_entry_dialog.dropDataProducts)
+            purrer.disappearedFile.connect(self.new_entry_dialog.dropDataProducts)
+            purrer.disappearedFile.connect(self.view_entry_dialog.dropDataProducts)
         # have we changed the current purrer? Update our state then
         # reopen Purr pipes
         self.purrpipes = {}
@@ -746,13 +741,13 @@ class MainWindow(QMainWindow):
             if do_show:
                 self.new_entry_dialog.show()
 
-    def _addDPFiles(self, *files):
+    def _addDPFiles(self, files):
         """callback to add DPs corresponding to files."""
         # quiet flag is always true
         self.new_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
             [(file, True) for file in files], unbanish=True, unignore=True))
 
-    def _addDPFilesToOldEntry(self, *files):
+    def _addDPFilesToOldEntry(self, files):
         """callback to add DPs corresponding to files."""
         # quiet flag is always true
         self.view_entry_dialog.addDataProducts(self.purrer.makeDataProducts(
@@ -797,7 +792,7 @@ class MainWindow(QMainWindow):
         # select entry in listview
         if select:
             self.etw.clearSelection()
-            self.etw.setItemSelected(self.etw.topLevelItem(ientry), True)
+            self.etw.topLevelItem(ientry).setSelected(True)
 
     def _viewPrevEntry(self):
         if self._viewing_ientry is not None and self._viewing_ientry > 0:
@@ -828,8 +823,8 @@ class MainWindow(QMainWindow):
             point = self.etw.mapToGlobal(point)
             self._current_item = item
             self.etw.clearSelection()
-            self.etw.setItemSelected(item, True)
-            menu.exec_(point)
+            item.setSelected(True)
+            menu.exec(point)
         else:
             self._current_item = None
 
@@ -874,7 +869,7 @@ class MainWindow(QMainWindow):
             if ndp:
                 msg += """<P>%d data product(s) saved with these entries will be deleted as well.</P>""" % ndp
         if QMessageBox.warning(self, "Deleting log entries", msg,
-                               QMessageBox.Yes, QMessageBox.No) != QMessageBox.Yes:
+                               QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
             return
         if hide_viewer:
             self.view_entry_dialog.hide()
@@ -964,7 +959,7 @@ class MainWindow(QMainWindow):
     def _regenerateLog(self):
         if QMessageBox.question(self.viewer_dialog, "Regenerate log", """<P><NOBR>Do you really want to regenerate the
       entire</NOBR> log? This can be a time-consuming operation.</P>""",
-                                QMessageBox.Yes, QMessageBox.No) != QMessageBox.Yes:
+                                QMessageBox.Yes | QMessageBox.No) != QMessageBox.Yes:
             return
         self.purrer.save(refresh=True)
         self._updateViewer()

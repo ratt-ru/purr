@@ -4,7 +4,8 @@ import os
 import os.path
 
 import Kittens.utils
-from PyQt4.Qt import QWidget, QDialog, QWizard, QWizardPage, QButtonGroup, QVBoxLayout, QRadioButton, QObject, SIGNAL, QHBoxLayout, QLineEdit, QPushButton, QFileDialog, QMessageBox
+from .qt import (QWidget, QDialog, QWizard, QWizardPage, QButtonGroup, QVBoxLayout, QRadioButton,
+                 QHBoxLayout, QLineEdit, QPushButton, QFileDialog, QMessageBox)
 
 import Purr
 from Purr import pixmaps
@@ -106,7 +107,7 @@ def startWizard(args, mainwin, modal=True):
     wizard_dialog = PurrStartupWizard(mainwin, dirname, purrlogs, moredirs=moredirs, create=create, message=message)
 
     if modal:
-        if wizard_dialog.exec_() == QDialog.Rejected:
+        if wizard_dialog.exec() == QDialog.Rejected:
             return False
         return True;
     else:
@@ -135,7 +136,7 @@ class PurrStartupWizard(QWizard):
                 for rb in self.rbs_log:
                     lo.addWidget(rb)
                     bg.addButton(rb)
-                    QObject.connect(rb, SIGNAL("toggled(bool)"), self.checkCompleteness)
+                    rb.toggled.connect(self.checkCompleteness)
                 self.rbs_log[0].setChecked(True)
             # add option to load another purrlog
             lo1 = QHBoxLayout()
@@ -146,10 +147,10 @@ class PurrStartupWizard(QWizard):
             self.wother.setReadOnly(True)
             lo1.addWidget(self.wother, 1)
             pb = QPushButton(pixmaps.folder_open.icon(), "")
-            QObject.connect(pb, SIGNAL("clicked()"), self._select_other_dialog)
-            QObject.connect(self.rb_other, SIGNAL("toggled(bool)"), pb.setEnabled)
-            QObject.connect(self.rb_other, SIGNAL("toggled(bool)"), self.wother.setEnabled)
-            QObject.connect(self.rb_other, SIGNAL("toggled(bool)"), self.checkCompleteness)
+            pb.clicked.connect(self._select_other_dialog)
+            self.rb_other.toggled.connect(pb.setEnabled)
+            self.rb_other.toggled.connect(self.wother.setEnabled)
+            self.rb_other.toggled.connect(self.checkCompleteness)
             pb.setEnabled(False)
             self.wother.setEnabled(False)
             lo1.addWidget(pb)
@@ -164,11 +165,11 @@ class PurrStartupWizard(QWizard):
             self.wcreate = QLineEdit()
             lo1.addWidget(self.wcreate, 1)
             pb = QPushButton(pixmaps.folder_open.icon(), "")
-            QObject.connect(pb, SIGNAL("clicked()"), self._select_create_dialog)
-            QObject.connect(self.rb_create, SIGNAL("toggled(bool)"), pb.setEnabled)
-            QObject.connect(self.rb_create, SIGNAL("toggled(bool)"), self.wcreate.setEnabled)
-            QObject.connect(self.rb_create, SIGNAL("toggled(bool)"), self.checkCompleteness)
-            QObject.connect(self.wcreate, SIGNAL("editingFinished()"), self._validate_create_filename)
+            pb.clicked.connect(self._select_create_dialog)
+            self.rb_create.toggled.connect(pb.setEnabled)
+            self.rb_create.toggled.connect(self.wcreate.setEnabled)
+            self.rb_create.toggled.connect(self.checkCompleteness)
+            self.wcreate.editingFinished.connect(self._validate_create_filename)
             pb.setEnabled(False)
             self.wcreate.setEnabled(False)
             # this holds the last validated name
@@ -244,7 +245,8 @@ class PurrStartupWizard(QWizard):
             return True
 
         def _select_create_dialog(self):
-            path = str(QFileDialog.getSaveFileName(self, "Create new purrlog", self.create_path))
+            # Qt5/Qt6 return a (filename, selected_filter) tuple
+            path = str(QFileDialog.getSaveFileName(self, "Create new purrlog", self.create_path)[0])
             if path:
                 self._validate_create_filename(path)
 
@@ -252,7 +254,7 @@ class PurrStartupWizard(QWizard):
             if toggled and hasattr(self, 'rb_other') and self.rb_other.isChecked() and not self.load_path:
                 self._select_other_dialog()
             else:
-                self.emit(SIGNAL("completeChanged()"))
+                self.completeChanged.emit()
 
         def isComplete(self):
             if hasattr(self, 'rb_create') and self.rb_create.isChecked():
@@ -326,7 +328,7 @@ class PurrStartupWizard(QWizard):
 #    pb.setSizePolicy(QSizePolicy.Minimum,QSizePolicy.MinimumExpanding)
 #    # pb.setFlat(True)
 #    self._lo.addWidget(pb)
-#    QObject.connect(pb,SIGNAL("clicked()"),callback)
+#    pb.clicked.connect(callback)
 #    return pb
 #
 #  def _load_log (self,logname):
@@ -344,7 +346,7 @@ class PurrStartupWizard(QWizard):
 #      dialog.setFileMode(QFileDialog.DirectoryOnly)
 #    if purrlogs:
 #      dialog.setSidebarUrls(map(QUrl,purrlogs))
-#    if not dialog.exec_():
+#    if not dialog.exec():
 #      return False
 #    logname = str(dialog.selectedFiles()[0])
 #    mainwin.show()
